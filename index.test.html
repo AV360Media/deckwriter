@@ -330,6 +330,7 @@ dialog.drawer .pgrid{grid-template-columns:repeat(auto-fill,minmax(82px,1fr))}
 #bootCanvas{width:100%;height:auto;max-width:100%}
 .boot-form{display:flex;flex-direction:column;gap:12px;min-width:0}
 #bootStyle,#bootBg{display:grid;grid-template-columns:repeat(auto-fill,minmax(84px,1fr))}
+.key .boot-over{position:absolute;inset:0;width:100%;height:100%;z-index:4;pointer-events:none}
 .boot-layout{border:1px solid rgba(255,255,255,.16);border-radius:12px;padding:10px 12px;background:#26262b}
 .boot-layout[open]{display:flex;flex-direction:column;gap:12px}
 .boot-layout summary{cursor:pointer;font-weight:500;color:#e4e4ea;list-style:none;display:flex;gap:8px;align-items:baseline}
@@ -745,7 +746,7 @@ function renderDeck(){
   g+="</div>";
   if(d.dials){g+='<div class="dials">';for(let c=0;c<d.dials;c++){const k=keyId(d.rows,c),b=pg.buttons[k];
     g+=`<button class="dial ${isSel(k)?"sel":""}" data-k="${k}" aria-label="Dial ${c+1}"><span>${esc(b?(b.text||"Dial "+(c+1)):"Dial "+(c+1))}</span></button>`}g+="</div>"}
-  g+=`<div class="deck-foot"><span>${esc(page().name||"")}</span>${pg.boot?`<button class="btn ghost sm" id="bootPlayDeck">▶ Play boot animation</button>`:""}<span>${Object.keys(pg.buttons).length} keys</span></div>`;
+  g+=`<div class="deck-foot"><span>${esc(page().name||"")}</span>${pg.boot||bootOverlayPage()===pg?`<button class="btn ghost sm" id="bootPlayDeck">▶ Play boot animation</button>`:""}<span>${Object.keys(pg.buttons).length} keys</span></div>`;
   deck.innerHTML=g;scheduleOverlay();
 }
 function renderPagebar(){
@@ -1454,6 +1455,16 @@ function buildExport(pi){
     if(c.raw){const r=clone(c.raw);r.instance_type=r.instance_type||r.moduleId||c.module;delete r.moduleId;r.label=c.label;r.config=cfg;instances[id]=r}
     else instances[id]={instance_type:c.module,label:c.label,config:cfg,isFirstInit:false,lastUpgradeIndex:-1,enabled:true,sortOrder:i};
     i++;}
+  if(bootOverlayPage()===pg){
+    const blank=()=>({type:"button",style:{text:"",textExpression:false,size:"auto",png64:null,alignment:"center:center",pngalignment:"center:center",color:16777215,bgcolor:0,show_topbar:false},
+      options:{rotaryActions:false,stepAutoProgress:true},feedbacks:[],steps:{0:{action_sets:{down:[],up:[]},options:{runWhileHeld:[]}}}});
+    let skipped=0;
+    for(const k of bootGeom().keys){const row=(controls[k.r]??={});let ctl=row[k.c];
+      if(!ctl)ctl=row[k.c]=blank();if(ctl.type!=="button"){skipped++;continue}
+      ctl.feedbacks=ctl.feedbacks.concat(bootFeedbacksAt(k.r,k.c,+S.boot.hold>0))}
+    if(!bootCache||bootCache.sig!==bootSig(S.boot))warn.push("The boot animation is not rendered yet. Open Boot screen and click Use on this page, then export again.");
+    warn.push(`The boot animation plays over this page. Import it as Companion page ${S.boot.companionPage||1} (the number set in Boot screen), and import the startup trigger too.`+(skipped?` ${skipped} page up/down key(s) can't show it and stay plain.`:""));
+  }
   if(pg.boot)warn.push("This is your boot screen. Import it as page 1, and also import the startup trigger (Boot screen → Save startup trigger) so the animation plays when Companion starts.");
   const maxRow=d.dials?d.rows:d.rows-1;
   return{data:{version:6,type:"page",page:{name:pg.name||`Page ${pi+1}`,controls,gridSize:{minColumn:0,maxColumn:d.cols-1,minRow:0,maxRow}},instances,oldPageNumber:pi+1},warn:[...new Set(warn)]};
@@ -1471,7 +1482,7 @@ async function saveFile(name,data){
 }
 const savedNote=r=>r==="renamed"?"Saved. Remove the .json ending before importing it in Companion":"Saved. Import it in Companion";
 async function openExport(){
-  if(S.boot&&S.pages.some(p=>p.boot)){try{await buildBootCache(S.boot)}catch(_){}}
+  if(S.boot&&(S.pages.some(p=>p.boot)||bootOverlayPage())){try{await buildBootCache(S.boot)}catch(_){}}
   $("#expPage").innerHTML=S.pages.map((p,i)=>`<option value="${i}" ${i===S.pageIdx?"selected":""}>${i+1}. ${esc(p.name)}</option>`).join("");
   fillExport();$("#exportDlg").showModal();
 }
@@ -1831,7 +1842,7 @@ function wipePage(){const n=Object.keys(page().buttons).length;if(!n)return;comm
 const BOOT_GAP=18, BOOT_VAR="boot_frame";
 const BOOT_STYLES=[["ignite","Ignition"],["scan","Scanline"],["ripple","Ripple"],["meter","Meters"],["glitch","Glitch"],["matrix","Matrix"],["warp","Warp"],["tiles","Tiles"],["countdown","Countdown"],["radar","Radar"],["type","Typewriter"]];
 const BOOT_BGS=[["aurora","Aurora"],["circuit","Circuit"],["rays","Rays"],["halftone","Halftone"],["waves","Waves"],["grid","Grid"],["black","Black"]];
-const bootDefaults=()=>({title:"AV360",subtitle:"SYSTEM ONLINE",style:"ignite",c1:"#c6f432",c2:"#ff5ad9",secs:2,fps:12,afterPage:2,titleSize:58,subSize:20,bg:"aurora",tRow:"auto",sRow:"auto",tX:0,tY:0,sX:0,sY:0,tSpace:0,sSpace:0,snap:false,subSnap:false,underline:true,deckId:"streamdeck:CL45L2A05421"});
+const bootDefaults=()=>({title:"AV360",subtitle:"SYSTEM ONLINE",style:"ignite",c1:"#c6f432",c2:"#ff5ad9",secs:2,fps:12,afterPage:2,titleSize:58,subSize:20,bg:"aurora",tRow:"auto",sRow:"auto",tX:0,tY:0,sX:0,sY:0,tSpace:0,sSpace:0,snap:false,subSnap:false,underline:true,mode:"overlay",overlayPage:null,companionPage:null,hold:3,deckId:"streamdeck:CL45L2A05421"});
 let bootCache=null; // {sig, finals:[dataURL per key], frames:[[dataURL per key] per frame]}
 const bootSig=cfg=>JSON.stringify([cfg,S.device]);
 const bootFrameCount=cfg=>Math.max(6,Math.round(cfg.secs*cfg.fps));
@@ -2074,11 +2085,18 @@ async function buildBootCache(cfg){
   drawBoot(bx,cfg,1,F+1);const finals=slice();
   bootCache={sig,finals,frames,F};return bootCache;
 }
-function bootFeedbacks(b){
-  if(!b.boot||!bootCache||!S.boot||bootCache.sig!==bootSig(S.boot))return[];
-  const{keys}=bootGeom();const idx=keys.findIndex(k=>k.r===b.boot.r&&k.c===b.boot.c);if(idx<0)return[];
-  return bootCache.frames.map((fr,f)=>({id:uid(16),type:"variable_value",instance_id:"internal",options:{variable:"internal:custom_"+BOOT_VAR,op:"eq",value:String(f+1)},style:{png64:fr[idx]},isInverted:false}));
+function bootFeedbacksAt(r,c,withFinal){
+  if(!bootCache||!S.boot||bootCache.sig!==bootSig(S.boot))return[];
+  const{keys}=bootGeom();const idx=keys.findIndex(k=>k.r===r&&k.c===c);if(idx<0)return[];
+  const fb=(value,png)=>({id:uid(16),type:"variable_value",instance_id:"internal",options:{variable:"internal:custom_"+BOOT_VAR,op:"eq",value},style:{png64:png},isInverted:false});
+  const out=bootCache.frames.map((fr,f)=>fb(String(f+1),fr[idx]));
+  if(withFinal)out.push(fb("final",bootCache.finals[idx]));
+  return out;
 }
+// own-page mode: the boot page's keys carry the frames; their normal image is the final screen
+function bootFeedbacks(b){return b.boot?bootFeedbacksAt(b.boot.r,b.boot.c,false):[]}
+// over-a-page mode: which page (if any) the animation plays over
+const bootOverlayPage=()=>S.boot&&S.boot.mode==="overlay"?S.pages.find(p=>p.id===S.boot.overlayPage)||null:null;
 const BOOT_BUSY="boot_busy";
 // The startup trigger. Plugging a deck in updates Companion's surface variables more than once, so the
 // "deck connected" event can fire twice in quick succession; a busy flag plus a trigger condition makes
@@ -2089,10 +2107,13 @@ function bootTriggerExport(){
   const act=(action,options)=>({id:uid(16),action,instance:"internal",options});
   const deck=String(cfg.deckId||"").trim();
   const actions=[act("custom_variable_create_value",{name:BOOT_BUSY,value:"0"}),act("custom_variable_set_value",{name:BOOT_BUSY,value:"1"})];
-  if(deck)actions.push(act("set_page",{controller:deck,controller_from_variable:false,page:1,page_from_variable:false}));
+  const overlay=cfg.mode==="overlay",target=overlay?Math.max(1,+cfg.companionPage||1):1;
+  if(deck)actions.push(act("set_page",{controller:deck,controller_from_variable:false,page:target,page_from_variable:false}));
   actions.push(act("custom_variable_create_value",{name:BOOT_VAR,value:"0"}));
   actions.push(act("wait",{time:600})); // let a just-connected deck settle so the first frames are not lost
   for(let f=1;f<=F;f++){actions.push(act("custom_variable_set_value",{name:BOOT_VAR,value:String(f)}));actions.push(act("wait",{time:wait}))}
+  // over a page: hold the title screen, then reveal the page's real buttons
+  if(overlay&&+cfg.hold>0){actions.push(act("custom_variable_set_value",{name:BOOT_VAR,value:"final"}));actions.push(act("wait",{time:Math.round(+cfg.hold*1000)}))}
   actions.push(act("custom_variable_set_value",{name:BOOT_VAR,value:"done"}));
   actions.push(act("custom_variable_set_value",{name:BOOT_BUSY,value:"0"}));
   const notBusy={id:uid(16),type:"variable_value",instance_id:"internal",options:{variable:"internal:custom_"+BOOT_BUSY,op:"ne",value:"1"},style:{},isInverted:false};
@@ -2104,7 +2125,16 @@ function bootTriggerExport(){
 let bootCfg=null,bootAnim=0;
 function bootForm(){
   const c=bootCfg;bootLayoutOpen=!!document.querySelector(".boot-layout[open]")||bootLayoutOpen;
+  const showPages=S.pages.filter(p=>!p.boot);
+  if(!showPages.some(p=>p.id===c.overlayPage))c.overlayPage=(showPages[0]||{}).id||null;
+  if(!c.companionPage)c.companionPage=Math.max(1,showPages.findIndex(p=>p.id===c.overlayPage)+1);
+  const overlay=c.mode==="overlay";
   $("#bootForm").innerHTML=`
+    <div class="field"><span class="label">Where it plays</span><div class="seg" id="bootMode"><button data-v="overlay" aria-pressed="${overlay}">Over a page</button><button data-v="page" aria-pressed="${!overlay}">Its own page</button></div>
+      <span class="empty-note">${overlay?"Plays over your show page, holds the title, then reveals the page's buttons. There is no boot page to land on while paging.":"A separate page 1 that stays on the title until you press a key."}</span></div>
+    ${overlay?`<div class="row2"><div class="field"><span class="label">Play over</span><select class="inp" id="bootOverPage">${showPages.map(p=>`<option value="${esc(p.id)}" ${p.id===c.overlayPage?"selected":""}>${esc(p.name||"Page")}</option>`).join("")}</select></div>
+      <div class="field"><span class="label">Its page number in Companion</span><input class="inp" type="number" id="bootCompPage" min="1" max="99" value="${+c.companionPage||1}"></div></div>
+      ${bootSlider("bootHold","Hold the title for",c.hold,0,10,1,"s")}`:""}
     <div class="field"><span class="label">Title</span><input class="inp" id="bootTitle" value="${esc(c.title)}" maxlength="18"></div>
     <div class="field"><span class="label">Subtitle</span><input class="inp" id="bootSub" value="${esc(c.subtitle)}" maxlength="28"></div>
     <div class="row2"><div class="field"><span class="label">Title size <span class="mono" id="bootTSv">${c.titleSize}</span></span><input type="range" id="bootTS" min="32" max="72" step="2" value="${c.titleSize}"></div>
@@ -2125,7 +2155,7 @@ function bootForm(){
     <div class="row2">${colorField("bootC1","Main colour",c.c1)}${colorField("bootC2","Second colour",c.c2)}</div>
     <div class="row2"><div class="field"><span class="label">Length</span><select class="inp" id="bootSecs">${[1.5,2,3,4].map(v=>`<option value="${v}" ${c.secs==v?"selected":""}>${v} seconds</option>`).join("")}</select></div>
     <div class="field"><span class="label">Smoothness</span><select class="inp" id="bootFps">${[[8,"8 fps (lightest)"],[12,"12 fps"],[15,"15 fps (smoothest)"]].map(([v,l])=>`<option value="${v}" ${c.fps==v?"selected":""}>${l}</option>`).join("")}</select></div></div>
-    <div class="field"><span class="label">Pressing any key afterwards</span><select class="inp" id="bootAfter"><option value="0" ${!c.afterPage?"selected":""}>Does nothing</option>${[2,3,4,5].map(n=>`<option value="${n}" ${c.afterPage==n?"selected":""}>Goes to page ${n}</option>`).join("")}</select></div>
+    <div class="field" ${overlay?"hidden":""}><span class="label">Pressing any key afterwards</span><select class="inp" id="bootAfter"><option value="0" ${!c.afterPage?"selected":""}>Does nothing</option>${[2,3,4,5].map(n=>`<option value="${n}" ${c.afterPage==n?"selected":""}>Goes to page ${n}</option>`).join("")}</select></div>
     <div class="field"><span class="label">Also play when this Stream Deck is plugged in</span><input class="inp mono" id="bootDeck" value="${esc(c.deckId||"")}" placeholder="streamdeck:SERIAL (leave blank for startup only)" spellcheck="false"><span class="empty-note">Find it in Companion under Surfaces. The trigger also switches this deck to page 1 before playing.</span></div>`;
 }
 // play=true runs the animation once and then holds the final screen; play=false jumps straight to the final screen
@@ -2146,10 +2176,11 @@ async function bootPreview(play=true){
 }
 let bootLayoutOpen=false;
 function bootSlider(id,label,val,min,max,step,unit){const v=+val||0;
-  return `<div class="field"><span class="label">${label} <span class="mono" id="${id}v">${unit==="keys"?(Math.round(v/90)||0)+" keys":v+" px"}</span></span><input type="range" id="${id}" min="${min}" max="${max}" step="${unit==="keys"?90:step}" value="${v}"></div>`}
-function openBoot(){bootCfg={...bootDefaults(),...(S.boot||{})};bootForm();$("#bootDlg").showModal();bootPreview()}
+  return `<div class="field"><span class="label">${label} <span class="mono" id="${id}v">${unit==="keys"?(Math.round(v/90)||0)+" keys":unit==="s"?v+" s":v+" px"}</span></span><input type="range" id="${id}" min="${min}" max="${max}" step="${unit==="keys"?90:step}" value="${v}"></div>`}
+function openBoot(){bootCfg={...bootDefaults(),...(S.boot||{})};bootForm();syncBootApply();$("#bootDlg").showModal();bootPreview()}
 function readBootForm(){const c=bootCfg;c.title=$("#bootTitle").value;c.subtitle=$("#bootSub").value;c.c1=normHex($("#bootC1H").value)||c.c1;c.c2=normHex($("#bootC2H").value)||c.c2;
   c.secs=+$("#bootSecs").value;c.fps=+$("#bootFps").value;c.afterPage=+$("#bootAfter").value;
+  if($("#bootOverPage")){c.overlayPage=$("#bootOverPage").value;c.companionPage=Math.max(1,+$("#bootCompPage").value||1);c.hold=+$("#bootHold").value;$("#bootHoldv").textContent=c.hold+" s"}
   c.titleSize=+$("#bootTS").value;c.subSize=+$("#bootSS").value;c.deckId=$("#bootDeck").value.trim();$("#bootTSv").textContent=c.titleSize;$("#bootSSv").textContent=c.subSize;
   const snapWas=c.snap,subSnapWas=c.subSnap;c.snap=$("#bootSnap").checked;c.subSnap=$("#bootSubSnap").checked;c.tRow=$("#bootTRow").value;c.sRow=$("#bootSRow").value;c.underline=$("#bootUnder").checked;
   c.tX=+$("#bootTX").value;c.tY=+$("#bootTY").value;c.sX=+$("#bootSX").value;c.sY=+$("#bootSY").value;c.tSpace=+$("#bootTSp").value;c.sSpace=+$("#bootSSp").value;
@@ -2160,11 +2191,20 @@ function readBootForm(){const c=bootCfg;c.title=$("#bootTitle").value;c.subtitle
 document.addEventListener("input",e=>{if(!e.target.closest("#bootForm"))return;const t=e.target;
   if(t.id==="bootC1C"||t.id==="bootC2C"){$("#"+t.id.slice(0,-1)+"H").value=t.value}
   readBootForm();bootPreview(false)});
-document.addEventListener("change",e=>{if(!e.target.closest("#bootForm"))return;readBootForm();bootPreview(e.target.id==="bootSecs"||e.target.id==="bootFps")});
+document.addEventListener("change",e=>{if(!e.target.closest("#bootForm"))return;readBootForm();if(e.target.id==="bootOverPage")syncBootApply();bootPreview(e.target.id==="bootSecs"||e.target.id==="bootFps")});
+function syncBootApply(){const b=$("#bootApply");if(!b||!bootCfg)return;const pg=S.pages.find(p=>p.id===bootCfg.overlayPage);b.textContent=bootCfg.mode==="overlay"?`Use on “${pg?.name||"page"}”`:"Put on page 1"}
 async function applyBoot(){
   readBootForm();const btn=$("#bootApply");btn.disabled=true;btn.textContent="Rendering frames…";
   try{
     const cfg={...bootCfg};const cache=await buildBootCache(cfg);const{keys}=bootGeom();
+    if(cfg.mode==="overlay"){
+      let removed=0;
+      commit(()=>{S.boot=cfg;removed=S.pages.filter(p=>p.boot).length;S.pages=S.pages.filter(p=>!p.boot);
+        S.pageIdx=Math.max(0,S.pages.findIndex(p=>p.id===cfg.overlayPage));selected=null;multi.clear();S.example=false});
+      $("#bootDlg").close();
+      toast(`The boot animation now plays over “${page().name}”${removed?" and the separate boot page is gone (Undo brings it back)":""}. Export this page and save the startup trigger.`);
+      setTimeout(()=>playBootOnDeck(),250);return;
+    }
     commit(()=>{S.boot=cfg;let i=S.pages.findIndex(p=>p.boot);
       if(i<0){S.pages.unshift({id:uid(),name:"Boot",boot:true,buttons:{}});i=0}else if(i!==0){const[p]=S.pages.splice(i,1);S.pages.unshift(p)}
       const pg=S.pages[0];pg.buttons={};
@@ -2174,7 +2214,7 @@ async function applyBoot(){
       S.pageIdx=0;selected=null;multi.clear();S.example=false});
     $("#bootDlg").close();toast(`Boot screen is on page 1: ${cache.F} frames across ${keys.length} keys. Now save the startup trigger. Companion needs both files.`);
     setTimeout(()=>playBootOnDeck(),250);
-  }finally{btn.disabled=false;btn.textContent="Put on page 1"}
+  }finally{btn.disabled=false;syncBootApply()}
 }
 async function saveBootTrigger(){
   if(!S.boot){readBootForm();S.boot={...bootCfg};persist()}
@@ -2182,8 +2222,15 @@ async function saveBootTrigger(){
   try{toast(savedNote(await saveFile("DeckWriter boot trigger.companionconfig",data)))}catch(e){if(e?.code!=="declined")toast("Couldn't save here. Try again")}
 }
 async function playBootOnDeck(){
-  const pg=page();if(!pg.boot||!S.boot)return;const cache=await buildBootCache(S.boot);const{keys}=bootGeom();
-  const imgs=keys.map(k=>$(`#deck [data-k="${keyId(k.r,k.c)}"] .art`));const dt=1000/S.boot.fps;
+  const pg=page();if(!S.boot)return;const over=bootOverlayPage()===pg;if(!pg.boot&&!over)return;
+  const cache=await buildBootCache(S.boot);const{keys}=bootGeom();const dt=1000/S.boot.fps;
+  if(over){
+    const imgs=keys.map(k=>{const el=$(`#deck [data-k="${keyId(k.r,k.c)}"]`);if(!el)return null;const im=document.createElement("img");im.className="boot-over";im.alt="";el.appendChild(im);return im});
+    for(const fr of cache.frames){imgs.forEach((im,j)=>{if(im)im.src=fr[j]});await new Promise(r=>setTimeout(r,dt))}
+    if(+S.boot.hold>0){imgs.forEach((im,j)=>{if(im)im.src=cache.finals[j]});await new Promise(r=>setTimeout(r,Math.min(+S.boot.hold,4)*1000))}
+    imgs.forEach(im=>im?.remove());return;
+  }
+  const imgs=keys.map(k=>$(`#deck [data-k="${keyId(k.r,k.c)}"] .art`));
   for(const fr of cache.frames){imgs.forEach((im,j)=>{if(im)im.src=fr[j]});await new Promise(r=>setTimeout(r,dt))}
   imgs.forEach((im,j)=>{if(im)im.src=cache.finals[j]});
 }
@@ -2191,6 +2238,7 @@ document.addEventListener("click",e=>{const t=e.target.closest("button")||e.targ
   if(t.id==="bootBtn"||t.id==="bootEdit"){openBoot();return}
   const bs=t.closest("#bootStyle [data-v]");if(bs){bootCfg.style=bs.dataset.v;[...$("#bootStyle").children].forEach(x=>x.setAttribute("aria-pressed",x===bs));bootPreview(true);return}
   if(t.id==="bootReplay"){bootPreview(true);return}
+  const bm=t.closest("#bootMode [data-v]");if(bm){readBootForm();bootCfg.mode=bm.dataset.v;bootForm();syncBootApply();bootPreview(false);return}
   if(t.id==="bootLayoutReset"){Object.assign(bootCfg,{tRow:"auto",sRow:"auto",tX:0,tY:0,sX:0,sY:0,tSpace:0,sSpace:0,snap:false,subSnap:false,underline:true});bootLayoutOpen=true;bootForm();bootPreview(false);return}
   const bb=t.closest("#bootBg [data-v]");if(bb){bootCfg.bg=bb.dataset.v;[...$("#bootBg").children].forEach(x=>x.setAttribute("aria-pressed",x===bb));bootPreview(false);return}
   if(t.id==="bootApply"){applyBoot();return}
