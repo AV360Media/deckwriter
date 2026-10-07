@@ -247,6 +247,17 @@ dialog::backdrop{background:rgba(5,5,6,.7);backdrop-filter:blur(3px)}
 .drop-zone.over{border-color:var(--lime);color:var(--fg);background:rgba(198,244,50,.04)}
 .warn{color:var(--yellow);font-size:12.5px}
 .sheet-scroll{overflow:auto;max-height:56vh;border-radius:12px;border:1px solid var(--stroke)}
+.clink-bar{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:8px 10px;border:1px dashed var(--stroke-2);border-radius:11px;font-size:12.5px}
+.clink-bar .grow{flex:1;min-width:0}
+.clink-bar b{font-weight:600}
+.dot.st-good{background:var(--ok);box-shadow:0 0 8px rgba(60,207,116,.6)}
+.dot.st-warn{background:var(--yellow)}
+.dot.st-bad{background:var(--live);box-shadow:0 0 8px rgba(255,77,79,.5)}
+.dot.st-off{background:var(--dim)}
+.st-msg{display:block;font-size:11px;margin-top:2px;white-space:normal}
+.st-msg.st-bad{color:#ff8a8c}.st-msg.st-warn{color:var(--yellow)}.st-msg.st-off{color:var(--dim)}
+.conn.live{border-color:rgba(60,207,116,.25)}
+.conn-match{margin-top:6px;font-size:12px;padding:4px 6px}
 .mod-list{display:flex;flex-direction:column;gap:4px;max-height:52vh;overflow-y:auto;padding-right:2px}
 .mod{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:4px 10px;align-items:center;text-align:left;background:var(--field);border:1px solid var(--stroke);border-radius:11px;padding:9px 12px}
 .mod:hover{border-color:var(--stroke-2);background:#18181b}
@@ -420,6 +431,7 @@ dialog.drawer .pgrid{grid-template-columns:repeat(auto-fill,minmax(82px,1fr))}
         <div class="seg seg-sm" role="tablist" id="srcTabs"><button data-src="conns" aria-pressed="true">Connections <span class="count" id="connCount"></span></button><button data-src="know" aria-pressed="false">What the AI knows</button></div>
       </header>
       <div class="node-b" id="paneConns">
+        <div class="clink-bar" id="compLink"></div>
         <div id="conns"></div>
         <button class="btn" id="openModules"><span class="ico" data-ico="plus"></span>Add connection</button>
         <span class="empty-note" id="catCount"></span>
@@ -762,7 +774,10 @@ function renderPagebar(){
 /* ---------- connections & learned ---------- */
 const connColor=id=>{let h=0;for(const ch of id)h=(h*31+ch.charCodeAt(0))%360;return`hsl(${h} 70% 60%)`};
 function renderRail(){
-  $("#conns").innerHTML=S.connections.length?S.connections.map(c=>`<div class="conn"><span class="dot" style="background:${connColor(c.id)}"></span><div class="meta"><b>${esc(c.label)}</b><span>${esc(modTitle(c.module))}${c.raw?" · imported":""}</span></div>${LIBRARY[c.module]?`<button class="x" data-presetsfor="${esc(c.module)}" title="Presets">${ico("layout-grid")}</button><button class="x" data-connset="${esc(c.id)}" title="Connection settings" aria-expanded="${openConnSet===c.id}">${ico("settings-2")}</button>`:""}<button class="x" data-delconn="${esc(c.id)}" aria-label="Remove ${esc(c.label)}">✕</button></div>${openConnSet===c.id?connSettingsHTML(c):""}`).join("")
+  renderCompLink();const cc=$("#connCount");if(cc)cc.textContent=S.connections.length||"";
+  $("#conns").innerHTML=S.connections.length?S.connections.map(c=>{const lv=liveOf(c.id),cands=live.list&&!lv?live.list.filter(x=>x.moduleId===c.module&&x.id!==c.id):[];
+    return `<div class="conn${lv?" live":""}"><span class="dot ${lv?"st-"+liveCat(lv):""}" style="${lv?"":`background:${connColor(c.id)}`}" title="${esc(lv?liveText(lv):"Not linked to Companion")}"></span><div class="meta"><b>${esc(c.label)}</b><span>${esc(modTitle(c.module))}${lv?" · in Companion":live.list?" · not in Companion":c.raw?" · imported":""}</span>${lv&&liveCat(lv)!=="good"?`<span class="st-msg st-${liveCat(lv)}">${esc(liveText(lv))}</span>`:""}
+      ${cands.length?`<select class="inp conn-match" data-matchconn="${esc(c.id)}" aria-label="Use a Companion connection"><option value="">Use my Companion connection…</option>${cands.map(x=>`<option value="${esc(x.id)}">${esc(x.label)}</option>`).join("")}</select>`:""}</div>${LIBRARY[c.module]?`<button class="x" data-presetsfor="${esc(c.module)}" title="Presets">${ico("layout-grid")}</button><button class="x" data-connset="${esc(c.id)}" title="Connection settings" aria-expanded="${openConnSet===c.id}">${ico("settings-2")}</button>`:""}<button class="x" data-delconn="${esc(c.id)}" aria-label="Remove ${esc(c.label)}">✕</button></div>${openConnSet===c.id?connSettingsHTML(c):""}`}).join("")
     :`<p class="empty-note">No connections yet. Add one from the full Companion list, import your Companion config, or just describe what you want and the AI adds what it needs.</p>`;
   $("#catCount").textContent=`${CATALOG.length} connection types available, the same list as the Companion module store.`;
   const mods=Object.keys(S.learned||{});
@@ -1464,7 +1479,8 @@ function buildExport(pi){
     for(const f of b.feedbacks)if(f.connection!=="internal")used.add(f.connection);}
   const instances={};let i=0;
   for(const id of used){const c=S.connections.find(x=>x.id===id);if(!c){warn.push(`A key uses a connection that was removed (${id}). Re-pick it in that key's Actions tab.`);continue}
-    const cfg={...(LIBRARY[c.module]?optDefaults(LIBRARY[c.module].config):{}),...(c.raw?.config||{}),...(c.config||{})};
+    // a connection adopted from a linked Companion already exists there: send no default settings that could overwrite it
+    const cfg=c.fromCompanion?{...(c.config||{})}:{...(LIBRARY[c.module]?optDefaults(LIBRARY[c.module].config):{}),...(c.raw?.config||{}),...(c.config||{})};
     if(c.raw){const r=clone(c.raw);r.instance_type=r.instance_type||r.moduleId||c.module;delete r.moduleId;r.label=c.label;r.config=cfg;instances[id]=r}
     else instances[id]={instance_type:c.module,label:c.label,config:cfg,isFirstInit:false,lastUpgradeIndex:-1,enabled:true,sortOrder:i};
     i++;}
@@ -2296,6 +2312,67 @@ document.addEventListener("keydown",e=>{if(e.key==="Escape")closeCtx()},true);
 window.addEventListener("blur",closeCtx);
 document.addEventListener("scroll",closeCtx,true);
 
+/* ---------- live link to Companion ---------- */
+// Companion's HTTP API answers GET /api/connections (CORS-enabled) with each connection's id, label,
+// moduleId, enabled flag and live status. Linking adopts those real ids so exported pages point at the
+// user's existing connections. Works wherever the page may reach the Mac (GitHub Pages, a local file);
+// the Claude artifact viewer blocks network requests, so there it explains instead.
+const live={list:null,error:"",at:0,busy:false,timer:0};
+const liveOf=id=>live.list?.find(x=>x.id===id)||null;
+const liveCat=x=>!x.enabled?"off":x.status?.category==="good"?"good":x.status?.category==="warning"?"warn":"bad";
+const liveText=x=>!x.enabled?"Disabled in Companion":[x.status?.level,x.status?.message].filter(Boolean).join(": ")||"Unknown";
+function renderCompLink(){
+  const el=$("#compLink");if(!el)return;const on=S.companionLinked;
+  const n=live.list?.length||0,good=live.list?.filter(x=>liveCat(x)==="good").length||0;
+  el.innerHTML=on&&live.list?`<span class="dot st-${good===n?"good":"warn"}"></span><span class="grow"><b>Companion</b> · ${good}/${n} connected</span><button class="btn ghost sm" id="compRefresh">Refresh</button><button class="btn ghost sm" id="compUnlink">Unlink</button>`
+    :on&&live.error?`<span class="dot st-bad"></span><span class="grow"><b>Companion</b> · can't reach it</span><button class="btn ghost sm" id="compRefresh">Retry</button><button class="btn ghost sm" id="compUnlink">Unlink</button><span class="st-msg st-bad" style="flex-basis:100%">${esc(live.error)}</span>`
+    :on?`<span class="dot"></span><span class="grow"><b>Companion</b> · connecting…</span>`
+    :`<button class="btn sm" id="compLinkBtn">${ico("link")}Link to Companion</button><span class="empty-note">See your real connections and their live status.</span>`;
+}
+async function pollCompanion(){
+  if(!S.companionLinked||live.busy)return;live.busy=true;
+  try{
+    const ctl=new AbortController();const t=setTimeout(()=>ctl.abort(),4000);
+    const r=await fetch(companionUrl()+"/api/connections",{signal:ctl.signal,cache:"no-store"});clearTimeout(t);
+    if(r.status===403)throw new Error("Companion's HTTP API is turned off. In Companion open Settings → Protocols and turn on the HTTP API.");
+    if(!r.ok)throw new Error(`Companion answered ${r.status}.`);
+    const list=await r.json();if(!Array.isArray(list))throw new Error("Unexpected answer from Companion.");
+    const first=!live.list;live.list=list;live.error="";live.at=Date.now();
+    // adopt Companion's connections: add missing ones with their real ids, keep labels in step
+    let changed=false;
+    for(const x of list){const c=S.connections.find(y=>y.id===x.id);
+      if(!c){S.connections.push({id:x.id,label:x.label,module:x.moduleId,fromCompanion:true});changed=true}
+      else if(c.label!==x.label||c.module!==x.moduleId){c.label=x.label;c.module=x.moduleId;changed=true}}
+    if(changed)persist();
+    if(first&&changed)toast(`Linked to Companion: ${list.length} connections`);
+  }catch(e){
+    live.list=null;
+    const inClaude=!!window.claude;
+    live.error=inClaude?"Claude blocks pages from reaching your Mac. Open DeckWriter from bryanchorton.github.io/deckwriter to link it."
+      :e.name==="AbortError"||e instanceof TypeError?`No answer from ${companionUrl()}. Check Companion is running, the address is right (Send to Companion → Companion address), and allow local network access if the browser asks.`:e.message;
+  }finally{live.busy=false;renderRail()}
+}
+function startCompanionLink(){clearInterval(live.timer);if(!S.companionLinked)return;pollCompanion();live.timer=setInterval(()=>{if(!document.hidden)pollCompanion()},5000)}
+// point every key and feedback that uses one connection at another, then drop the old one
+function remapConnection(fromId,toId){
+  for(const pg of S.pages)for(const b of Object.values(pg.buttons)){
+    for(const st of b.steps||[])for(const L of[st.down,st.up,st.rotL,st.rotR])for(const a of L||[])if(a.connection===fromId)a.connection=toId;
+    for(const f of b.feedbacks||[])if(f.connection===fromId)f.connection=toId}
+  const from=S.connections.find(c=>c.id===fromId),to=S.connections.find(c=>c.id===toId);
+  if(from&&to&&from.config&&!to.config)to.config=from.config;
+  S.connections=S.connections.filter(c=>c.id!==fromId);
+}
+document.addEventListener("click",e=>{const t=e.target.closest("button")||e.target;
+  if(t.id==="compLinkBtn"){S.companionLinked=true;persist();renderRail();startCompanionLink();return}
+  if(t.id==="compRefresh"){pollCompanion();return}
+  if(t.id==="compUnlink"){S.companionLinked=false;clearInterval(live.timer);live.list=null;live.error="";persist();renderRail();return}
+});
+document.addEventListener("change",e=>{const m=e.target.closest("[data-matchconn]");if(!m||!m.value)return;
+  const from=S.connections.find(c=>c.id===m.dataset.matchconn),x=liveOf(m.value);
+  commit(()=>{if(!S.connections.some(c=>c.id===x.id))S.connections.push({id:x.id,label:x.label,module:x.moduleId,fromCompanion:true});remapConnection(from.id,x.id)});
+  toast(`Keys that used “${from.label}” now use Companion's “${x.label}”`)});
+document.addEventListener("visibilitychange",()=>{if(!document.hidden&&S.companionLinked)pollCompanion()});
+
 /* ---------- sources card tabs ---------- */
 document.addEventListener("click",e=>{const b=e.target.closest("[data-src]");if(!b)return;
   [...$("#srcTabs").children].forEach(x=>x.setAttribute("aria-pressed",x===b));$("#paneConns").hidden=b.dataset.src!=="conns";$("#paneKnow").hidden=b.dataset.src!=="know";scheduleOverlay()});
@@ -2377,6 +2454,7 @@ const SHEET_CSS='.sheet{--kk:58px;background:#fff;color:#16191c;font:13px/1.45 "
 document.querySelectorAll("[data-ico]").forEach(el=>{el.innerHTML=ico(el.dataset.ico)});
 S=load();
 syncCompanionLink();
+setTimeout(startCompanionLink,300);
 render();
 // wait for lucide (it loads before this script, but art for the sample needs it)
 refreshAllArt();
