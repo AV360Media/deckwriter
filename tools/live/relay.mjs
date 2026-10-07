@@ -22,8 +22,17 @@ const arg = (name, def) => {
 }
 const COMPANION = arg('--companion', 'http://127.0.0.1:8000').replace(/\/+$/, '')
 const PORT = Number(arg('--port', 8790))
+// started on demand (by DeckWriter's Live button): stop again once DeckWriter hasn't been heard from for this long
+const IDLE_EXIT = Number(arg('--idle-exit', 0)) * 1000
+let lastHeardFromDeckWriter = Date.now()
+if (IDLE_EXIT > 0)
+	setInterval(() => {
+		if (Date.now() - lastHeardFromDeckWriter < IDLE_EXIT) return
+		log(`DeckWriter hasn't checked in for ${Math.round(IDLE_EXIT / 60000)} min, stopping until Live is clicked again`)
+		process.exit(0)
+	}, 15000)
 const ALLOWED = [/^https:\/\/bryanchorton\.github\.io$/, /^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/, /^null$/]
-const VERSION = '1.5.0'
+const VERSION = '1.6.0'
 
 const log = (...a) => console.log(new Date().toLocaleTimeString(), ...a)
 
@@ -431,6 +440,7 @@ const body = (req) =>
 
 http
 	.createServer(async (req, res) => {
+		lastHeardFromDeckWriter = Date.now()
 		if (!cors(req, res)) return send(res, 403, { ok: false, error: 'Origin not allowed' })
 		if (req.method === 'OPTIONS') return res.writeHead(204).end()
 		const path = new URL(req.url, 'http://x').pathname

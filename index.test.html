@@ -2517,11 +2517,20 @@ function liveTarget(pg,num){const c=liveCfg();const was=c.at[pg.id]??(c.map[pg.i
   if(was!==num){c.owned[pg.id]={};delete c.base[pg.id]}c.at[pg.id]=num}
 // stable fingerprint of an exported key: ignore the random entity ids
 const keyHash=ctl=>JSON.stringify(ctl,(k,val)=>k==="id"?undefined:val);
+// The relay only runs on demand: clicking Live opens deckwriter-live://, which the "DeckWriter Live" helper app
+// (installed by tools/live/install.sh) answers by starting it. Must be called from a click (browsers require it).
+async function wakeRelay(){
+  if(window.claude||liveRT.waking)return liveRT.status;
+  liveRT.waking=true;renderLive();
+  try{location.href="deckwriter-live://start"}catch(_){}
+  for(let i=0;i<20&&!(await relayStatus())?.companion;i++)await new Promise(r=>setTimeout(r,1000));
+  liveRT.waking=false;renderLive();return liveRT.status;
+}
 async function relayStatus(){
   try{const ctl=new AbortController();const t=setTimeout(()=>ctl.abort(),2500);
     const r=await fetch(RELAY+"/status",{signal:ctl.signal,cache:"no-store"});clearTimeout(t);
     liveRT.status=await r.json();liveRT.error=liveRT.status.companion?"":"The relay is running but can't reach Companion. Is Companion open?";
-  }catch(_){liveRT.status=null;liveRT.error=window.claude?"Live can't run inside Claude. Open DeckWriter from bryanchorton.github.io/deckwriter.":"The relay isn't running on this Mac."}
+  }catch(_){liveRT.status=null;liveRT.error=window.claude?"Live can't run inside Claude. Open DeckWriter from bryanchorton.github.io/deckwriter.":liveRT.waking?"Starting the Live helper… (if Chrome asks, allow it to open DeckWriter Live)":"The Live helper isn't running on this Mac. If it's set up, click Live again; if not, set it up below."}
   renderLive();liveFollow();const w=$("#wipePage");if(w)w.disabled=!Object.keys(page().buttons).length&&!liveExtraKeys(page()).length;return liveRT.status;
 }
 // Live always follows the page you're on: DeckWriter's show pages line up with Companion's, in order, after the boot screen.
@@ -2563,7 +2572,7 @@ function liveAutoLink(ids){const done=[],unsure=[];
     else if(cands.length>1)unsure.push(`${mine.label} (Companion has ${cands.map(x=>"“"+x.label+"”").join(" and ")}: pick one with Link in Connections)`)}
   if(done.length){persist();renderRail()}
   return{done,unsure}}
-const BUILD="Oct 7, 1:01 PM";
+const BUILD="Oct 7, 1:06 PM";
 function renderLive(){
   const bs=$("#buildStamp");if(bs)bs.textContent="Build "+BUILD;
   const c=liveCfg(),st=liveRT.status,ok=!!(st&&st.companion),pg=page();
@@ -2572,7 +2581,7 @@ function renderLive(){
   if(!$("#liveDlg").open)return;
   $("#liveStatus").innerHTML=`<div class="row"><span class="dot ${st?"st-good":"st-bad"}"></span>Relay ${st?`running (v${esc(st.relay)})`:"not running"}</div>
     <div class="row"><span class="dot ${ok?"st-good":"st-bad"}"></span>Companion ${ok?`connected · ${st.pages.length} pages`:"not reachable"}</div>${liveRT.error?`<span class="st-msg st-warn">${esc(liveRT.error)}</span>`:""}`;
-  $("#liveSetup").innerHTML=st||window.claude?"":`<div class="field live-setup"><span class="label">Set up Live on this Mac (once): paste this into Terminal. After that it runs in the background, starts with your Mac and updates itself. You can close Terminal.</span><pre class="mono" style="background:var(--field);border:1px solid var(--stroke);border-radius:10px;padding:10px;font-size:11.5px;margin:0">${esc(RELAY_CMD)}</pre><div><button class="btn sm" id="liveCopyCmd">Copy command</button></div></div>`;
+  $("#liveSetup").innerHTML=st||window.claude||liveRT.waking?"":`<div class="field live-setup"><span class="label">Not set up on this Mac yet? Paste this into Terminal once. After that, clicking Live starts it in the background (nothing runs at login) and it stops by itself when you&#39;re done. You can close Terminal.</span><pre class="mono" style="background:var(--field);border:1px solid var(--stroke);border-radius:10px;padding:10px;font-size:11.5px;margin:0">${esc(RELAY_CMD)}</pre><div><button class="btn sm" id="liveCopyCmd">Copy command</button></div></div>`;
   const n=livePageNum(pg),cp=st?.pages?.find(p=>p.number===n);
   $("#liveTargetInfo").textContent=pg.boot?"nothing (the boot page isn't sent live)":`Companion page ${n}${cp?` · “${cp.name}”`:st?" (not in Companion yet: Live adds it)":""}`;$("#liveOn").checked=!!c.on;
   $("#liveLog").textContent=liveRT.lastMsg||(cp?`Companion page ${n} is “${cp.name}” with ${cp.keys.length} key${cp.keys.length===1?"":"s"}.`:st?`Companion has no page ${n} yet. Live adds it with your next change.`:"");
@@ -2765,7 +2774,7 @@ function askReplace(pg,keys){
   el.dataset.keys=JSON.stringify(keys);el.dataset.page=pg.id;
 }
 document.addEventListener("click",async e=>{const t=e.target.closest("button")||e.target;
-  if(t.id==="liveBtn"){const d=$("#liveDlg");if(d.open){d.close();return}d.show();renderLive();relayStatus();return}
+  if(t.id==="liveBtn"){const d=$("#liveDlg");if(d.open){d.close();return}d.show();renderLive();relayStatus().then(st=>{if(!st)wakeRelay()});return}
   if(t.id==="liveClose"){$("#liveDlg").close();return}
   if(t.id==="liveCopyCmd"){copyText(RELAY_CMD,"Copied. Paste it into Terminal and leave that window open.");return}
   if(t.id==="livePull"){if(!S.live?.on){toast("Switch Live on first");return}liveRT.dirty=false;livePull("button").then(d=>{if(!d&&!liveRT.lastMsg.startsWith("Couldn't"))toast(liveRT.lastMsg)});return}
@@ -2777,11 +2786,11 @@ document.addEventListener("click",async e=>{const t=e.target.closest("button")||
 document.addEventListener("change",e=>{
   if(e.target.id==="liveOn"){const c=liveCfg();c.on=e.target.checked;liveRT.pulled=false;if(c.on){c.base={};c.owned={};liveRT.shown=null}persist();renderLive();
     if(c.on){clearTimeout(liveRT.timer);liveRT.dirty=false} // nothing to send yet: load Companion first
-    if(c.on)livePull("on").then(done=>{
+    if(c.on)(liveRT.status?.companion?Promise.resolve():wakeRelay()).then(()=>livePull("on")).then(done=>{
       if(!liveRT.pulled){toast((liveRT.lastMsg||"Couldn't load from Companion.")+" Live won't send anything until it can load Companion: is the relay running?");return}
       if(!done){liveFollow();liveSync()}toast(done?liveRT.lastMsg+". From now on your edits go to Companion.":"Live on: DeckWriter matches Companion, and your edits go straight to it.")});return}
 });
-setInterval(()=>{if(!document.hidden&&(S.live?.on||$("#liveDlg")?.open))relayStatus()},4000);
+setInterval(()=>{if(S.live?.on||(!document.hidden&&$("#liveDlg")?.open))relayStatus()},4000); // also keeps the on-demand relay awake
 
 /* ---------- sources card tabs ---------- */
 document.addEventListener("click",e=>{const b=e.target.closest("[data-src]");if(!b)return;
@@ -2871,6 +2880,6 @@ refreshAllArt();
 })();
 </script>
 
-<div style="position:fixed;left:12px;bottom:12px;z-index:200;background:#e5484d;color:#fff;font:700 11px/1 system-ui,sans-serif;letter-spacing:.08em;padding:6px 8px;border-radius:6px;pointer-events:none">TEST BUILD · Oct 7, 1:01 PM</div>
+<div style="position:fixed;left:12px;bottom:12px;z-index:200;background:#e5484d;color:#fff;font:700 11px/1 system-ui,sans-serif;letter-spacing:.08em;padding:6px 8px;border-radius:6px;pointer-events:none">TEST BUILD · Oct 7, 1:06 PM</div>
 </body>
 </html>

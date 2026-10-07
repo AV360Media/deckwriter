@@ -45,7 +45,7 @@ DeckWriter keeps your work in the browser of the computer you're on. To take it 
 
 Live sends each key you add, change, move or delete straight to Companion, one key at a time, without importing.
 
-1. Set up Live on the Companion Mac, once. Paste this into Terminal; it installs the relay as a background service (a LaunchAgent using Companion's own Node), so there's no window to keep open. It starts when you log in, restarts if it stops, and fetches the latest relay each time it starts:
+1. Set up Live on the Companion Mac, once: paste this into Terminal. It installs the relay as an on-demand background service (a LaunchAgent using Companion's own Node) plus a tiny helper app, *DeckWriter Live*, that answers `deckwriter-live://` links. Nothing runs at login: clicking **Live** in DeckWriter opens that link (Chrome asks once; tick *Always allow*), the helper starts the relay with no window, and the relay stops itself 10 minutes after DeckWriter stops checking in. Each start fetches the latest relay:
 
    ```bash
    curl -fsSL https://raw.githubusercontent.com/bryanchorton/deckwriter/main/tools/live/install.sh | bash
