@@ -1,9 +1,9 @@
-# Deckwright
+# DeckWriter
 
 Design Stream Deck pages for Bitfocus Companion: lay out keys, label and colour them, give them icons, build their actions from real module definitions, then export a page file that Companion imports as a new page.
 
-- **Production:** https://bryanchorton.github.io/deckwright/
-- **Test build:** https://bryanchorton.github.io/deckwright/index.test.html
+- **Production:** https://bryanchorton.github.io/deckwriter/
+- **Test build:** https://bryanchorton.github.io/deckwriter/index.test.html
 
 (Both work once GitHub Pages is on: Settings > Pages > Source: GitHub Actions.) You can also download `index.html` and open it in Chrome or Edge; it is one file and works offline (fonts and icons load from a CDN when online).
 
@@ -29,7 +29,7 @@ Design Stream Deck pages for Bitfocus Companion: lay out keys, label and colour 
 1. Pick your Stream Deck model at the top left (Mini, Neo, MK.2, XL or +).
 2. Fill keys:
    - **Presets** (bottom dock): drag a ready-made button onto any key, or click to fill the next empty key. Every preset gets a matching icon.
-   - **Prompt**: describe an automation in plain English and Claude builds the keys (works when Deckwright is opened inside Claude).
+   - **Prompt**: describe an automation in plain English and Claude builds the keys (works when DeckWriter is opened inside Claude).
    - Click an empty key and **New button** to build one by hand.
 3. Click a key to edit it on the right: **Look** (label, size, colours), **Image** (icons, emoji, gradients, uploads), **Actions** and **Feedback**. For ATEM, vMix, Resolume, OSCPoint and Mitti, actions and feedbacks are picked from dropdowns with real option fields.
 4. Drag keys to move them, Option-drag to copy, Shift-click to select several, right-click for Copy, Paste, Duplicate, Delete and Wipe page.
@@ -48,5 +48,5 @@ Files saved from this site are named `*.companionconfig` and import directly. In
 ## Companion notes
 
 - Exports use Companion's export format version 6 (Companion 3.x). Companion 4 and 5 upgrade it on import.
-- Buttons export with the top bar off so they look the same in Companion as in Deckwright.
+- Buttons export with the top bar off so they look the same in Companion as in DeckWriter.
 - Companion only imports files ending in `.companionconfig` or `.yaml`.

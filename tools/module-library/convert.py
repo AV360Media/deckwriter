@@ -1,4 +1,4 @@
-"""Convert harness output (Companion module definitions) into Deckwright's compact library format."""
+"""Convert harness output (Companion module definitions) into DeckWriter's compact library format."""
 import json, sys
 
 MODS = ["bmd-atem", "studiocoast-vmix", "resolume-arena", "zinc-oscpoint", "imimot-mitti"]

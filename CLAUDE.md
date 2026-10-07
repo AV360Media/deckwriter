@@ -1,4 +1,4 @@
-# Deckwright: notes for Claude
+# DeckWriter: notes for Claude
 
 Stream Deck page designer for Bitfocus Companion. The owner runs Companion 5 on a Mac with a Stream Deck XL and mostly uses ATEM, vMix, Resolume Arena, OSCPoint and Mitti.
 
@@ -9,6 +9,8 @@ Stream Deck page designer for Bitfocus Companion. The owner runs Companion 5 on 
 - "Promote to production" means: `npm run promote` (re-checks, then writes `index.html`), commit, push to `main`. Promote only when asked.
 - No Node on the owner's Mac by default; Companion ships one: `/Applications/Companion.app/Contents/Resources/node-runtimes/node22/bin/node`.
 - The app is also published as a Claude artifact. `npm run artifact` writes `dist/artifact.html` (body only) for that.
+
+Renamed from Deckwright to DeckWriter on 2026-10-06. The browser storage keys (`deckwright.v1`, `deckwright.drawer`, and the `.test.` versions) keep the old name on purpose so saved projects survive; don't rename them.
 
 ## Structure of src/app.html
 

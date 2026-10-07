@@ -1,4 +1,4 @@
-// Checks for Deckwright. No packages needed.
+// Checks for DeckWriter. No packages needed.
 //   node test/check.mjs           -> checks the test build (and that index.test.html is current)
 //   node test/check.mjs --prod    -> also checks that index.html matches a fresh production build
 import { readFileSync } from 'node:fs'

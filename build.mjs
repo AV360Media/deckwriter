@@ -1,4 +1,4 @@
-// Builds Deckwright from src/.
+// Builds DeckWriter from src/.
 //   node build.mjs             -> index.test.html (test build: red TEST BUILD tag, its own autosave)
 //   node build.mjs --prod      -> index.html      (production)
 //   node build.mjs --artifact  -> dist/artifact.html (page body only, for publishing as a Claude artifact)
@@ -44,7 +44,7 @@ export function build(mode = 'test') {
 	if (mode === 'test') {
 		// separate autosave so testing never touches the production project
 		html = html.replaceAll('"deckwright.v1"', '"deckwright.test.v1"').replaceAll('"deckwright.drawer"', '"deckwright.test.drawer"')
-		html = html.replace('<title>Deckwright</title>', '<title>Deckwright (test)</title>')
+		html = html.replace('<title>DeckWriter</title>', '<title>DeckWriter (test)</title>')
 		html +=
 			'\n<div style="position:fixed;left:12px;bottom:12px;z-index:200;background:#e5484d;color:#fff;font:700 11px/1 system-ui,sans-serif;letter-spacing:.08em;padding:6px 8px;border-radius:6px;pointer-events:none">TEST BUILD</div>'
 	}

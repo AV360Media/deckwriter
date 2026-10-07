@@ -1,6 +1,6 @@
 # Module library tools
 
-Regenerates `src/data/library.json`: the actions, feedbacks, presets and connection settings Deckwright offers for a Companion module.
+Regenerates `src/data/library.json`: the actions, feedbacks, presets and connection settings DeckWriter offers for a Companion module.
 
 1. Download a module from the Companion module store, e.g. `https://developer.bitfocus.io/api/v1/companion/modules/connection/bmd-atem` lists versions with a `tarUrl` and `tarSha`. Check the SHA-256, then unpack it into `work/<module-id>/`.
 2. Run the harness with Companion's own Node (this runs the module's code, the same code Companion would run):

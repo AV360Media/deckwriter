@@ -1,4 +1,4 @@
-<title>Deckwright</title>
+<title>DeckWriter</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500&display=swap">
 <script src="https://unpkg.com/lucide@0.460.0/dist/umd/lucide.min.js"></script>
@@ -358,7 +358,7 @@ dialog.drawer .pgrid{grid-template-columns:repeat(auto-fill,minmax(82px,1fr))}
 <header class="hud">
   <div class="pill brand">
     <div class="mark" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
-    <b>Deckwright</b>
+    <b>DeckWriter</b>
     <span class="vsep"></span>
     <select id="device" aria-label="Device"></select>
   </div>
@@ -479,7 +479,7 @@ dialog.drawer .pgrid{grid-template-columns:repeat(auto-fill,minmax(82px,1fr))}
 
 <dialog id="importDlg"><div class="dlg">
   <h3>Import from Companion</h3>
-  <p>Drop a Companion export (full config or a single page, <span class="mono">.companionconfig</span> or <span class="mono">.yaml</span>). Deckwright adds your connections with their real IDs and learns every action and feedback you've already built, so new buttons use the exact names your modules expect.</p>
+  <p>Drop a Companion export (full config or a single page, <span class="mono">.companionconfig</span> or <span class="mono">.yaml</span>). DeckWriter adds your connections with their real IDs and learns every action and feedback you've already built, so new buttons use the exact names your modules expect.</p>
   <label class="drop-zone" id="dropZone" for="importFile">Drop a file here or <u>browse</u></label>
   <input type="file" id="importFile" hidden>
   <div id="importResult" class="field"></div>
@@ -528,8 +528,8 @@ dialog.drawer .pgrid{grid-template-columns:repeat(auto-fill,minmax(82px,1fr))}
 
 <dialog id="helperDlg"><div class="dlg">
   <h3>Send to Companion app</h3>
-  <p>Deckwright can't reach Companion directly, and Companion only imports files. This small Mac app closes the gap. Click it after you save a page and it:</p>
-  <ol class="helper-steps"><li>Renames every Deckwright export in Downloads to <span class="mono">.companionconfig</span></li><li>Opens Companion's Import / Export page</li><li>Shows the newest file in Finder, ready to pick or drag in</li></ol>
+  <p>DeckWriter can't reach Companion directly, and Companion only imports files. This small Mac app closes the gap. Click it after you save a page and it:</p>
+  <ol class="helper-steps"><li>Renames every DeckWriter export in Downloads to <span class="mono">.companionconfig</span></li><li>Opens Companion's Import / Export page</li><li>Shows the newest file in Finder, ready to pick or drag in</li></ol>
   <div class="field"><span class="label">Companion address</span><input class="inp mono" id="compUrl" spellcheck="false" style="max-width:320px"></div>
   <span class="label">Install: paste this into Terminal</span>
   <pre id="helperScript"></pre>
@@ -979,7 +979,7 @@ document.addEventListener("change",e=>{
   if(t.id==="iconScale"){renderInspector();return}
   if(t.id==="bake"){mutSel(b=>{b.image.bake=t.checked},true);return}
   if(t.id==="upFile"){const f=t.files[0];if(!f)return;const rd=new FileReader();rd.onload=()=>mutSel(b=>{b.image.src=rd.result},true);rd.readAsDataURL(f);return}
-  if(t.id==="loadProject"){const f=t.files[0];if(!f)return;f.text().then(txt=>{try{const s=JSON.parse(txt);if(!s.pages)throw 0;commit(()=>{S=s;selected=null});refreshAllArt();toast("Project opened")}catch(_){toast("That file isn't a Deckwright project")}});t.value="";return}
+  if(t.id==="loadProject"){const f=t.files[0];if(!f)return;f.text().then(txt=>{try{const s=JSON.parse(txt);if(!s.pages)throw 0;commit(()=>{S=s;selected=null});refreshAllArt();toast("Project opened")}catch(_){toast("That file isn't a DeckWriter project")}});t.value="";return}
   if(t.dataset.okind==="act"||t.dataset.f==="actsel"){const row=t.closest("[data-set]");const set=row.dataset.set,i=+row.dataset.i;
     mutSel(b=>{const a=b.steps[stepIdx][set][i];const L=libOf(a.connection);
       if(t.dataset.f==="actsel"){a.action=t.value;a.options=optDefaults(L?.aById.get(t.value)?.o)}
@@ -1304,7 +1304,7 @@ function sheetBody(){
     h+=rows.length?`<table><thead><tr><th>Key</th><th></th><th>Label</th><th>What it does</th></tr></thead><tbody>${rows.join("")}</tbody></table>`:`<p class="sh-empty">No keys on this page yet.</p>`;
     h+="</section>";
   }
-  return h+`<p class="sh-foot">Keys are named by row (A is the top row) and column. Made with Deckwright.</p>`;
+  return h+`<p class="sh-foot">Keys are named by row (A is the top row) and column. Made with DeckWriter.</p>`;
 }
 function renderSheet(){$("#sheetView").innerHTML=sheetBody()}
 function openSheet(){$("#sheetStatus").textContent="";$("#sheetAI").disabled=!sampleFn||aiBlocked;renderSheet();$("#sheetDlg").showModal()}
@@ -1335,11 +1335,11 @@ function companionUrl(){const v=String(S.companionUrl||"http://127.0.0.1:8000").
 function helperScript(){
   const url=companionUrl()+"/import-export";
   return `mkdir -p "$HOME/Applications" && cd "$(mktemp -d)" && cat > send.applescript <<'EOF'
--- Send to Companion: renames Deckwright exports in Downloads, opens Companion's import page, and shows the newest file in Finder.
+-- Send to Companion: renames DeckWriter exports in Downloads, opens Companion's import page, and shows the newest file in Finder.
 on run
 	set f to do shell script "cd ~/Downloads && for f in *.companionconfig.json; do [ -e \\"$f\\" ] || continue; d=\\"\${f%.json}\\"; [ -e \\"$d\\" ] && d=\\"\${f%.companionconfig.json} $(date +%H%M%S).companionconfig\\"; mv \\"$f\\" \\"$d\\"; done; n=$(ls -t -- *.companionconfig 2>/dev/null | head -n 1); [ -n \\"$n\\" ] && echo \\"$HOME/Downloads/$n\\"; exit 0"
 	if f is "" then
-		display dialog "No Deckwright exports in your Downloads folder yet. Save a page from Deckwright first." buttons {"OK"} default button 1 with title "Send to Companion"
+		display dialog "No DeckWriter exports in your Downloads folder yet. Save a page from DeckWriter first." buttons {"OK"} default button 1 with title "Send to Companion"
 		return
 	end if
 	open location "${url}"
@@ -1472,7 +1472,7 @@ function fillExport(){
 $("#openExport").onclick=openExport;$("#expPage").onchange=fillExport;
 $("#expCopy").onclick=async()=>{const t=fillExport.cur.full;try{await navigator.clipboard.writeText(t);toast("Copied. Paste into a file named something.companionconfig")}catch(_){const ta=document.createElement("textarea");ta.value=t;document.body.appendChild(ta);ta.select();try{document.execCommand("copy");toast("Copied")}catch(__){toast("Copy blocked. Use Save file instead")}ta.remove()}};
 $("#expSave").onclick=async()=>{try{toast(savedNote(await saveFile(`${fillExport.cur.name}.companionconfig`,fillExport.cur.full)))}catch(e){if(e?.code!=="declined")toast(e?.code==="rate_limited"?"A save prompt is already open":"Couldn't save here. Use Copy JSON instead")}};
-$("#saveProject").onclick=async()=>{try{await saveFile("deckwright-project.json",JSON.stringify(S));toast("Project saved")}catch(e){if(e?.code!=="declined")toast("Couldn't save the project")}};
+$("#saveProject").onclick=async()=>{try{await saveFile("deckwriter-project.json",JSON.stringify(S));toast("Project saved")}catch(e){if(e?.code!=="declined")toast("Couldn't save the project")}};
 
 /* ---------- import ---------- */
 function openImport(){$("#importResult").innerHTML="";$("#importDlg").showModal()}
@@ -1535,7 +1535,7 @@ document.addEventListener("click",e=>{const lp=e.target.closest("[data-loadpage]
     b.feedbacks=(ctl.feedbacks||[]).filter(f=>f).map(f=>({connection:f.instance_id??f.connectionId??"internal",type:f.definitionId??f.type,options:unwrap(f.options||{}),style:{bgcolor:f.style?.bgcolor!=null?intToHex(f.style.bgcolor):"#c8102e",color:f.style?.color!=null?intToHex(f.style.color):"#ffffff"},inverted:!!f.isInverted}));
     buttons[keyId(+r,+c)]=b}
   commit(()=>{S.pages.push({id:uid(),name:P.name,buttons});S.pageIdx=S.pages.length-1;selected=null;S.example=false});
-  $("#importDlg").close();toast(skipped?`Page opened. ${skipped} button(s) used a type Deckwright can't edit and were skipped.`:"Page opened");
+  $("#importDlg").close();toast(skipped?`Page opened. ${skipped} button(s) used a type DeckWriter can't edit and were skipped.`:"Page opened");
 });
 
 /* ---------- module library: real actions, feedbacks, presets and settings ---------- */
@@ -1909,7 +1909,7 @@ function bootTriggerExport(){
   actions.push(act("custom_variable_create_value",{name:BOOT_VAR,value:"0"}));
   for(let f=1;f<=F;f++){actions.push(act("custom_variable_set_value",{name:BOOT_VAR,value:String(f)}));actions.push(act("wait",{time:wait}))}
   actions.push(act("custom_variable_set_value",{name:BOOT_VAR,value:"done"}));
-  return{version:6,type:"trigger_list",triggers:{[uid()]:{type:"trigger",options:{name:"Deckwright boot animation",enabled:true,sortOrder:0},action_sets:{0:actions},condition:[],
+  return{version:6,type:"trigger_list",triggers:{[uid()]:{type:"trigger",options:{name:"DeckWriter boot animation",enabled:true,sortOrder:0},action_sets:{0:actions},condition:[],
     events:[{id:uid(),type:"startup",enabled:true,options:{delay:1500}}].concat(deck?[{id:uid(),type:"variable_changed",enabled:true,options:{variableId:"internal:surface_"+deck.replaceAll(":","_")+"_location"}}]:[])}},instances:{}};
 }
 
@@ -1971,7 +1971,7 @@ async function applyBoot(){
 async function saveBootTrigger(){
   if(!S.boot){readBootForm();S.boot={...bootCfg};persist()}
   const data=JSON.stringify(bootTriggerExport(),null,2);
-  try{toast(savedNote(await saveFile("Deckwright boot trigger.companionconfig",data)))}catch(e){if(e?.code!=="declined")toast("Couldn't save here. Try again")}
+  try{toast(savedNote(await saveFile("DeckWriter boot trigger.companionconfig",data)))}catch(e){if(e?.code!=="declined")toast("Couldn't save here. Try again")}
 }
 async function playBootOnDeck(){
   const pg=page();if(!pg.boot||!S.boot)return;const cache=await buildBootCache(S.boot);const{keys}=bootGeom();

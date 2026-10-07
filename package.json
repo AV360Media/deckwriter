@@ -1,5 +1,5 @@
 {
-  "name": "deckwright",
+  "name": "deckwriter",
   "version": "1.0.0",
   "private": true,
   "description": "Design Stream Deck pages for Bitfocus Companion and export them as ready-to-import page files.",
