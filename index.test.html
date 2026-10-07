@@ -2419,7 +2419,10 @@ document.addEventListener("visibilitychange",()=>{if(!document.hidden&&S.compani
 const RELAY="http://127.0.0.1:8790";
 const RELAY_CMD='curl -fsSL https://raw.githubusercontent.com/bryanchorton/deckwriter/main/tools/live/relay.mjs -o ~/.deckwriter-relay.mjs && "/Applications/Companion.app/Contents/Resources/node-runtimes/node22/bin/node" ~/.deckwriter-relay.mjs';
 const liveRT={status:null,error:"",busy:false,timer:0,pending:false,skip:{},asking:false,lastMsg:""};
-const liveCfg=()=>{const c=(S.live??={on:false,map:{},owned:{}});c.base??={};return c};
+const liveCfg=()=>{const c=(S.live??={on:false,map:{},owned:{}});c.base??={};c.at??={};return c};
+// what Live sent is remembered per Companion page: when a DeckWriter page points somewhere new, start over there
+function liveTarget(pg,num){const c=liveCfg();const was=c.at[pg.id]??(c.map[pg.id]||S.pages.indexOf(pg)+1); // older versions numbered pages straight through
+  if(was!==num){c.owned[pg.id]={};delete c.base[pg.id]}c.at[pg.id]=num}
 // stable fingerprint of an exported key: ignore the random entity ids
 const keyHash=ctl=>JSON.stringify(ctl,(k,val)=>k==="id"?undefined:val);
 async function relayStatus(){
@@ -2429,7 +2432,20 @@ async function relayStatus(){
   }catch(_){liveRT.status=null;liveRT.error=window.claude?"Live can't run inside Claude. Open DeckWriter from bryanchorton.github.io/deckwriter.":"The relay isn't running on this Mac."}
   renderLive();return liveRT.status;
 }
-function livePageNum(pg){const c=liveCfg();return c.map[pg.id]||Math.max(1,S.pages.indexOf(pg)+1)}
+// With a boot page, Companion page 1 is the boot screen, so DeckWriter's show pages start at Companion page 2.
+const bootOnPage1=()=>!!(S.boot&&S.boot.mode!=="overlay");
+function livePageNum(pg){const c=liveCfg();if(c.map[pg.id])return c.map[pg.id];
+  const shows=S.pages.filter(p=>!p.boot);return Math.max(1,shows.indexOf(pg)+1+(bootOnPage1()?1:0))}
+// never send live buttons onto the boot screen
+function liveBlocked(num,cp){if((bootOnPage1()&&num===1)||(cp&&/^boot$/i.test(cp.name||"")))return`Companion page ${num} is your boot screen, so Live won't touch it. Pick another page in Live.`;return""}
+// a button made with DeckWriter's own connection is switched to Companion's, when Companion has exactly one of that kind
+function liveAutoLink(ids){const done=[],unsure=[];
+  for(const id of ids){const mine=S.connections.find(c=>c.id===id);if(!mine)continue;
+    const cands=(live.list||[]).filter(x=>x.moduleId===mine.module);
+    if(cands.length===1){const x=cands[0];if(!S.connections.some(c=>c.id===x.id))S.connections.push({id:x.id,label:x.label,module:x.moduleId,fromCompanion:true});remapConnection(id,x.id);done.push(`${mine.label} → Companion's “${x.label}”`)}
+    else if(cands.length>1)unsure.push(`${mine.label} (Companion has ${cands.map(x=>"“"+x.label+"”").join(" and ")}: pick one with Link in Connections)`)}
+  if(done.length){persist();renderRail()}
+  return{done,unsure}}
 function renderLive(){
   const c=liveCfg(),st=liveRT.status,ok=!!(st&&st.companion),pg=page();
   const btn=$("#liveBtn");if(btn){btn.classList.toggle("on",c.on&&ok);btn.classList.toggle("ready",!c.on&&ok);btn.classList.toggle("problem",c.on&&!ok);
@@ -2456,6 +2472,10 @@ async function liveSync(force){
   const pg=page(),pi=S.pageIdx;if(pg.boot){liveRT.lastMsg="The boot page isn't sent live.";renderLive();return}
   const st=liveRT.status||await relayStatus();if(!st?.companion){renderLive();return}
   const num=livePageNum(pg),cp=st.pages.find(p=>p.number===num);if(!cp){liveRT.lastMsg=`Companion has no page ${num}.`;renderLive();return}
+  {const b=liveBlocked(num,cp);if(b){liveRT.lastMsg=b;toast(b);renderLive();return}}
+  liveTarget(pg,num);
+  if(live.list){const known=new Set(live.list.map(x=>x.id)),ids=new Set();for(const ctl of Object.values(desiredControls(pi)))for(const id of ctlConnections(ctl))if(!known.has(id))ids.add(id);
+    if(ids.size){const{done}=liveAutoLink([...ids]);if(done.length)toast("Linked "+done.join(", "))}}
   liveRT.busy=true;
   try{
     const want=desiredControls(pi),owned=(c.owned[pg.id]??={}),occupied=new Set(cp.keys.map(([r,cc])=>r+","+cc));
@@ -2469,7 +2489,7 @@ async function liveSync(force){
     for(const[k,ctl]of Object.entries(want)){
       const h=keyHash(ctl);if(owned[k]===h||skip.has(k)||(!owned[k]&&base[k]===h))continue;
       const missing=ctlConnections(ctl).filter(id=>live.list?!knownConns.has(id):!S.connections.some(x=>x.id===id&&x.fromCompanion));
-      if(missing.length){const names=missing.map(id=>S.connections.find(x=>x.id===id)?.label||id);problems.push(`${keyCodeK(k)} uses ${names.join(", ")}, not in Companion`);continue}
+      if(missing.length){const names=missing.map(id=>{const m=S.connections.find(x=>x.id===id),n=(live.list||[]).filter(x=>x.moduleId===m?.module).length;return(m?.label||id)+(n>1?" (Companion has "+n+" of these, pick one with Link in Connections)":n?"":" (add this connection in Companion first)")});problems.push(`${keyCodeK(k)} uses ${names.join(", ")}, not linked to Companion`);continue}
       if(!owned[k]&&occupied.has(k)){conflicts.push(k);continue}
       const[r,col]=parseKey(k);
       const res=await fetch(RELAY+"/push",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({page:num,row:r,column:col,control:ctl})}).then(x=>x.json());
@@ -2483,7 +2503,8 @@ async function liveSync(force){
     const parts=[];if(sent)parts.push(`sent ${sent} key${sent===1?"":"s"}`);if(cleared)parts.push(`cleared ${cleared}`);
     liveRT.lastMsg=parts.length?`Companion page ${num}: ${parts.join(", ")}`:"Up to date";
     if(problems.length)toast(problems[0]+(problems.length>1?` (+${problems.length-1} more)`:""));else if(sent||cleared)toast(liveRT.lastMsg);
-    if(conflicts.length)askReplace(pg,conflicts);
+    if(conflicts.length){askReplace(pg,conflicts);liveRT.lastMsg=`Waiting on you: replace ${conflicts.map(keyCodeK).join(", ")} in Companion?`;
+      const d=$("#liveDlg");if(!d.open)d.show();toast(`Companion already has a button at ${conflicts.map(keyCodeK).join(", ")}. Replace or leave it in the Live panel.`)}
   }catch(e){liveRT.lastMsg="Live update failed: "+e.message;toast(liveRT.lastMsg);relayStatus()}
   finally{liveRT.busy=false;renderLive();if(liveRT.pending){liveRT.pending=false;scheduleLive()}}
 }
@@ -2494,6 +2515,8 @@ function liveMoved(pg,from,to,copy){
   const why=m=>{liveRT.lastMsg=m;toast(m);renderLive()};
   if(!liveRT.status?.companion)return why("Live: move not sent, the relay or Companion isn't connected");
   const num=livePageNum(pg),cp=liveRT.status.pages.find(p=>p.number===num);if(!cp)return why(`Live: Companion has no page ${num}`);
+  {const b=liveBlocked(num,cp);if(b)return why(b)}
+  liveTarget(pg,num);
   const occ=new Set(cp.keys.map(([r,cc])=>r+","+cc)),owned=(c.owned[pg.id]??={}),base=(c.base[pg.id]??={});
   // the dragged key is the same button in both apps; only a Companion button DeckWriter never had at the target stays put
   const hadTo=copy?false:!!pg.buttons[from];
@@ -2525,7 +2548,7 @@ document.addEventListener("click",async e=>{const t=e.target.closest("button")||
     const owned=(liveCfg().owned[pid]??={});keys.forEach(k=>{owned[k]="replace"});liveSync();return}
 });
 document.addEventListener("change",e=>{
-  if(e.target.id==="livePage"){const c=liveCfg();c.map[page().id]=Math.max(1,+e.target.value||1);c.owned[page().id]={};delete c.base[page().id];persist();renderLive();return}
+  if(e.target.id==="livePage"){const c=liveCfg(),n=Math.max(1,+e.target.value||1),b=liveBlocked(n,liveRT.status?.pages?.find(p=>p.number===n));if(b){toast(b);renderLive();return}c.map[page().id]=n;c.owned[page().id]={};delete c.base[page().id];persist();renderLive();return}
   if(e.target.id==="liveOn"){const c=liveCfg();c.on=e.target.checked;c.map[page().id]=livePageNum(page());if(c.on){c.base={};c.owned={}}persist();renderLive();if(c.on){toast(`Live on: changes on this page go to Companion page ${livePageNum(page())}`);liveSync()}return}
 });
 setInterval(()=>{if(!document.hidden&&(S.live?.on||$("#liveDlg")?.open))relayStatus()},4000);
