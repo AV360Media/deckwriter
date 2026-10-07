@@ -322,6 +322,11 @@ dialog.drawer .pgrid{grid-template-columns:repeat(auto-fill,minmax(82px,1fr))}
 #bootCanvas{width:100%;height:auto;max-width:100%}
 .boot-form{display:flex;flex-direction:column;gap:12px;min-width:0}
 #bootStyle,#bootBg{display:grid;grid-template-columns:repeat(auto-fill,minmax(84px,1fr))}
+.boot-layout{border:1px solid rgba(255,255,255,.16);border-radius:12px;padding:10px 12px;background:#26262b}
+.boot-layout[open]{display:flex;flex-direction:column;gap:12px}
+.boot-layout summary{cursor:pointer;font-weight:500;color:#e4e4ea;list-style:none;display:flex;gap:8px;align-items:baseline}
+.boot-layout summary::before{content:"▸";color:var(--lime);transition:transform .15s}
+.boot-layout[open] summary::before{transform:rotate(90deg)}
 @media (max-width:760px){.boot-grid{grid-template-columns:1fr}}
 
 /* ---------- responsive ---------- */
@@ -1818,7 +1823,7 @@ function wipePage(){const n=Object.keys(page().buttons).length;if(!n)return;comm
 const BOOT_GAP=18, BOOT_VAR="boot_frame";
 const BOOT_STYLES=[["ignite","Ignition"],["scan","Scanline"],["ripple","Ripple"],["meter","Meters"],["glitch","Glitch"],["matrix","Matrix"],["warp","Warp"],["tiles","Tiles"],["countdown","Countdown"],["radar","Radar"],["type","Typewriter"]];
 const BOOT_BGS=[["aurora","Aurora"],["circuit","Circuit"],["rays","Rays"],["halftone","Halftone"],["waves","Waves"],["grid","Grid"],["black","Black"]];
-const bootDefaults=()=>({title:"AV360",subtitle:"SYSTEM ONLINE",style:"ignite",c1:"#c6f432",c2:"#ff5ad9",secs:2,fps:12,afterPage:2,titleSize:58,subSize:20,bg:"aurora",deckId:"streamdeck:CL45L2A05421"});
+const bootDefaults=()=>({title:"AV360",subtitle:"SYSTEM ONLINE",style:"ignite",c1:"#c6f432",c2:"#ff5ad9",secs:2,fps:12,afterPage:2,titleSize:58,subSize:20,bg:"aurora",tRow:"auto",sRow:"auto",tX:0,tY:0,sX:0,sY:0,tSpace:0,sSpace:0,snap:false,subSnap:false,underline:true,deckId:"streamdeck:CL45L2A05421"});
 let bootCache=null; // {sig, finals:[dataURL per key], frames:[[dataURL per key] per frame]}
 const bootSig=cfg=>JSON.stringify([cfg,S.device]);
 const bootFrameCount=cfg=>Math.max(6,Math.round(cfg.secs*cfg.fps));
@@ -1830,31 +1835,67 @@ function rgba(hex,a){const n=hexToInt(hex);return`rgba(${n>>16&255},${n>>8&255},
 function mixHex(h1,h2,t){const a=hexToInt(h1),b=hexToInt(h2);const ch=s=>Math.round((a>>s&255)*(1-t)+(b>>s&255)*t);return intToHex(ch(16)<<16|ch(8)<<8|ch(0))}
 function rng(seed){return()=>{seed|=0;seed=seed+0x6D2B79F5|0;let t=Math.imul(seed^seed>>>15,1|seed);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296}}
 
+// Draws text with extra letter spacing, centred on cx. Only the first `shown` characters are drawn (Typewriter).
+// Returns the right edge of what was drawn and the full run's left edge and width.
+function drawSpaced(x,str,cx,y,sp,shown=str.length){
+  const ws=[...str].map(ch=>x.measureText(ch).width),total=ws.reduce((a,b)=>a+b,0)+sp*Math.max(0,ws.length-1);
+  let px=cx-total/2;const left=px;x.textAlign="left";
+  [...str].forEach((ch,i)=>{if(i<shown)x.fillText(ch,px,y);px+=ws[i]+sp;if(i===shown-1)drawSpaced.end=px-sp});
+  if(shown<=0)drawSpaced.end=left;x.textAlign="center";return{left,total,end:drawSpaced.end};
+}
+const spacedWidth=(x,str,sp)=>[...str].reduce((a,ch)=>a+x.measureText(ch).width,0)+sp*Math.max(0,[...str].length-1);
+// Title and subtitle. Rows, nudges, letter spacing and "one letter per key" come from cfg (Boot screen studio).
 function drawTitle(x,cfg,W,H,alpha,scale=1,reveal=1){
   if(alpha<=0)return;x.save();x.globalAlpha=alpha;
   const title=String(cfg.title||"").toUpperCase(),sub=String(cfg.subtitle||"").toUpperCase();
-  // snap the title to one row of keys and the subtitle to the row below, so neither straddles a gap
-  const rows=dev().rows,rowY=r=>r*(72+BOOT_GAP)+36;
-  const tRow=sub&&rows>1?Math.max(0,Math.floor((rows-2)/2)):Math.floor((rows-1)/2),sRow=Math.min(rows-1,tRow+1);
-  if(!["black","grid"].includes(cfg.bg||"aurora")){const top=rowY(tRow)-50,bot=rowY(sub&&sRow!==tRow?sRow:tRow)+50;const sg=x.createLinearGradient(0,top,0,bot);
-    sg.addColorStop(0,"rgba(0,0,0,0)");sg.addColorStop(.25,`rgba(0,0,0,${.5*alpha})`);sg.addColorStop(.75,`rgba(0,0,0,${.5*alpha})`);sg.addColorStop(1,"rgba(0,0,0,0)");x.fillStyle=sg;x.fillRect(0,top,W,bot-top)}
-  let fs=+cfg.titleSize||58;x.font=`700 ${fs}px Geist, "Helvetica Neue", Arial, sans-serif`;
-  const tw=x.measureText(title).width;if(tw>W*.9)fs*=W*.9/tw;
-  x.translate(W/2,rowY(tRow));x.scale(scale,scale);
-  if(reveal<1){x.beginPath();x.rect(-W/2,-H,W*reveal,H*2);x.clip()}
-  x.font=`700 ${fs}px Geist, "Helvetica Neue", Arial, sans-serif`;x.textAlign="center";x.textBaseline="middle";
-  const g=x.createLinearGradient(-W/2,0,W/2,0);g.addColorStop(0,"#ffffff");g.addColorStop(.55,mixHex("#ffffff",cfg.c1,.35));g.addColorStop(1,cfg.c1);
-  x.shadowColor=rgba(cfg.c1,.55);x.shadowBlur=fs*.35;x.fillStyle=g;
+  const d=dev(),rows=d.rows,cols=d.cols,pitch=72+BOOT_GAP,rowY=r=>r*pitch+36,colX=c=>c*pitch+36,clampRow=r=>Math.max(0,Math.min(rows-1,r));
+  const autoT=sub&&rows>1?Math.max(0,Math.floor((rows-2)/2)):Math.floor((rows-1)/2);
+  const tRow=cfg.tRow&&cfg.tRow!=="auto"?clampRow(+cfg.tRow-1):autoT;
+  let sRow=null;
+  if(sub&&cfg.sRow!=="none"){sRow=cfg.sRow&&cfg.sRow!=="auto"?clampRow(+cfg.sRow-1):(tRow+1<rows?tRow+1:tRow>0?tRow-1:null);if(sRow===tRow&&(!cfg.sRow||cfg.sRow==="auto"))sRow=null}
+  const tY=rowY(tRow)+(+cfg.tY||0),sY=sRow!=null?rowY(sRow)+(+cfg.sY||0)-4:0,tX=W/2+(+cfg.tX||0),sX=W/2+(+cfg.sX||0);
   const typed=typeof cfg.__typed==="number",subTyped=typeof cfg.__subTyped==="number";
-  if(typed){const full=x.measureText(title).width,shown=title.slice(0,cfg.__typed);x.textAlign="left";x.fillText(shown,-full/2,0);x.shadowBlur=0;
-    if(cfg.__cursor&&!subTyped){x.fillStyle=cfg.c1;x.fillRect(-full/2+x.measureText(shown).width+4,-fs*.38,fs*.09,fs*.76)}x.textAlign="center"}
-  else x.fillText(title,0,0);
+  // a soft dark band behind the text on busy backgrounds
+  if(!["black","grid"].includes(cfg.bg||"aurora")){const ys=[tY].concat(sRow!=null?[sY]:[]);const top=Math.min(...ys)-50,bot=Math.max(...ys)+50;const sg=x.createLinearGradient(0,top,0,bot);
+    sg.addColorStop(0,"rgba(0,0,0,0)");sg.addColorStop(.25,`rgba(0,0,0,${.5*alpha})`);sg.addColorStop(.75,`rgba(0,0,0,${.5*alpha})`);sg.addColorStop(1,"rgba(0,0,0,0)");x.fillStyle=sg;x.fillRect(0,top,W,bot-top)}
+  if(reveal<1){x.beginPath();x.rect(0,0,W*reveal,H);x.clip()}
+  x.translate(tX,tY);x.scale(scale,scale);x.translate(-tX,-tY);
+  const font=f=>`700 ${f}px Geist, "Helvetica Neue", Arial, sans-serif`;
+  const tSp=+cfg.tSpace||0,chars=[...title],snap=!!cfg.snap&&chars.length>1&&chars.length<=cols;
+  let fs=+cfg.titleSize||58;
+  if(snap)fs=Math.min(fs,64);else{x.font=font(fs);const tw=spacedWidth(x,title,tSp);if(tw>W*.94)fs*=W*.94/tw}
+  x.font=font(fs);x.textBaseline="middle";x.textAlign="center";
+  const g=x.createLinearGradient(0,0,W,0);g.addColorStop(0,"#ffffff");g.addColorStop(.55,mixHex("#ffffff",cfg.c1,.35));g.addColorStop(1,cfg.c1);
+  x.shadowColor=rgba(cfg.c1,.55);x.shadowBlur=fs*.35;x.fillStyle=g;
+  const shown=typed?cfg.__typed:chars.length;let cursorX=null;
+  if(snap){
+    // one letter centred in each key; the left/right nudge moves the word by whole keys
+    const sc=Math.max(0,Math.min(cols-chars.length,Math.round((cols-chars.length)/2)+Math.round((+cfg.tX||0)/pitch)));
+    chars.forEach((ch,i)=>{if(i<shown)x.fillText(ch,colX(sc+i),rowY(tRow)+(+cfg.tY||0))});
+    cursorX=colX(sc+Math.min(shown,chars.length-1))+(shown>=chars.length?fs*.4:-fs*.45);
+  }else{const r=drawSpaced(x,title,tX,tY,tSp,shown);cursorX=r.end+4}
   x.shadowBlur=0;
-  if(sub&&sRow!==tRow&&!(typed&&!subTyped)){let ss=+cfg.subSize||20;x.font=`600 ${ss}px "Geist Mono", Menlo, monospace`;const sw=x.measureText(sub).width;if(sw>W*.9){ss*=W*.9/sw;x.font=`600 ${ss}px "Geist Mono", Menlo, monospace`}
-    const dy=rowY(sRow)-rowY(tRow);x.fillStyle=cfg.c2;
-    if(subTyped){const full=x.measureText(sub).width,shown=sub.slice(0,cfg.__subTyped);x.textAlign="left";x.fillText(shown,-full/2,dy-4);
-      if(cfg.__cursor){x.fillStyle=cfg.c2;x.fillRect(-full/2+x.measureText(shown).width+3,dy-4-ss*.45,ss*.12,ss*.9)}x.textAlign="center"}
-    else{x.fillText(sub,0,dy-4);x.fillStyle=rgba(cfg.c1,.9);const bw=Math.min(W*.5,x.measureText(sub).width);x.fillRect(-bw/2,dy+ss*.75,bw,3)}}
+  if(typed&&cfg.__cursor&&!subTyped){x.fillStyle=cfg.c1;x.fillRect(cursorX,tY-fs*.38,fs*.09,fs*.76)}
+  // subtitle
+  if(sRow!=null&&!(typed&&!subTyped)){
+    const sSp=+cfg.sSpace||0;let ss=+cfg.subSize||20;const sfont=f=>`600 ${f}px "Geist Mono", Menlo, monospace`;
+    x.font=sfont(ss);const sw=spacedWidth(x,sub,sSp);if(sw>W*.94){ss*=W*.94/sw;x.font=sfont(ss)}
+    const words=sub.split(/\s+/).filter(Boolean),wordSnap=!!cfg.subSnap&&words.length>0&&words.length<=cols;
+    x.fillStyle=cfg.c2;
+    if(wordSnap){
+      // one word centred in each key, shrunk so the longest word fits inside a key
+      const longest=Math.max(...words.map(w=>spacedWidth(x,w,sSp)));if(longest>62){ss*=62/longest;x.font=sfont(ss)}
+      const sc=Math.max(0,Math.min(cols-words.length,Math.round((cols-words.length)/2)+Math.round((+cfg.sX||0)/pitch))),yy=rowY(sRow)+(+cfg.sY||0)-(cfg.underline!==false?4:0);
+      let left=subTyped?cfg.__subTyped:Infinity,lastEnd=null;
+      words.forEach((w,i)=>{if(left<=0)return;const n=Math.min(w.length,left);const r=drawSpaced(x,w,colX(sc+i),yy,sSp,n);lastEnd=r.end;left-=w.length+1;
+        if(!subTyped&&cfg.underline!==false){x.fillStyle=rgba(cfg.c1,.9);x.fillRect(colX(sc+i)-r.total/2,yy+ss*.75,r.total,3);x.fillStyle=cfg.c2}});
+      if(subTyped&&cfg.__cursor&&lastEnd!=null){x.fillRect(lastEnd+3,yy-ss*.45,ss*.12,ss*.9)}
+    }else{
+      const r=drawSpaced(x,sub,sX,sY,sSp,subTyped?cfg.__subTyped:sub.length);
+      if(subTyped){if(cfg.__cursor){x.fillStyle=cfg.c2;x.fillRect(r.end+3,sY-ss*.45,ss*.12,ss*.9)}}
+      else if(cfg.underline!==false){x.fillStyle=rgba(cfg.c1,.9);const bw=Math.min(W*.5,r.total);x.fillRect(sX-bw/2,sY+ss*.75,bw,3)}
+    }
+  }
   x.restore();
 }
 // The final-screen background. `a` fades it in during the animation. Seeded, so every frame and export matches.
@@ -2028,12 +2069,23 @@ function bootTriggerExport(){
 /* studio dialog */
 let bootCfg=null,bootAnim=0;
 function bootForm(){
-  const c=bootCfg;
+  const c=bootCfg;bootLayoutOpen=!!document.querySelector(".boot-layout[open]")||bootLayoutOpen;
   $("#bootForm").innerHTML=`
     <div class="field"><span class="label">Title</span><input class="inp" id="bootTitle" value="${esc(c.title)}" maxlength="18"></div>
     <div class="field"><span class="label">Subtitle</span><input class="inp" id="bootSub" value="${esc(c.subtitle)}" maxlength="28"></div>
     <div class="row2"><div class="field"><span class="label">Title size <span class="mono" id="bootTSv">${c.titleSize}</span></span><input type="range" id="bootTS" min="32" max="72" step="2" value="${c.titleSize}"></div>
     <div class="field"><span class="label">Subtitle size <span class="mono" id="bootSSv">${c.subSize}</span></span><input type="range" id="bootSS" min="12" max="34" step="1" value="${c.subSize}"></div></div>
+    <details class="boot-layout" ${bootLayoutOpen?"open":""}><summary>Text layout <span class="empty-note">rows, position, spacing</span></summary>
+      <div class="row2"><label class="check"><input type="checkbox" id="bootSnap" ${c.snap?"checked":""}> Title: one letter per key</label>
+      <label class="check"><input type="checkbox" id="bootSubSnap" ${c.subSnap?"checked":""}> Subtitle: one word per key</label></div>
+      <span class="empty-note" style="margin-top:-6px">Keeps text out of the gaps between keys. Up to ${dev().cols} letters or words. Left / right then moves by whole keys.</span>
+      <div class="row2"><div class="field"><span class="label">Title row</span><select class="inp" id="bootTRow"><option value="auto">Auto</option>${Array.from({length:dev().rows},(_,i)=>`<option value="${i+1}" ${String(c.tRow)===String(i+1)?"selected":""}>Row ${i+1}</option>`).join("")}</select></div>
+      <div class="field"><span class="label">Subtitle row</span><select class="inp" id="bootSRow"><option value="auto">Auto (under title)</option>${Array.from({length:dev().rows},(_,i)=>`<option value="${i+1}" ${String(c.sRow)===String(i+1)?"selected":""}>Row ${i+1}</option>`).join("")}<option value="none" ${c.sRow==="none"?"selected":""}>Hidden</option></select></div></div>
+      <div class="row2">${bootSlider("bootTX","Title left / right",c.tX,-180,180,1,c.snap?"keys":"px")}${bootSlider("bootTY","Title up / down",c.tY,-36,36,1,"px")}</div>
+      <div class="row2">${bootSlider("bootTSp","Title letter spacing",c.tSpace,0,60,1,"px")}${bootSlider("bootSSp","Subtitle letter spacing",c.sSpace,0,30,1,"px")}</div>
+      <div class="row2">${bootSlider("bootSX","Subtitle left / right",c.sX,-180,180,1,c.subSnap?"keys":"px")}${bootSlider("bootSY","Subtitle up / down",c.sY,-36,36,1,"px")}</div>
+      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap"><label class="check"><input type="checkbox" id="bootUnder" ${c.underline!==false?"checked":""}> Line under subtitle</label><span style="flex:1"></span><button class="btn sm" id="bootLayoutReset">Reset text layout</button></div>
+    </details>
     <div class="field"><span class="label">Animation</span><div class="seg" id="bootStyle">${BOOT_STYLES.map(([v,l])=>`<button data-v="${v}" aria-pressed="${c.style===v}">${l}</button>`).join("")}</div></div>
     <div class="field"><span class="label">Final background</span><div class="seg" id="bootBg">${BOOT_BGS.map(([v,l])=>`<button data-v="${v}" aria-pressed="${(c.bg||"aurora")===v}">${l}</button>`).join("")}</div></div>
     <div class="row2">${colorField("bootC1","Main colour",c.c1)}${colorField("bootC2","Second colour",c.c2)}</div>
@@ -2058,10 +2110,19 @@ async function bootPreview(play=true){
     bootAnim=requestAnimationFrame(step)};
   bootAnim=requestAnimationFrame(step);
 }
+let bootLayoutOpen=false;
+function bootSlider(id,label,val,min,max,step,unit){const v=+val||0;
+  return `<div class="field"><span class="label">${label} <span class="mono" id="${id}v">${unit==="keys"?(Math.round(v/90)||0)+" keys":v+" px"}</span></span><input type="range" id="${id}" min="${min}" max="${max}" step="${unit==="keys"?90:step}" value="${v}"></div>`}
 function openBoot(){bootCfg={...bootDefaults(),...(S.boot||{})};bootForm();$("#bootDlg").showModal();bootPreview()}
 function readBootForm(){const c=bootCfg;c.title=$("#bootTitle").value;c.subtitle=$("#bootSub").value;c.c1=normHex($("#bootC1H").value)||c.c1;c.c2=normHex($("#bootC2H").value)||c.c2;
   c.secs=+$("#bootSecs").value;c.fps=+$("#bootFps").value;c.afterPage=+$("#bootAfter").value;
-  c.titleSize=+$("#bootTS").value;c.subSize=+$("#bootSS").value;c.deckId=$("#bootDeck").value.trim();$("#bootTSv").textContent=c.titleSize;$("#bootSSv").textContent=c.subSize}
+  c.titleSize=+$("#bootTS").value;c.subSize=+$("#bootSS").value;c.deckId=$("#bootDeck").value.trim();$("#bootTSv").textContent=c.titleSize;$("#bootSSv").textContent=c.subSize;
+  const snapWas=c.snap,subSnapWas=c.subSnap;c.snap=$("#bootSnap").checked;c.subSnap=$("#bootSubSnap").checked;c.tRow=$("#bootTRow").value;c.sRow=$("#bootSRow").value;c.underline=$("#bootUnder").checked;
+  c.tX=+$("#bootTX").value;c.tY=+$("#bootTY").value;c.sX=+$("#bootSX").value;c.sY=+$("#bootSY").value;c.tSpace=+$("#bootTSp").value;c.sSpace=+$("#bootSSp").value;
+  for(const[id,v]of[["bootTY",c.tY],["bootTSp",c.tSpace],["bootSSp",c.sSpace],["bootSY",c.sY]])$("#"+id+"v").textContent=v+" px";
+  $("#bootSXv").textContent=c.subSnap?(Math.round(c.sX/90)||0)+" keys":c.sX+" px";
+  $("#bootTXv").textContent=c.snap?(Math.round(c.tX/90)||0)+" keys":c.tX+" px";
+  if(snapWas!==c.snap||subSnapWas!==c.subSnap){if(snapWas!==c.snap)c.tX=0;if(subSnapWas!==c.subSnap)c.sX=0;bootLayoutOpen=true;bootForm()}}
 document.addEventListener("input",e=>{if(!e.target.closest("#bootForm"))return;const t=e.target;
   if(t.id==="bootC1C"||t.id==="bootC2C"){$("#"+t.id.slice(0,-1)+"H").value=t.value}
   readBootForm();bootPreview(false)});
@@ -2096,6 +2157,7 @@ document.addEventListener("click",e=>{const t=e.target.closest("button")||e.targ
   if(t.id==="bootBtn"||t.id==="bootEdit"){openBoot();return}
   const bs=t.closest("#bootStyle [data-v]");if(bs){bootCfg.style=bs.dataset.v;[...$("#bootStyle").children].forEach(x=>x.setAttribute("aria-pressed",x===bs));bootPreview(true);return}
   if(t.id==="bootReplay"){bootPreview(true);return}
+  if(t.id==="bootLayoutReset"){Object.assign(bootCfg,{tRow:"auto",sRow:"auto",tX:0,tY:0,sX:0,sY:0,tSpace:0,sSpace:0,snap:false,subSnap:false,underline:true});bootLayoutOpen=true;bootForm();bootPreview(false);return}
   const bb=t.closest("#bootBg [data-v]");if(bb){bootCfg.bg=bb.dataset.v;[...$("#bootBg").children].forEach(x=>x.setAttribute("aria-pressed",x===bb));bootPreview(false);return}
   if(t.id==="bootApply"){applyBoot();return}
   if(t.id==="bootTrigger"||t.id==="bootTrigger2"){saveBootTrigger();return}

@@ -46,6 +46,8 @@ check('connection catalog is complete', () => cat.length > 800 && cat.every((m) 
 const ids = new Set([...app.matchAll(/\bid="([\w-]+)"/g)].map((m) => m[1]))
 // colorField("x", …) builds the inputs xC (picker) and xH (hex text)
 for (const m of app.matchAll(/colorField\("([\w-]+)"/g)) ids.add(m[1] + 'C').add(m[1] + 'H')
+// bootSlider("x", …) builds the range input x and its value label xv
+for (const m of app.matchAll(/bootSlider\("([\w-]+)"/g)) ids.add(m[1]).add(m[1] + 'v')
 const used = new Set([...scripts[0].matchAll(/\$\("#([\w-]+)[^"]*"\)/g)].map((m) => m[1]))
 check('every element the script looks up exists', () => {
 	const missing = [...used].filter((id) => !ids.has(id))
