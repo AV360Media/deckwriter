@@ -732,9 +732,9 @@ const sel=()=>selected?page().buttons[selected]:null;
 /* ---------- button art ---------- */
 function loadImg(src){return new Promise((res,rej)=>{const i=new Image();i.onload=()=>res(i);i.onerror=rej;i.src=src})}
 function fitText(text){
-  const t=String(text||"");if(!t.trim())return 14;
+  const t=showVars(String(text||""));if(!t.trim())return 14; // fit what the key shows, not the $(variable) name: Companion sizes to the live value
   const lines=t.split("\n");const longestWord=Math.max(...t.split(/\s+/).map(w=>w.length));
-  for(const fs of [44,30,24,18,14,7]){const cw=fs*.56;const perLine=Math.max(1,Math.floor(68/cw));
+  for(const fs of [44,30,24,18,14,12,10,7]){const cw=fs*.56;const perLine=Math.max(1,Math.floor(68/cw));
     if(longestWord>perLine&&fs>7)continue;
     let n=0;for(const l of lines)n+=Math.max(1,Math.ceil(l.length/perLine));
     if(n*fs*1.12<=68)return fs}
@@ -1747,8 +1747,12 @@ function presetToButton(p,conn){
   b.steps=p.st.map(s=>({down:acts(s.down),up:acts(s.up),rotL:acts(s.rotL),rotR:acts(s.rotR)}));
   b.feedbacks=(p.fb||[]).map(f=>({connection:conn.id,type:f.f,options:fixVars(clone(f.o||{}),conn),style:f.s?{bgcolor:f.s.bg||undefined,color:f.s.fg||undefined}:{},inverted:!!f.inv}));
   if(p.png){b.png64=p.png.startsWith("data:")?p.png:"data:image/png;base64,"+p.png;b.image.mode="upload";b.image.src=b.png64;b.image.fit="contain"}
-  b.fromPreset=p.n;return applyPresetIcon(b,p);
+  b.fromPreset=p.n;
+  // a readout (no action, just live values like a timer, slide count or notes): no icon, text as big as the key allows
+  if(isReadout(p)){b.png64=null;Object.assign(b.image,{mode:"none",icon:null,src:null});b.size="auto";b.align="center:center";return b}
+  return applyPresetIcon(b,p);
 }
+const isReadout=p=>/\$\(/.test(String(p.tx||""))&&(p.st||[]).every(s=>!["down","up","rotL","rotR"].some(k=>(s[k]||[]).length));
 // Variables like $(atem:short_1) show as {short_1} in previews; Companion fills in the real value
 const ATEM_SRC={0:"Blk",1000:"Bars",2001:"Col 1",2002:"Col 2",3010:"MP 1",3011:"MP 1K",3020:"MP 2",3021:"MP 2K",3030:"MP 3",3040:"MP 4",6000:"SSrc",10010:"PGM",10011:"PVW"};
 const varName=n=>{const m=/^(?:short|long)_(\d+)$/.exec(n);if(m){const v=+m[1];return ATEM_SRC[v]||(v>0&&v<1000?"In "+v:String(v))}
@@ -2504,7 +2508,8 @@ document.addEventListener("visibilitychange",()=>{if(!document.hidden&&S.compani
 // Keys DeckWriter has sent are remembered (S.live.owned) so it only ever clears keys it put there, and it
 // asks before replacing a key that was already in Companion.
 const RELAY="http://127.0.0.1:8790";
-const RELAY_CMD='curl -fsSL https://raw.githubusercontent.com/bryanchorton/deckwriter/main/tools/live/relay.mjs -o ~/.deckwriter-relay.mjs && "/Applications/Companion.app/Contents/Resources/node-runtimes/node22/bin/node" ~/.deckwriter-relay.mjs';
+// one-time setup: installs the relay as a background service (no Terminal window, starts at login, updates itself)
+const RELAY_CMD='curl -fsSL https://raw.githubusercontent.com/bryanchorton/deckwriter/main/tools/live/install.sh | bash';
 const liveRT={status:null,error:"",busy:false,timer:0,pending:false,skip:{},asking:false,lastMsg:""};
 const liveCfg=()=>{const c=(S.live??={on:false,map:{},owned:{}});c.base??={};c.at??={};return c};
 // what Live sent is remembered per Companion page: when a DeckWriter page points somewhere new, start over there
@@ -2512,11 +2517,20 @@ function liveTarget(pg,num){const c=liveCfg();const was=c.at[pg.id]??(c.map[pg.i
   if(was!==num){c.owned[pg.id]={};delete c.base[pg.id]}c.at[pg.id]=num}
 // stable fingerprint of an exported key: ignore the random entity ids
 const keyHash=ctl=>JSON.stringify(ctl,(k,val)=>k==="id"?undefined:val);
+// The relay only runs on demand: clicking Live opens deckwriter-live://, which the "DeckWriter Live" helper app
+// (installed by tools/live/install.sh) answers by starting it. Must be called from a click (browsers require it).
+async function wakeRelay(){
+  if(window.claude||liveRT.waking)return liveRT.status;
+  liveRT.waking=true;renderLive();
+  try{location.href="deckwriter-live://start"}catch(_){}
+  for(let i=0;i<20&&!(await relayStatus())?.companion;i++)await new Promise(r=>setTimeout(r,1000));
+  liveRT.waking=false;renderLive();return liveRT.status;
+}
 async function relayStatus(){
   try{const ctl=new AbortController();const t=setTimeout(()=>ctl.abort(),2500);
     const r=await fetch(RELAY+"/status",{signal:ctl.signal,cache:"no-store"});clearTimeout(t);
     liveRT.status=await r.json();liveRT.error=liveRT.status.companion?"":"The relay is running but can't reach Companion. Is Companion open?";
-  }catch(_){liveRT.status=null;liveRT.error=window.claude?"Live can't run inside Claude. Open DeckWriter from bryanchorton.github.io/deckwriter.":"The relay isn't running on this Mac."}
+  }catch(_){liveRT.status=null;liveRT.error=window.claude?"Live can't run inside Claude. Open DeckWriter from bryanchorton.github.io/deckwriter.":liveRT.waking?"Starting the Live helper… (if Chrome asks, allow it to open DeckWriter Live)":"The Live helper isn't running on this Mac. If it's set up, click Live again; if not, set it up below."}
   renderLive();liveFollow();const w=$("#wipePage");if(w)w.disabled=!Object.keys(page().buttons).length&&!liveExtraKeys(page()).length;return liveRT.status;
 }
 // Live always follows the page you're on: DeckWriter's show pages line up with Companion's, in order, after the boot screen.
@@ -2558,7 +2572,7 @@ function liveAutoLink(ids){const done=[],unsure=[];
     else if(cands.length>1)unsure.push(`${mine.label} (Companion has ${cands.map(x=>"“"+x.label+"”").join(" and ")}: pick one with Link in Connections)`)}
   if(done.length){persist();renderRail()}
   return{done,unsure}}
-const BUILD="Oct 7, 1:41 AM";
+const BUILD="Oct 7, 1:08 PM";
 function renderLive(){
   const bs=$("#buildStamp");if(bs)bs.textContent="Build "+BUILD;
   const c=liveCfg(),st=liveRT.status,ok=!!(st&&st.companion),pg=page();
@@ -2567,7 +2581,7 @@ function renderLive(){
   if(!$("#liveDlg").open)return;
   $("#liveStatus").innerHTML=`<div class="row"><span class="dot ${st?"st-good":"st-bad"}"></span>Relay ${st?`running (v${esc(st.relay)})`:"not running"}</div>
     <div class="row"><span class="dot ${ok?"st-good":"st-bad"}"></span>Companion ${ok?`connected · ${st.pages.length} pages`:"not reachable"}</div>${liveRT.error?`<span class="st-msg st-warn">${esc(liveRT.error)}</span>`:""}`;
-  $("#liveSetup").innerHTML=st||window.claude?"":`<div class="field live-setup"><span class="label">Start the relay: paste this into Terminal and leave it running</span><pre class="mono" style="background:var(--field);border:1px solid var(--stroke);border-radius:10px;padding:10px;font-size:11.5px;margin:0">${esc(RELAY_CMD)}</pre><div><button class="btn sm" id="liveCopyCmd">Copy command</button></div></div>`;
+  $("#liveSetup").innerHTML=st||window.claude||liveRT.waking?"":`<div class="field live-setup"><span class="label">Not set up on this Mac yet? Paste this into Terminal once. After that, clicking Live starts it in the background (nothing runs at login) and it stops by itself when you&#39;re done. You can close Terminal.</span><pre class="mono" style="background:var(--field);border:1px solid var(--stroke);border-radius:10px;padding:10px;font-size:11.5px;margin:0">${esc(RELAY_CMD)}</pre><div><button class="btn sm" id="liveCopyCmd">Copy command</button></div></div>`;
   const n=livePageNum(pg),cp=st?.pages?.find(p=>p.number===n);
   $("#liveTargetInfo").textContent=pg.boot?"nothing (the boot page isn't sent live)":`Companion page ${n}${cp?` · “${cp.name}”`:st?" (not in Companion yet: Live adds it)":""}`;$("#liveOn").checked=!!c.on;
   $("#liveLog").textContent=liveRT.lastMsg||(cp?`Companion page ${n} is “${cp.name}” with ${cp.keys.length} key${cp.keys.length===1?"":"s"}.`:st?`Companion has no page ${n} yet. Live adds it with your next change.`:"");
@@ -2760,7 +2774,7 @@ function askReplace(pg,keys){
   el.dataset.keys=JSON.stringify(keys);el.dataset.page=pg.id;
 }
 document.addEventListener("click",async e=>{const t=e.target.closest("button")||e.target;
-  if(t.id==="liveBtn"){const d=$("#liveDlg");if(d.open){d.close();return}d.show();renderLive();relayStatus();return}
+  if(t.id==="liveBtn"){const d=$("#liveDlg");if(d.open){d.close();return}d.show();renderLive();relayStatus().then(st=>{if(!st)wakeRelay()});return}
   if(t.id==="liveClose"){$("#liveDlg").close();return}
   if(t.id==="liveCopyCmd"){copyText(RELAY_CMD,"Copied. Paste it into Terminal and leave that window open.");return}
   if(t.id==="livePull"){if(!S.live?.on){toast("Switch Live on first");return}liveRT.dirty=false;livePull("button").then(d=>{if(!d&&!liveRT.lastMsg.startsWith("Couldn't"))toast(liveRT.lastMsg)});return}
@@ -2772,11 +2786,11 @@ document.addEventListener("click",async e=>{const t=e.target.closest("button")||
 document.addEventListener("change",e=>{
   if(e.target.id==="liveOn"){const c=liveCfg();c.on=e.target.checked;liveRT.pulled=false;if(c.on){c.base={};c.owned={};liveRT.shown=null}persist();renderLive();
     if(c.on){clearTimeout(liveRT.timer);liveRT.dirty=false} // nothing to send yet: load Companion first
-    if(c.on)livePull("on").then(done=>{
+    if(c.on)(liveRT.status?.companion?Promise.resolve():wakeRelay()).then(()=>livePull("on")).then(done=>{
       if(!liveRT.pulled){toast((liveRT.lastMsg||"Couldn't load from Companion.")+" Live won't send anything until it can load Companion: is the relay running?");return}
       if(!done){liveFollow();liveSync()}toast(done?liveRT.lastMsg+". From now on your edits go to Companion.":"Live on: DeckWriter matches Companion, and your edits go straight to it.")});return}
 });
-setInterval(()=>{if(!document.hidden&&(S.live?.on||$("#liveDlg")?.open))relayStatus()},4000);
+setInterval(()=>{if(S.live?.on||(!document.hidden&&$("#liveDlg")?.open))relayStatus()},4000); // also keeps the on-demand relay awake
 
 /* ---------- sources card tabs ---------- */
 document.addEventListener("click",e=>{const b=e.target.closest("[data-src]");if(!b)return;
