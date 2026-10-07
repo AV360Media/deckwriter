@@ -247,6 +247,17 @@ dialog::backdrop{background:rgba(5,5,6,.7);backdrop-filter:blur(3px)}
 .drop-zone.over{border-color:var(--lime);color:var(--fg);background:rgba(198,244,50,.04)}
 .warn{color:var(--yellow);font-size:12.5px}
 .sheet-scroll{overflow:auto;max-height:56vh;border-radius:12px;border:1px solid var(--stroke)}
+.clink-bar{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:8px 10px;border:1px dashed var(--stroke-2);border-radius:11px;font-size:12.5px}
+.clink-bar .grow{flex:1;min-width:0}
+.clink-bar b{font-weight:600}
+.dot.st-good{background:var(--ok);box-shadow:0 0 8px rgba(60,207,116,.6)}
+.dot.st-warn{background:var(--yellow)}
+.dot.st-bad{background:var(--live);box-shadow:0 0 8px rgba(255,77,79,.5)}
+.dot.st-off{background:var(--dim)}
+.st-msg{display:block;font-size:11px;margin-top:2px;white-space:normal}
+.st-msg.st-bad{color:#ff8a8c}.st-msg.st-warn{color:var(--yellow)}.st-msg.st-off{color:var(--dim)}
+.conn.live{border-color:rgba(60,207,116,.25)}
+.conn-match{margin-top:6px;font-size:12px;padding:4px 6px}
 .mod-list{display:flex;flex-direction:column;gap:4px;max-height:52vh;overflow-y:auto;padding-right:2px}
 .mod{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:4px 10px;align-items:center;text-align:left;background:var(--field);border:1px solid var(--stroke);border-radius:11px;padding:9px 12px}
 .mod:hover{border-color:var(--stroke-2);background:#18181b}
@@ -329,7 +340,31 @@ dialog.drawer .pgrid{grid-template-columns:repeat(auto-fill,minmax(82px,1fr))}
 #bootInfo{color:#c4c4cc}
 #bootCanvas{width:100%;height:auto;max-width:100%}
 .boot-form{display:flex;flex-direction:column;gap:12px;min-width:0}
+#bootStyle,#bootBg{display:grid;grid-template-columns:repeat(auto-fill,minmax(84px,1fr))}
+.key .boot-over{position:absolute;inset:0;width:100%;height:100%;z-index:4;pointer-events:none}
+.boot-layout{border:1px solid rgba(255,255,255,.16);border-radius:12px;padding:10px 12px;background:#26262b}
+.boot-layout[open]{display:flex;flex-direction:column;gap:12px}
+.boot-layout summary{cursor:pointer;font-weight:500;color:#e4e4ea;list-style:none;display:flex;gap:8px;align-items:baseline}
+.boot-layout summary::before{content:"▸";color:var(--lime);transition:transform .15s}
+.boot-layout[open] summary::before{transform:rotate(90deg)}
 @media (max-width:760px){.boot-grid{grid-template-columns:1fr}}
+
+.live-btn{gap:8px}
+.live-dot{width:8px;height:8px;border-radius:50%;background:var(--dim);flex:none}
+.live-btn.on{border-color:rgba(255,77,79,.6);color:#fff}
+.live-btn.on .live-dot{background:var(--live);box-shadow:0 0 10px rgba(255,77,79,.8);animation:livepulse 1.4s ease-in-out infinite}
+.live-btn.ready .live-dot{background:var(--ok)}
+.live-btn.problem .live-dot{background:var(--yellow)}
+@keyframes livepulse{50%{opacity:.35}}
+dialog.live-panel{position:fixed;inset:64px 16px auto auto;margin:0;width:min(420px,calc(100vw - 32px));z-index:70}
+.live-status{display:flex;flex-direction:column;gap:6px;padding:10px 12px;border-radius:11px;background:var(--field);border:1px solid var(--stroke);font-size:13px}
+.live-status .row{display:flex;gap:8px;align-items:center}
+.live-row{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.live-switch{font-weight:600;font-size:14px}
+.live-rules{margin:0;padding-left:18px;color:var(--muted);font-size:12.5px;display:flex;flex-direction:column;gap:3px}
+.live-setup pre{white-space:pre-wrap;word-break:break-all}
+.live-ask{position:fixed;left:50%;top:calc(70px + env(safe-area-inset-top,0px));transform:translateX(-50%);z-index:120;background:#2a1416;border:1px solid rgba(255,77,79,.5);color:#fff;border-radius:12px;padding:10px 14px;display:flex;gap:10px;align-items:center;flex-wrap:wrap;max-width:calc(100vw - 32px);box-shadow:0 18px 40px -10px rgba(0,0,0,.8);font-size:13.5px}
+@media (prefers-reduced-motion:reduce){.live-btn.on .live-dot{animation:none}}
 
 /* ---------- responsive ---------- */
 /* Desktop: the board fits the window; each column scrolls on its own only if it has to */
@@ -378,6 +413,7 @@ dialog.drawer .pgrid{grid-template-columns:repeat(auto-fill,minmax(82px,1fr))}
       <span class="vsep"></span>
       <button class="btn ghost sm" id="openImport"><span class="ico" data-ico="download"></span>Import</button>
     </div>
+    <button class="btn live-btn" id="liveBtn" aria-expanded="false"><span class="live-dot" id="liveDot"></span><span id="liveLabel">Live</span></button>
     <button class="btn primary" id="openExport"><span class="ico" data-ico="upload"></span>Export page</button>
   </div>
 </header>
@@ -413,6 +449,7 @@ dialog.drawer .pgrid{grid-template-columns:repeat(auto-fill,minmax(82px,1fr))}
         <div class="seg seg-sm" role="tablist" id="srcTabs"><button data-src="conns" aria-pressed="true">Connections <span class="count" id="connCount"></span></button><button data-src="know" aria-pressed="false">What the AI knows</button></div>
       </header>
       <div class="node-b" id="paneConns">
+        <div class="clink-bar" id="compLink"></div>
         <div id="conns"></div>
         <button class="btn" id="openModules"><span class="ico" data-ico="plus"></span>Add connection</button>
         <span class="empty-note" id="catCount"></span>
@@ -455,9 +492,9 @@ dialog.drawer .pgrid{grid-template-columns:repeat(auto-fill,minmax(82px,1fr))}
   <button id="sheetBtn"><span class="ico" data-ico="file-text"></span>Cheat sheet</button>
   <button id="helperBtn"><span class="ico" data-ico="send"></span>Send to Companion</button>
   <span class="vsep"></span>
-  <button id="saveProject"><span class="ico" data-ico="save"></span>Save</button>
-  <label for="loadProject"><span class="ico" data-ico="folder-open"></span>Open</label>
-  <input type="file" id="loadProject" accept=".json" hidden>
+  <button id="saveProject" title="Save the whole project as one file, to open on another computer"><span class="ico" data-ico="save"></span>Save project</button>
+  <label for="loadProject" title="Open a project file saved from DeckWriter on any computer"><span class="ico" data-ico="folder-open"></span>Open project</label>
+  <input type="file" id="loadProject" accept=".json,application/json" hidden>
   <button id="newProject" class="danger">Start over</button>
   <span class="chip pink" id="selHint"></span>
 </nav>
@@ -487,12 +524,28 @@ dialog.drawer .pgrid{grid-template-columns:repeat(auto-fill,minmax(82px,1fr))}
 
 <dialog id="importDlg"><div class="dlg">
   <h3>Import from Companion</h3>
-  <p>Drop a Companion export (full config or a single page, <span class="mono">.companionconfig</span> or <span class="mono">.yaml</span>). DeckWriter adds your connections with their real IDs and learns every action and feedback you've already built, so new buttons use the exact names your modules expect.</p>
+  <p>Drop a Companion export (full config or a single page, <span class="mono">.companionconfig</span> or <span class="mono">.yaml</span>). DeckWriter adds your connections with their real IDs and learns every action and feedback you've already built, so new buttons use the exact names your modules expect. A DeckWriter project file (from Save project) dropped here opens as the project.</p>
   <label class="drop-zone" id="dropZone" for="importFile">Drop a file here or <u>browse</u></label>
   <input type="file" id="importFile" hidden>
   <div id="importResult" class="field"></div>
   <div class="dlg-foot"><button class="btn ghost" data-close>Close</button></div>
 </div></dialog>
+
+<dialog id="liveDlg" class="live-panel"><div class="dlg">
+  <div class="drawer-head"><h3>Live to Companion</h3><button class="btn ghost sm" id="liveClose">Close</button></div>
+  <p>Changes you make to keys on this page go straight to your Stream Deck, one key at a time, without importing.</p>
+  <div class="live-status" id="liveStatus"></div>
+  <div id="liveSetup"></div>
+  <div class="live-row"><span class="label">This page goes to</span><b id="liveTargetInfo"></b></div>
+  <label class="check live-switch"><input type="checkbox" id="liveOn"> Live updates on</label>
+  <ul class="live-rules">
+    <li>Only keys you add or change are sent.</li>
+    <li>DeckWriter never clears a Companion key it didn't put there, and asks before replacing one that was already in Companion.</li>
+    <li>Keys must use connections that exist in Companion (link them in Connections).</li>
+  </ul>
+  <div class="dlg-foot"><span class="empty-note" id="liveLog" style="margin-right:auto;align-self:center"></span><button class="btn" id="livePushAll">Send whole page now</button></div>
+</div></dialog>
+<div class="live-ask" id="liveAsk" hidden></div>
 
 <dialog id="bootDlg" class="wide"><div class="dlg">
   <h3>Boot screen</h3>
@@ -613,6 +666,14 @@ function sanitizeSvgInner(src){
 }
 
 /* ---------- state ---------- */
+// Every new page starts with the owner's layout: page up, the page's title, page down, stacked in the first column
+// (B1, C1, D1 on an XL). The title key follows the page name when it's renamed.
+function starterKeys(name){const d=dev(),out={},nav={bg:"#1d2226",color:"#ffffff"};
+  const at=d.rows>=3?[keyId(d.rows-3,0),keyId(d.rows-2,0),keyId(d.rows-1,0)]:[keyId(0,0),d.cols>1?keyId(0,1):null,keyId(d.rows-1,0)];
+  out[at[0]]={...newButton(nav),kind:"pageup"};
+  if(at[1])out[at[1]]=newButton({...nav,text:name,size:"14",pageTitle:true});
+  out[at[2]]={...newButton(nav),kind:"pagedown"};
+  return out}
 function newButton(o={}){return Object.assign({kind:"button",text:"",size:"auto",color:"#ffffff",bg:"#000000",align:"center:center",
   image:{mode:"none",bgStyle:"none",g1:"#1e6cff",g2:"#5b2bd9",icon:null,iconColor:"#ffffff",scale:.55,pos:"center",bake:false,src:null,fit:"cover"},
   png64:null,steps:[{down:[],up:[],rotL:[],rotR:[]}],feedbacks:[]},o)}
@@ -648,12 +709,16 @@ function sampleProject(){
 }
 
 let S; let selected=null; const multi=new Set(); const undoStack=[]; const redoStack=[]; let clipboard=null; let tab="look"; let stepIdx=0;
-function load(){try{const raw=localStorage.getItem("deckwright.v1");if(raw){const s=JSON.parse(raw);if(s&&s.pages)return s}}catch(e){}return sampleProject()}
-function persist(){clearTimeout(persist.t);persist.t=setTimeout(()=>{try{localStorage.setItem("deckwright.v1",JSON.stringify(S))}catch(e){}},250)}
+function load(){try{const raw=localStorage.getItem("deckwright.v1");if(raw){const s=JSON.parse(raw);if(s&&s.pages){fixTitleKeys(s);return s}}}catch(e){}return sampleProject()}
+// page title keys used to be auto-sized, which Companion blows up to fill the key: give them the nav keys' size
+function fixTitleKeys(s){for(const p of s.pages||[])for(const b of Object.values(p.buttons||{}))if(b?.pageTitle&&b.size==="auto")b.size="14"}
+function persist(){clearTimeout(persist.t);persist.t=setTimeout(()=>{try{localStorage.setItem("deckwright.v1",JSON.stringify(S))}catch(e){}},250);if(typeof scheduleLive==="function")scheduleLive()}
 function commit(fn,{renderArtFor}={}){undoStack.push(JSON.stringify(S));if(undoStack.length>80)undoStack.shift();redoStack.length=0;fn();persist();
   if(renderArtFor){refreshArt(renderArtFor).then(render)}else render()}
-function undo(){if(!undoStack.length)return;redoStack.push(JSON.stringify(S));S=JSON.parse(undoStack.pop());persist();render()}
-function redo(){if(!redoStack.length)return;undoStack.push(JSON.stringify(S));S=JSON.parse(redoStack.pop());persist();render()}
+// Live's record of what is on the Stream Deck is never rolled back: undo changes DeckWriter and Live sends the difference
+function restore(json){const live=S.live,companionLinked=S.companionLinked;S=JSON.parse(json);if(live)S.live=live;S.companionLinked=companionLinked}
+function undo(){if(!undoStack.length)return;const before=liveShowIds();redoStack.push(JSON.stringify(S));restore(undoStack.pop());persist();render();livePagesChanged(before,liveShowIds())}
+function redo(){if(!redoStack.length)return;const before=liveShowIds();undoStack.push(JSON.stringify(S));restore(redoStack.pop());persist();render();livePagesChanged(before,liveShowIds())}
 const page=()=>S.pages[S.pageIdx];
 const dev=()=>DEVICES[S.device]||DEVICES.mk2;
 const isSel=k=>multi.size>1?multi.has(k):selected===k;
@@ -739,7 +804,7 @@ function renderDeck(){
   g+="</div>";
   if(d.dials){g+='<div class="dials">';for(let c=0;c<d.dials;c++){const k=keyId(d.rows,c),b=pg.buttons[k];
     g+=`<button class="dial ${isSel(k)?"sel":""}" data-k="${k}" aria-label="Dial ${c+1}"><span>${esc(b?(b.text||"Dial "+(c+1)):"Dial "+(c+1))}</span></button>`}g+="</div>"}
-  g+=`<div class="deck-foot"><span>${esc(page().name||"")}</span>${pg.boot?`<button class="btn ghost sm" id="bootPlayDeck">▶ Play boot animation</button>`:""}<span>${Object.keys(pg.buttons).length} keys</span></div>`;
+  g+=`<div class="deck-foot"><span>${esc(page().name||"")}</span>${pg.boot||bootOverlayPage()===pg?`<button class="btn ghost sm" id="bootPlayDeck">▶ Play boot animation</button>`:""}<span>${Object.keys(pg.buttons).length} keys</span></div>`;
   deck.innerHTML=g;scheduleOverlay();
 }
 function renderPagebar(){
@@ -748,14 +813,17 @@ function renderPagebar(){
    <span class="count">${S.pageIdx+1}/${n}</span><input class="pagename" id="pageName" aria-label="Page name" value="${esc(page().name)}">
    <button class="ic" id="nextPage" aria-label="Next page" ${S.pageIdx>=n-1?"disabled":""}>${ico("chevron-right")}</button>
    <span class="vsep"></span><button class="ic" id="addPage" title="New page" aria-label="New page">${ico("plus")}</button>
-   <button class="ic" id="wipePage" title="Wipe this page (clear every key)" aria-label="Wipe this page" ${Object.keys(page().buttons).length?"":"disabled"}>${ico("eraser")}</button>
+   <button class="ic" id="wipePage" title="Wipe this page (clear every key)" aria-label="Wipe this page" ${Object.keys(page().buttons).length||liveExtraKeys(page()).length?"":"disabled"}>${ico("eraser")}</button>
    ${n>1?`<button class="ic" id="delPage" title="Delete this page" aria-label="Delete this page">${ico("trash-2")}</button>`:""}`;
 }
 
 /* ---------- connections & learned ---------- */
 const connColor=id=>{let h=0;for(const ch of id)h=(h*31+ch.charCodeAt(0))%360;return`hsl(${h} 70% 60%)`};
 function renderRail(){
-  $("#conns").innerHTML=S.connections.length?S.connections.map(c=>`<div class="conn"><span class="dot" style="background:${connColor(c.id)}"></span><div class="meta"><b>${esc(c.label)}</b><span>${esc(modTitle(c.module))}${c.raw?" · imported":""}</span></div>${LIBRARY[c.module]?`<button class="x" data-presetsfor="${esc(c.module)}" title="Presets">${ico("layout-grid")}</button><button class="x" data-connset="${esc(c.id)}" title="Connection settings" aria-expanded="${openConnSet===c.id}">${ico("settings-2")}</button>`:""}<button class="x" data-delconn="${esc(c.id)}" aria-label="Remove ${esc(c.label)}">✕</button></div>${openConnSet===c.id?connSettingsHTML(c):""}`).join("")
+  renderCompLink();const cc=$("#connCount");if(cc)cc.textContent=S.connections.length||"";
+  $("#conns").innerHTML=S.connections.length?S.connections.map(c=>{const lv=liveOf(c.id),cands=live.list&&!lv?live.list.filter(x=>x.moduleId===c.module&&x.id!==c.id):[];
+    return `<div class="conn${lv?" live":""}"><span class="dot ${lv?"st-"+liveCat(lv):""}" style="${lv?"":`background:${connColor(c.id)}`}" title="${esc(lv?liveText(lv):"Not linked to Companion")}"></span><div class="meta"><b>${esc(c.label)}</b><span>${esc(modTitle(c.module))}${lv?" · in Companion":live.list?" · not in Companion":c.raw?" · imported":""}</span>${lv&&liveCat(lv)!=="good"?`<span class="st-msg st-${liveCat(lv)}">${esc(liveText(lv))}</span>`:""}
+      ${cands.length?`<select class="inp conn-match" data-matchconn="${esc(c.id)}" aria-label="Use a Companion connection"><option value="">Use my Companion connection…</option>${cands.map(x=>`<option value="${esc(x.id)}">${esc(x.label)}</option>`).join("")}</select>`:""}</div>${LIBRARY[c.module]?`<button class="x" data-presetsfor="${esc(c.module)}" title="Presets">${ico("layout-grid")}</button><button class="x" data-connset="${esc(c.id)}" title="Connection settings" aria-expanded="${openConnSet===c.id}">${ico("settings-2")}</button>`:""}<button class="x" data-delconn="${esc(c.id)}" aria-label="Remove ${esc(c.label)}">✕</button></div>${openConnSet===c.id?connSettingsHTML(c):""}`}).join("")
     :`<p class="empty-note">No connections yet. Add one from the full Companion list, import your Companion config, or just describe what you want and the AI adds what it needs.</p>`;
   $("#catCount").textContent=`${CATALOG.length} connection types available, the same list as the Companion module store.`;
   const mods=Object.keys(S.learned||{});
@@ -858,7 +926,8 @@ function render(){renderPagebar();renderDeck();renderRail();renderInspector();re
   $("#deckTitle").textContent=dev().name;$("#deckPage").textContent="Page "+(S.pageIdx+1);$("#connCount").textContent=S.connections.length||"";
   $("#device").value=S.device;$("#undo").disabled=!undoStack.length;$("#redo").disabled=!redoStack.length;
   $("#exampleBanner").hidden=!S.example;
-  $("#selHint").textContent=multi.size>1?`${multi.size} selected`:"";}
+  $("#selHint").textContent=multi.size>1?`${multi.size} selected`:"";
+  if(typeof renderLive==="function")renderLive();if(typeof liveFollow==="function")liveFollow();}
 
 /* ---------- mutations ---------- */
 function mutSel(fn,art=false){if(!selected)return;commit(()=>{fn(page().buttons[selected])},art?{renderArtFor:[selected]}:{})}
@@ -875,6 +944,7 @@ function moveKey(from,to,copy){
   commit(()=>{const a=pg.buttons[from],b=pg.buttons[to];
     if(copy){if(a)pg.buttons[to]=clone(a)}else{if(b)pg.buttons[from]=b;else delete pg.buttons[from];if(a)pg.buttons[to]=a;else delete pg.buttons[to]}
     selected=to;});
+  if(typeof liveMoved==="function")liveMoved(pg,from,to,copy);
 }
 function allKeys(){const d=dev(),out=[];for(let r=0;r<d.rows;r++)for(let c=0;c<d.cols;c++)out.push(keyId(r,c));if(d.dials)for(let c=0;c<d.dials;c++)out.push(keyId(d.rows,c));return out}
 
@@ -917,8 +987,8 @@ $("#undo").onclick=undo;$("#redo").onclick=redo;
 document.addEventListener("click",e=>{
   const t=e.target.closest("button")||e.target;
   const p=t.closest("[data-p]");if(p){S.pageIdx=+p.dataset.p;selected=null;multi.clear();persist();render();return}
-  if(t.id==="addPage"){commit(()=>{S.pages.push({id:uid(),name:"Page "+(S.pages.length+1),buttons:{}});S.pageIdx=S.pages.length-1;selected=null});return}
-  if(t.id==="delPage"){if(t.dataset.armed){commit(()=>{S.pages.splice(S.pageIdx,1);S.pageIdx=Math.max(0,S.pageIdx-1);selected=null})}else{t.dataset.armed="1";t.classList.add("armed");toast("Click the bin again to delete this page");setTimeout(()=>{if(t.isConnected){delete t.dataset.armed;t.classList.remove("armed")}},2500)}return}
+  if(t.id==="addPage"){commit(()=>{const name="Page "+(S.pages.length+1);S.pages.push({id:uid(),name,buttons:starterKeys(name)});S.pageIdx=S.pages.length-1;selected=null});return}
+  if(t.id==="delPage"){if(t.dataset.armed){const before=liveShowIds();commit(()=>{S.pages.splice(S.pageIdx,1);S.pageIdx=Math.max(0,S.pageIdx-1);selected=null});livePagesChanged(before,liveShowIds())}else{t.dataset.armed="1";t.classList.add("armed");toast("Click the bin again to delete this page");setTimeout(()=>{if(t.isConnected){delete t.dataset.armed;t.classList.remove("armed")}},2500)}return}
   if(t.id==="wipePage"){if(t.dataset.armed){wipePage()}else{t.dataset.armed="1";t.classList.add("armed");toast("Click the eraser again to wipe every key on this page");setTimeout(()=>{if(t.isConnected){delete t.dataset.armed;t.classList.remove("armed")}},2500)}return}
   if(t.id==="prevPage"||t.id==="nextPage"){const d=t.id==="prevPage"?-1:1;S.pageIdx=Math.max(0,Math.min(S.pages.length-1,S.pageIdx+d));selected=null;multi.clear();persist();render();return}
   const gt=t.closest("[data-goto]");if(gt){tab=gt.dataset.goto;renderInspector();return}
@@ -957,14 +1027,14 @@ document.addEventListener("click",e=>{
   if(t.id==="dismissExample"){S.example=false;persist();render();return}
   if(t.id==="clearExample"){commit(()=>{S.pages=[{id:uid(),name:"Page 1",buttons:{}}];S.pageIdx=0;S.example=false;selected=null});return}
 });
-$("#newProject").onclick=e=>{const t=e.currentTarget;if(t.dataset.armed){commit(()=>{S={v:1,device:S.device,pageIdx:0,example:false,pages:[{id:uid(),name:"Page 1",buttons:{}}],connections:[],learned:{}};selected=null});delete t.dataset.armed;t.textContent="Start over"}
+$("#newProject").onclick=e=>{const t=e.currentTarget;if(t.dataset.armed){commit(()=>{S={v:1,device:S.device,pageIdx:0,example:false,pages:[{id:uid(),name:"Page 1",buttons:starterKeys("Page 1")}],connections:[],learned:{}};selected=null});delete t.dataset.armed;t.textContent="Start over"}
   else{t.dataset.armed="1";t.textContent="Click again to wipe";setTimeout(()=>{delete t.dataset.armed;t.textContent="Start over"},2500)}};
 
 /* inspector inputs */
 document.addEventListener("input",e=>{
   const t=e.target;
-  if(t.id==="fText"){setText(t.value);return}
-  if(t.id==="pageName"){page().name=t.value;persist();return}
+  if(t.id==="fText"){const b=sel();if(b?.pageTitle)delete b.pageTitle;setText(t.value);return}
+  if(t.id==="pageName"){page().name=t.value;let tied=false;for(const b of Object.values(page().buttons))if(b.pageTitle){b.text=t.value;tied=true}persist();if(tied){renderDeck();if(selected&&page().buttons[selected]?.pageTitle)renderInspector()}return}
   if(t.id==="iconSearch"){renderIconGrid(t.value);return}
   const pairs={fColorC:["color",false],fBgC:["bg",false],fG1C:["g1",true],fG2C:["g2",true],fIcC:["iconColor",true]};
   if(pairs[t.id]){liveColor(pairs[t.id],t.value);const hx=$("#"+t.id.slice(0,-1)+"H");if(hx)hx.value=t.value;return}
@@ -987,7 +1057,7 @@ document.addEventListener("change",e=>{
   if(t.id==="iconScale"){renderInspector();return}
   if(t.id==="bake"){mutSel(b=>{b.image.bake=t.checked},true);return}
   if(t.id==="upFile"){const f=t.files[0];if(!f)return;const rd=new FileReader();rd.onload=()=>mutSel(b=>{b.image.src=rd.result},true);rd.readAsDataURL(f);return}
-  if(t.id==="loadProject"){const f=t.files[0];if(!f)return;f.text().then(txt=>{try{const s=JSON.parse(txt);if(!s.pages)throw 0;commit(()=>{S=s;selected=null});refreshAllArt();toast("Project opened")}catch(_){toast("That file isn't a DeckWriter project")}});t.value="";return}
+  if(t.id==="loadProject"){const f=t.files[0];if(!f)return;f.text().then(txt=>{try{openProject(JSON.parse(txt),f.name)}catch(_){toast("That file isn't a DeckWriter project")}});t.value="";return}
   if(t.dataset.okind==="act"||t.dataset.f==="actsel"){const row=t.closest("[data-set]");const set=row.dataset.set,i=+row.dataset.i;
     mutSel(b=>{const a=b.steps[stepIdx][set][i];const L=libOf(a.connection);
       if(t.dataset.f==="actsel"){a.action=t.value;a.options=optDefaults(L?.aById.get(t.value)?.o)}
@@ -1021,7 +1091,7 @@ document.addEventListener("keydown",e=>{
   const typing=e.target.closest("input,textarea,select,[contenteditable]");
   const mod=e.metaKey||e.ctrlKey;
   if(mod&&e.key.toLowerCase()==="z"&&!typing){e.preventDefault();e.shiftKey?redo():undo();return}
-  if(typing||document.querySelector("dialog[open]"))return;
+  if(typing||document.querySelector("dialog[open]:modal"))return; // the Live panel is not modal: shortcuts keep working while it is open
   if(mod&&e.key==="c"){copy();return}
   if(mod&&e.key==="v"){paste();return}
   if(mod&&e.key==="d"){e.preventDefault();duplicate();return}
@@ -1433,24 +1503,54 @@ function toControl(b,dial){
   const baked=b.image.bake&&b.image.mode!=="none"&&b.png64;
   const style={text:baked?"":b.text,textExpression:false,size:b.size==="auto"?"auto":Number(b.size),png64:b.png64||null,alignment:b.align,pngalignment:"center:center",color:hexToInt(b.color),bgcolor:hexToInt(b.bg),show_topbar:false};
   const steps={};b.steps.forEach((s,i)=>{const sets={down:s.down.map(exportAction),up:s.up.map(exportAction)};if(dial){sets.rotate_left=s.rotL.map(exportAction);sets.rotate_right=s.rotR.map(exportAction)}steps[i]={action_sets:sets,options:{runWhileHeld:[]}}});
-  return{type:"button",style,options:{rotaryActions:!!dial,stepAutoProgress:true},feedbacks:b.feedbacks.map(f=>{const st={};if(f.style?.bgcolor)st.bgcolor=hexToInt(f.style.bgcolor);if(f.style?.color)st.color=hexToInt(f.style.color);return{id:uid(16),type:f.type,instance_id:f.connection,options:f.options||{},style:st,isInverted:!!f.inverted}}).concat(bootFeedbacks(b)),steps};
+  const bootFb=bootFeedbacks(b);
+  if(bootFb.length){Object.assign(style,{png64:null,text:"",bgcolor:0});
+    // leaving the boot page resets the animation, so the next plug-in starts from black rather than the final screen
+    const down=steps[0]?.action_sets?.down;if(down?.some(a=>a.action==="set_page"))down.push({id:uid(16),action:"custom_variable_set_value",instance:"internal",options:{name:BOOT_VAR,value:"0"}})}
+  return{type:"button",style,options:{rotaryActions:!!dial,stepAutoProgress:true},feedbacks:b.feedbacks.map(f=>{const st={};if(f.style?.bgcolor)st.bgcolor=hexToInt(f.style.bgcolor);if(f.style?.color)st.color=hexToInt(f.style.color);return{id:uid(16),type:f.type,instance_id:f.connection,options:f.options||{},style:st,isInverted:!!f.inverted}}).concat(bootFb),steps};
+}
+// With a separate boot page, Companion's own page up/down keys cycle onto it during a show. On every other
+// page they export instead as plain "go to page" buttons that cycle through the show pages only.
+// Companion page numbers follow DeckWriter's page order (the boot page is page 1).
+function navSkipBoot(b,pi){
+  if(b.kind!=="pageup"&&b.kind!=="pagedown")return null;
+  if(S.pages[pi]?.boot||!S.pages.some(p=>p.boot))return null;
+  const nums=S.pages.map((p,i)=>p.boot?0:i+1).filter(Boolean),at=nums.indexOf(pi+1);if(at<0)return null;
+  const to=b.kind==="pageup"?nums[(at+1)%nums.length]:nums[(at-1+nums.length)%nums.length];
+  return{type:"button",style:{text:b.kind==="pageup"?"▲\nPAGE UP":"▼\nPAGE DOWN",textExpression:false,size:14,png64:null,alignment:"center:center",pngalignment:"center:center",color:0xffffff,bgcolor:0x1d2226,show_topbar:false},
+    options:{rotaryActions:false,stepAutoProgress:true},feedbacks:[],
+    steps:{0:{action_sets:{down:[{id:uid(16),action:"set_page",instance:"internal",options:{controller:"self",controller_from_variable:false,page:to,page_from_variable:false}}],up:[]},options:{runWhileHeld:[]}}},__to:to};
 }
 function buildExport(pi){
-  const pg=S.pages[pi];const d=dev();const controls={};const used=new Set();const warn=[];
+  const pg=S.pages[pi];const d=dev();const controls={};const used=new Set();const warn=[];const navTargets=[];
   for(const[k,b]of Object.entries(pg.buttons)){const[r,c]=parseKey(k);
     const onDeck=(r<d.rows&&c<d.cols)||(d.dials&&r===d.rows&&c<d.dials);if(!onDeck){warn.push(`Key at row ${r+1}, column ${c+1} is outside the ${d.name} and was left out.`);continue}
-    const ctl=toControl(b,d.dials&&r===d.rows);(controls[r]??={})[c]=ctl;
+    const nav=navSkipBoot(b,pi);if(nav){navTargets.push(`${b.kind==="pageup"?"Page up":"Page down"} → page ${nav.__to}`);delete nav.__to}
+    const ctl=nav||toControl(b,d.dials&&r===d.rows);(controls[r]??={})[c]=ctl;
     for(const s of b.steps)for(const L of[s.down,s.up,s.rotL,s.rotR])for(const a of L){if(a.connection!=="internal")used.add(a.connection);if(!a.action)warn.push(`"${b.text||"A key"}" has an action with no id.`)}
     for(const f of b.feedbacks)if(f.connection!=="internal")used.add(f.connection);}
   const instances={};let i=0;
   for(const id of used){const c=S.connections.find(x=>x.id===id);if(!c){warn.push(`A key uses a connection that was removed (${id}). Re-pick it in that key's Actions tab.`);continue}
-    const cfg={...(LIBRARY[c.module]?optDefaults(LIBRARY[c.module].config):{}),...(c.raw?.config||{}),...(c.config||{})};
+    // a connection adopted from a linked Companion already exists there: send no default settings that could overwrite it
+    const cfg=c.fromCompanion?{...(c.config||{})}:{...(LIBRARY[c.module]?optDefaults(LIBRARY[c.module].config):{}),...(c.raw?.config||{}),...(c.config||{})};
     if(c.raw){const r=clone(c.raw);r.instance_type=r.instance_type||r.moduleId||c.module;delete r.moduleId;r.label=c.label;r.config=cfg;instances[id]=r}
     else instances[id]={instance_type:c.module,label:c.label,config:cfg,isFirstInit:false,lastUpgradeIndex:-1,enabled:true,sortOrder:i};
     i++;}
+  if(bootOverlayPage()===pg){
+    const blank=()=>({type:"button",style:{text:"",textExpression:false,size:"auto",png64:null,alignment:"center:center",pngalignment:"center:center",color:16777215,bgcolor:0,show_topbar:false},
+      options:{rotaryActions:false,stepAutoProgress:true},feedbacks:[],steps:{0:{action_sets:{down:[],up:[]},options:{runWhileHeld:[]}}}});
+    let skipped=0;
+    for(const k of bootGeom().keys){const row=(controls[k.r]??={});let ctl=row[k.c];
+      if(!ctl)ctl=row[k.c]=blank();if(ctl.type!=="button"){skipped++;continue}
+      ctl.feedbacks=ctl.feedbacks.concat(bootFeedbacksAt(k.r,k.c,+S.boot.hold>0?["final"]:[]))}
+    if(!bootCache||bootCache.sig!==bootSig(S.boot))warn.push("The boot animation is not rendered yet. Open Boot screen and click Use on this page, then export again.");
+    warn.push(`The boot animation plays over this page. Import it as Companion page ${S.boot.companionPage||1} (the number set in Boot screen), and import the startup trigger too.`+(skipped?` ${skipped} page up/down key(s) can't show it and stay plain.`:""));
+  }
+  if(navTargets.length)warn.push(`Page keys skip the boot page: ${[...new Set(navTargets)].join(", ")}. Import this page as Companion page ${pi+1} so the numbers line up.`);
   if(pg.boot)warn.push("This is your boot screen. Import it as page 1, and also import the startup trigger (Boot screen → Save startup trigger) so the animation plays when Companion starts.");
   const maxRow=d.dials?d.rows:d.rows-1;
-  return{data:{version:6,type:"page",page:{name:pg.name||`Page ${pi+1}`,controls,gridSize:{minColumn:0,maxColumn:d.cols-1,minRow:0,maxRow}},instances,oldPageNumber:pi+1},warn:[...new Set(warn)]};
+  let data={version:6,type:"page",page:{name:pg.name||`Page ${pi+1}`,controls,gridSize:{minColumn:0,maxColumn:d.cols-1,minRow:0,maxRow}},instances,oldPageNumber:pi+1};
+  return{data,warn:[...new Set(warn)]};
 }
 let downloadsCap=null;(async()=>{try{downloadsCap=await window.claude?.use?.("downloads")}catch(_){}})();
 // Inside Claude, files go through the downloads capability, which only allows some extensions, so a
@@ -1465,7 +1565,7 @@ async function saveFile(name,data){
 }
 const savedNote=r=>r==="renamed"?"Saved. Remove the .json ending before importing it in Companion":"Saved. Import it in Companion";
 async function openExport(){
-  if(S.boot&&S.pages.some(p=>p.boot)){try{await buildBootCache(S.boot)}catch(_){}}
+  if(S.boot&&(S.pages.some(p=>p.boot)||bootOverlayPage())){try{await buildBootCache(S.boot)}catch(_){}}
   $("#expPage").innerHTML=S.pages.map((p,i)=>`<option value="${i}" ${i===S.pageIdx?"selected":""}>${i+1}. ${esc(p.name)}</option>`).join("");
   fillExport();$("#exportDlg").showModal();
 }
@@ -1480,7 +1580,24 @@ function fillExport(){
 $("#openExport").onclick=openExport;$("#expPage").onchange=fillExport;
 $("#expCopy").onclick=async()=>{const t=fillExport.cur.full;try{await navigator.clipboard.writeText(t);toast("Copied. Paste into a file named something.companionconfig")}catch(_){const ta=document.createElement("textarea");ta.value=t;document.body.appendChild(ta);ta.select();try{document.execCommand("copy");toast("Copied")}catch(__){toast("Copy blocked. Use Save file instead")}ta.remove()}};
 $("#expSave").onclick=async()=>{try{toast(savedNote(await saveFile(`${fillExport.cur.name}.companionconfig`,fillExport.cur.full)))}catch(e){if(e?.code!=="declined")toast(e?.code==="rate_limited"?"A save prompt is already open":"Couldn't save here. Use Copy JSON instead")}};
-$("#saveProject").onclick=async()=>{try{await saveFile("deckwriter-project.json",JSON.stringify(S));toast("Project saved")}catch(e){if(e?.code!=="declined")toast("Couldn't save the project")}};
+/* ---------- project files: the whole project in one file, to carry between computers ---------- */
+// Live's record of what is on this computer's Stream Deck stays behind: it means nothing on another machine.
+function projectData(){const st=JSON.parse(JSON.stringify(S));delete st.live;return JSON.stringify({deckwriter:"project",version:1,saved:new Date().toISOString(),state:st})}
+const projectName=()=>(S.projectName||"").trim()||"DeckWriter project";
+$("#saveProject").onclick=async()=>{const d=new Date(),p=n=>String(n).padStart(2,"0");
+  const name=`${projectName().replace(/[^\w\- ]+/g,"").trim()||"DeckWriter project"} ${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())} ${p(d.getHours())}${p(d.getMinutes())}.json`;
+  try{const r=await saveFile(name,projectData());toast(`Project saved as “${r==="renamed"?name+".json":name}”. Open it on any computer with Open project.`)}catch(e){if(e?.code!=="declined")toast("Couldn't save the project")}};
+function openProject(o,fileName){
+  const st=o?.deckwriter==="project"?o.state:o; // older saves were the bare project
+  if(!st||!Array.isArray(st.pages)||!st.pages.length||!st.pages.every(p=>p&&typeof p.buttons==="object"))throw new Error("not a project");
+  if(!DEVICES[st.device])st.device=S.device;fixTitleKeys(st);
+  st.connections??=[];st.learned??={};st.pageIdx=Math.min(Math.max(0,st.pageIdx|0),st.pages.length-1);delete st.live;
+  if(fileName)st.projectName=fileName.replace(/(\.json)+$/i,"").replace(/\s+\d{4}-\d{2}-\d{2}( \d{4})?$/,"").trim();
+  commit(()=>{const live=S.live;S=st;if(live)S.live=live;selected=null;multi.clear()});
+  refreshAllArt();
+  const keys=st.pages.reduce((n,p)=>n+Object.keys(p.buttons).length,0);
+  toast(`Opened “${projectName()}”: ${st.pages.length} page${st.pages.length===1?"":"s"}, ${keys} keys. ⌘Z goes back to what you had.`);
+}
 
 /* ---------- import ---------- */
 function openImport(){$("#importResult").innerHTML="";$("#importDlg").showModal()}
@@ -1504,6 +1621,7 @@ function* walkEntities(list){for(const e of list||[]){if(!e)continue;yield e;if(
 function importFile(file){
   const out=$("#importResult");out.innerHTML=`<span class="empty-note">Reading ${esc(file.name)}…</span>`;
   readConfig(file).then(cfg=>{
+    if(cfg?.deckwriter==="project"){$("#importDlg").close();openProject(cfg,file.name);return}
     if(!cfg||typeof cfg!=="object"||!cfg.version)throw new Error("notcompanion");
     const inst=cfg.instances||{};const modOf={};let addedConn=0;
     undoStack.push(JSON.stringify(S));redoStack.length=0;
@@ -1607,14 +1725,16 @@ const showVars=t=>String(t||"").replace(/\$\(([^:()]+):([^()]+)\)/g,(_,c,n)=>var
 
 /* preset browser */
 let presetMod=null,presetCat="",presetQ="";
-function presetConn(mod){return S.connections.find(c=>c.id===$("#presetConn")?.value&&c.module===mod)||S.connections.find(c=>c.module===mod)}
+// prefer the connection picked in the drawer, then a real connection from a linked Companion, then any of that type
+function presetConn(mod){return S.connections.find(c=>c.id===$("#presetConn")?.value&&c.module===mod)||S.connections.find(c=>c.module===mod&&(typeof liveOf==="function"&&liveOf(c.id)))||S.connections.find(c=>c.module===mod&&c.fromCompanion)||S.connections.find(c=>c.module===mod)}
 function renderPresets(){
   const mods=Object.keys(LIBRARY);if(!presetMod||!LIBRARY[presetMod])presetMod=(S.connections.find(c=>LIBRARY[c.module])||{}).module||mods[0];
   const L=LIBRARY[presetMod];const cats=[...new Set(L.presets.map(p=>p.cat))];
   if(presetCat&&!cats.includes(presetCat))presetCat="";
   const q=presetQ.trim().toLowerCase();
   const list=L.presets.map((p,i)=>[p,i]).filter(([p])=>(!presetCat||p.cat===presetCat)&&(!q||(p.n+" "+p.tx+" "+p.cat).toLowerCase().includes(q)));
-  const conns=S.connections.filter(c=>c.module===presetMod);
+  const real=c=>(typeof liveOf==="function"&&liveOf(c.id))||c.fromCompanion?0:1;
+  const conns=S.connections.filter(c=>c.module===presetMod).sort((a,b)=>real(a)-real(b));
   $("#presetMods").innerHTML=mods.map(m=>`<button data-pmod="${esc(m)}" aria-pressed="${m===presetMod}">${esc(libName(m))}<span class="count">${LIBRARY[m].presets.length}</span></button>`).join("");
   $("#presetBar").innerHTML=`<select class="inp" id="presetCat" aria-label="Category"><option value="">All categories (${L.presets.length})</option>${cats.map(c=>`<option ${c===presetCat?"selected":""}>${esc(c)}</option>`).join("")}</select>
     <input class="inp" id="presetSearch" placeholder="Search presets" value="${esc(presetQ)}" aria-label="Search presets">
@@ -1816,15 +1936,34 @@ async function paintPresetPreviews(){
   }
 }
 
-function wipePage(){const n=Object.keys(page().buttons).length;if(!n)return;commit(()=>{page().buttons={};selected=null;multi.clear();S.example=false});toast(`Wiped ${n} keys from “${page().name||"this page"}”. Press ⌘Z to undo.`)}
+function wipePage(){const n=Object.keys(page().buttons).length,extra=liveExtraKeys(page());if(!n&&!extra.length)return;
+  if(n)commit(()=>{page().buttons={};selected=null;multi.clear();S.example=false});
+  if(extra.length||(S.live?.on&&n))liveWipe(page());
+  toast(n?`Wiped ${n} keys from “${page().name||"this page"}”${S.live?.on?` and Companion page ${livePageNum(page())}`:""}. Press ⌘Z to undo in DeckWriter.`:`Clearing Companion page ${livePageNum(page())}…`)}
+// keys Companion has on this page's Live target that DeckWriter doesn't have (only while Live is on)
+function liveExtraKeys(pg){const c=S.live;if(!c?.on||pg.boot)return[];try{if(!liveRT.status?.companion)return[]}catch(_){return[]} // liveRT is declared further down
+  const num=livePageNum(pg),cp=liveRT.status.pages.find(p=>p.number===num);
+  if(!cp||liveBlocked(num,cp))return[];return cp.keys.map(([r,cc])=>r+","+cc).filter(k=>!pg.buttons[k])}
+// Wipe with Live on empties the Companion page too, including buttons DeckWriter never sent
+async function liveWipe(pg){const c=liveCfg(),num=livePageNum(pg);
+  const st=await relayStatus(),cp=st?.pages?.find(p=>p.number===num);if(!cp||liveBlocked(num,cp))return;
+  while(liveRT.busy)await new Promise(r=>setTimeout(r,100));liveRT.busy=true;let n=0;
+  try{for(const[r,col]of cp.keys){if(pg.buttons[r+","+col])continue;
+      const res=await fetch(RELAY+"/clear",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({page:num,row:r,column:col})}).then(x=>x.json());
+      if(!res.ok)throw new Error(res.error||"clear failed");n++}
+    c.owned[pg.id]={};c.base[pg.id]={};liveTarget(pg,num);try{localStorage.setItem("deckwright.v1",JSON.stringify(S))}catch(_){}
+    liveRT.lastMsg=`Companion page ${num}: cleared ${n} key${n===1?"":"s"}`;toast(liveRT.lastMsg)}
+  catch(e){liveRT.lastMsg="Live wipe failed: "+e.message;toast(liveRT.lastMsg)}
+  finally{liveRT.busy=false;await relayStatus();render()}}
 
 /* ---------- boot screen: an animation across every key on page 1, played by a startup trigger ---------- */
 // How it works in Companion: every key's normal image is the final title screen. Each key also carries one
 // "Variable: check value" feedback per frame that swaps in that frame's slice of the picture while
 // $(internal:custom_boot_frame) equals the frame number. A startup trigger steps that variable 1..N, then "done".
 const BOOT_GAP=18, BOOT_VAR="boot_frame";
-const BOOT_STYLES=[["ignite","Ignition"],["scan","Scanline"],["ripple","Ripple"],["meter","Meters"]];
-const bootDefaults=()=>({title:"AV360",subtitle:"SYSTEM ONLINE",style:"ignite",c1:"#c6f432",c2:"#ff5ad9",secs:2,fps:12,afterPage:2,titleSize:58,subSize:20,deckId:"streamdeck:CL45L2A05421"});
+const BOOT_STYLES=[["ignite","Ignition"],["scan","Scanline"],["ripple","Ripple"],["meter","Meters"],["glitch","Glitch"],["matrix","Matrix"],["warp","Warp"],["tiles","Tiles"],["countdown","Countdown"],["radar","Radar"],["type","Typewriter"]];
+const BOOT_BGS=[["aurora","Aurora"],["circuit","Circuit"],["rays","Rays"],["halftone","Halftone"],["waves","Waves"],["grid","Grid"],["black","Black"]];
+const bootDefaults=()=>({title:"AV360",subtitle:"SYSTEM ONLINE",style:"ignite",c1:"#c6f432",c2:"#ff5ad9",secs:2,fps:12,afterPage:2,titleSize:58,subSize:20,bg:"aurora",tRow:"auto",sRow:"auto",tX:0,tY:0,sX:0,sY:0,tSpace:0,sSpace:0,snap:false,subSnap:false,underline:true,mode:"page",overlayPage:null,companionPage:null,hold:3,deckId:"streamdeck:CL45L2A05421"});
 let bootCache=null; // {sig, finals:[dataURL per key], frames:[[dataURL per key] per frame]}
 const bootSig=cfg=>JSON.stringify([cfg,S.device]);
 const bootFrameCount=cfg=>Math.max(6,Math.round(cfg.secs*cfg.fps));
@@ -1836,32 +1975,122 @@ function rgba(hex,a){const n=hexToInt(hex);return`rgba(${n>>16&255},${n>>8&255},
 function mixHex(h1,h2,t){const a=hexToInt(h1),b=hexToInt(h2);const ch=s=>Math.round((a>>s&255)*(1-t)+(b>>s&255)*t);return intToHex(ch(16)<<16|ch(8)<<8|ch(0))}
 function rng(seed){return()=>{seed|=0;seed=seed+0x6D2B79F5|0;let t=Math.imul(seed^seed>>>15,1|seed);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296}}
 
+// Draws text with extra letter spacing, centred on cx. Only the first `shown` characters are drawn (Typewriter).
+// Returns the right edge of what was drawn and the full run's left edge and width.
+function drawSpaced(x,str,cx,y,sp,shown=str.length){
+  const ws=[...str].map(ch=>x.measureText(ch).width),total=ws.reduce((a,b)=>a+b,0)+sp*Math.max(0,ws.length-1);
+  let px=cx-total/2;const left=px;x.textAlign="left";
+  [...str].forEach((ch,i)=>{if(i<shown)x.fillText(ch,px,y);px+=ws[i]+sp;if(i===shown-1)drawSpaced.end=px-sp});
+  if(shown<=0)drawSpaced.end=left;x.textAlign="center";return{left,total,end:drawSpaced.end};
+}
+const spacedWidth=(x,str,sp)=>[...str].reduce((a,ch)=>a+x.measureText(ch).width,0)+sp*Math.max(0,[...str].length-1);
+// Title and subtitle. Rows, nudges, letter spacing and "one letter per key" come from cfg (Boot screen studio).
 function drawTitle(x,cfg,W,H,alpha,scale=1,reveal=1){
   if(alpha<=0)return;x.save();x.globalAlpha=alpha;
   const title=String(cfg.title||"").toUpperCase(),sub=String(cfg.subtitle||"").toUpperCase();
-  // snap the title to one row of keys and the subtitle to the row below, so neither straddles a gap
-  const rows=dev().rows,rowY=r=>r*(72+BOOT_GAP)+36;
-  const tRow=sub&&rows>1?Math.max(0,Math.floor((rows-2)/2)):Math.floor((rows-1)/2),sRow=Math.min(rows-1,tRow+1);
-  let fs=+cfg.titleSize||58;x.font=`700 ${fs}px Geist, "Helvetica Neue", Arial, sans-serif`;
-  const tw=x.measureText(title).width;if(tw>W*.9)fs*=W*.9/tw;
-  x.translate(W/2,rowY(tRow));x.scale(scale,scale);
-  if(reveal<1){x.beginPath();x.rect(-W/2,-H,W*reveal,H*2);x.clip()}
-  x.font=`700 ${fs}px Geist, "Helvetica Neue", Arial, sans-serif`;x.textAlign="center";x.textBaseline="middle";
-  const g=x.createLinearGradient(-W/2,0,W/2,0);g.addColorStop(0,"#ffffff");g.addColorStop(.55,mixHex("#ffffff",cfg.c1,.35));g.addColorStop(1,cfg.c1);
-  x.shadowColor=rgba(cfg.c1,.55);x.shadowBlur=fs*.35;x.fillStyle=g;x.fillText(title,0,0);x.shadowBlur=0;
-  if(sub&&sRow!==tRow){let ss=+cfg.subSize||20;x.font=`600 ${ss}px "Geist Mono", Menlo, monospace`;const sw=x.measureText(sub).width;if(sw>W*.9){ss*=W*.9/sw;x.font=`600 ${ss}px "Geist Mono", Menlo, monospace`}
-    const dy=rowY(sRow)-rowY(tRow);x.fillStyle=cfg.c2;x.fillText(sub,0,dy-4);
-    x.fillStyle=rgba(cfg.c1,.9);const bw=Math.min(W*.5,x.measureText(sub).width);x.fillRect(-bw/2,dy+ss*.75,bw,3)}
+  const d=dev(),rows=d.rows,cols=d.cols,pitch=72+BOOT_GAP,rowY=r=>r*pitch+36,colX=c=>c*pitch+36,clampRow=r=>Math.max(0,Math.min(rows-1,r));
+  const autoT=sub&&rows>1?Math.max(0,Math.floor((rows-2)/2)):Math.floor((rows-1)/2);
+  const tRow=cfg.tRow&&cfg.tRow!=="auto"?clampRow(+cfg.tRow-1):autoT;
+  let sRow=null;
+  if(sub&&cfg.sRow!=="none"){sRow=cfg.sRow&&cfg.sRow!=="auto"?clampRow(+cfg.sRow-1):(tRow+1<rows?tRow+1:tRow>0?tRow-1:null);if(sRow===tRow&&(!cfg.sRow||cfg.sRow==="auto"))sRow=null}
+  const tY=rowY(tRow)+(+cfg.tY||0),sY=sRow!=null?rowY(sRow)+(+cfg.sY||0)-4:0,tX=W/2+(+cfg.tX||0),sX=W/2+(+cfg.sX||0);
+  const typed=typeof cfg.__typed==="number",subTyped=typeof cfg.__subTyped==="number";
+  // a soft dark band behind the text on busy backgrounds
+  if(!["black","grid"].includes(cfg.bg||"aurora")){const ys=[tY].concat(sRow!=null?[sY]:[]);const top=Math.min(...ys)-50,bot=Math.max(...ys)+50;const sg=x.createLinearGradient(0,top,0,bot);
+    sg.addColorStop(0,"rgba(0,0,0,0)");sg.addColorStop(.25,`rgba(0,0,0,${.5*alpha})`);sg.addColorStop(.75,`rgba(0,0,0,${.5*alpha})`);sg.addColorStop(1,"rgba(0,0,0,0)");x.fillStyle=sg;x.fillRect(0,top,W,bot-top)}
+  if(reveal<1){x.beginPath();x.rect(0,0,W*reveal,H);x.clip()}
+  x.translate(tX,tY);x.scale(scale,scale);x.translate(-tX,-tY);
+  const font=f=>`700 ${f}px Geist, "Helvetica Neue", Arial, sans-serif`;
+  const tSp=+cfg.tSpace||0,chars=[...title],snap=!!cfg.snap&&chars.length>1&&chars.length<=cols;
+  let fs=+cfg.titleSize||58;
+  if(snap)fs=Math.min(fs,64);else{x.font=font(fs);const tw=spacedWidth(x,title,tSp);if(tw>W*.94)fs*=W*.94/tw}
+  x.font=font(fs);x.textBaseline="middle";x.textAlign="center";
+  const g=x.createLinearGradient(0,0,W,0);g.addColorStop(0,"#ffffff");g.addColorStop(.55,mixHex("#ffffff",cfg.c1,.35));g.addColorStop(1,cfg.c1);
+  x.shadowColor=rgba(cfg.c1,.55);x.shadowBlur=fs*.35;x.fillStyle=g;
+  const shown=typed?cfg.__typed:chars.length;let cursorX=null;
+  if(snap){
+    // one letter centred in each key; the left/right nudge moves the word by whole keys
+    const sc=Math.max(0,Math.min(cols-chars.length,Math.round((cols-chars.length)/2)+Math.round((+cfg.tX||0)/pitch)));
+    chars.forEach((ch,i)=>{if(i<shown)x.fillText(ch,colX(sc+i),rowY(tRow)+(+cfg.tY||0))});
+    cursorX=colX(sc+Math.min(shown,chars.length-1))+(shown>=chars.length?fs*.4:-fs*.45);
+  }else{const r=drawSpaced(x,title,tX,tY,tSp,shown);cursorX=r.end+4}
+  x.shadowBlur=0;
+  if(typed&&cfg.__cursor&&!subTyped){x.fillStyle=cfg.c1;x.fillRect(cursorX,tY-fs*.38,fs*.09,fs*.76)}
+  // subtitle
+  if(sRow!=null&&!(typed&&!subTyped)){
+    const sSp=+cfg.sSpace||0;let ss=+cfg.subSize||20;const sfont=f=>`600 ${f}px "Geist Mono", Menlo, monospace`;
+    x.font=sfont(ss);const sw=spacedWidth(x,sub,sSp);if(sw>W*.94){ss*=W*.94/sw;x.font=sfont(ss)}
+    const words=sub.split(/\s+/).filter(Boolean),wordSnap=!!cfg.subSnap&&words.length>0&&words.length<=cols;
+    x.fillStyle=cfg.c2;
+    if(wordSnap){
+      // one word centred in each key, shrunk so the longest word fits inside a key
+      const longest=Math.max(...words.map(w=>spacedWidth(x,w,sSp)));if(longest>62){ss*=62/longest;x.font=sfont(ss)}
+      const sc=Math.max(0,Math.min(cols-words.length,Math.round((cols-words.length)/2)+Math.round((+cfg.sX||0)/pitch))),yy=rowY(sRow)+(+cfg.sY||0)-(cfg.underline!==false?4:0);
+      let left=subTyped?cfg.__subTyped:Infinity,lastEnd=null;
+      words.forEach((w,i)=>{if(left<=0)return;const n=Math.min(w.length,left);const r=drawSpaced(x,w,colX(sc+i),yy,sSp,n);lastEnd=r.end;left-=w.length+1;
+        if(!subTyped&&cfg.underline!==false){x.fillStyle=rgba(cfg.c1,.9);x.fillRect(colX(sc+i)-r.total/2,yy+ss*.75,r.total,3);x.fillStyle=cfg.c2}});
+      if(subTyped&&cfg.__cursor&&lastEnd!=null){x.fillRect(lastEnd+3,yy-ss*.45,ss*.12,ss*.9)}
+    }else{
+      const r=drawSpaced(x,sub,sX,sY,sSp,subTyped?cfg.__subTyped:sub.length);
+      if(subTyped){if(cfg.__cursor){x.fillStyle=cfg.c2;x.fillRect(r.end+3,sY-ss*.45,ss*.12,ss*.9)}}
+      else if(cfg.underline!==false){x.fillStyle=rgba(cfg.c1,.9);const bw=Math.min(W*.5,r.total);x.fillRect(sX-bw/2,sY+ss*.75,bw,3)}
+    }
+  }
   x.restore();
 }
+// The final-screen background. `a` fades it in during the animation. Seeded, so every frame and export matches.
 function drawBackdrop(x,cfg,W,H,a=1){
   x.fillStyle="#050506";x.fillRect(0,0,W,H);
-  const g=x.createRadialGradient(W/2,H*.45,0,W/2,H*.45,Math.max(W,H)*.7);g.addColorStop(0,rgba(cfg.c1,.26*a));g.addColorStop(.6,rgba(cfg.c2,.1*a));g.addColorStop(1,"rgba(0,0,0,0)");
-  x.fillStyle=g;x.fillRect(0,0,W,H);
-  x.strokeStyle=`rgba(255,255,255,${.08*a})`;x.lineWidth=1;
-  for(let gx=0;gx<W;gx+=24){x.beginPath();x.moveTo(gx+.5,0);x.lineTo(gx+.5,H);x.stroke()}
-  for(let gy=0;gy<H;gy+=24){x.beginPath();x.moveTo(0,gy+.5);x.lineTo(W,gy+.5);x.stroke()}
+  if(a<=0)return;
+  const bg=cfg.bg||"aurora",R=rng(4242),c1=cfg.c1,c2=cfg.c2,mid=mixHex(c1,c2,.5);
+  const blob=(cx,cy,r,col,al)=>{const g=x.createRadialGradient(cx,cy,0,cx,cy,r);g.addColorStop(0,rgba(col,al*a));g.addColorStop(1,"rgba(0,0,0,0)");x.fillStyle=g;x.fillRect(0,0,W,H)};
+  x.save();
+  if(bg==="aurora"){
+    blob(W*.12,H*.9,W*.6,c1,.75);blob(W*.88,H*.1,W*.6,c2,.7);blob(W*.55,H*1.05,W*.5,mid,.45);blob(W*.3,H*.05,W*.35,c2,.3);
+    // soft diagonal light bands
+    x.globalCompositeOperation="lighter";
+    for(let i=0;i<3;i++){const g=x.createLinearGradient(0,0,W,H);const o=.25+i*.22;
+      g.addColorStop(Math.max(0,o-.08),"rgba(255,255,255,0)");g.addColorStop(o,`rgba(255,255,255,${.05*a})`);g.addColorStop(Math.min(1,o+.08),"rgba(255,255,255,0)");x.fillStyle=g;x.fillRect(0,0,W,H)}
+  }else if(bg==="circuit"){
+    blob(W/2,H/2,Math.max(W,H)*.75,c1,.12);
+    x.lineCap="round";x.lineJoin="round";
+    for(let i=0;i<34;i++){
+      let px=R()*W,py=R()*H;const col=R()<.7?c1:c2;x.strokeStyle=rgba(col,(.25+R()*.35)*a);x.lineWidth=R()<.3?3:1.6;
+      x.beginPath();x.moveTo(px,py);
+      for(let s2=0;s2<3+Math.floor(R()*3);s2++){const len=30+R()*110;if(R()<.5)px+=R()<.5?len:-len;else py+=R()<.5?len:-len;
+        if(R()<.35){const d=(R()<.5?1:-1)*25;px+=d;py+=d}x.lineTo(px,py)}
+      x.stroke();
+      x.fillStyle=rgba(col,.9*a);x.beginPath();x.arc(px,py,3.5,0,Math.PI*2);x.fill();
+      x.strokeStyle=rgba(col,.5*a);x.lineWidth=1.5;x.beginPath();x.arc(px,py,7,0,Math.PI*2);x.stroke();
+    }
+  }else if(bg==="rays"){
+    const cx=W/2,cy=H*.42,n=28,r=Math.hypot(W,H);
+    for(let i=0;i<n;i++){const a0=i/n*Math.PI*2,a1=(i+.5)/n*Math.PI*2;x.fillStyle=rgba(i%2?c1:c2,(i%2?.5:.34)*a);
+      x.beginPath();x.moveTo(cx,cy);x.arc(cx,cy,r,a0,a1);x.closePath();x.fill()}
+    blob(cx,cy,Math.max(W,H)*.45,c1,.55);
+    const v=x.createRadialGradient(cx,cy,0,cx,cy,r*.6);v.addColorStop(0,"rgba(0,0,0,0)");v.addColorStop(.55,"rgba(0,0,0,0)");v.addColorStop(1,"rgba(0,0,0,.35)");x.fillStyle=v;x.fillRect(0,0,W,H);
+  }else if(bg==="halftone"){
+    // dots laid out per key (6 x 6, 12px apart, inset 6px) so every key gets whole dots and even edges
+    const cx=W/2,cy=H/2,maxD=Math.hypot(cx,cy);
+    for(const k of bootGeom().keys)for(let i=0;i<6;i++)for(let j=0;j<6;j++){const xx=k.x+6+i*12,yy=k.y+6+j*12,d=Math.hypot(xx-cx,yy-cy)/maxD,rr=2+d*3.5;
+      x.fillStyle=rgba(mixHex(c1,c2,xx/W),(.28+d*.6)*a);x.beginPath();x.arc(xx,yy,rr,0,Math.PI*2);x.fill()}
+  }else if(bg==="waves"){
+    blob(W/2,H/2,W*.6,mid,.15);
+    for(let k=0;k<9;k++){const col=k%2?c2:c1,amp=H*(.06+R()*.1),fr=(2+R()*3)*Math.PI*2/W,ph=R()*6,base=H*(.15+k*.09);
+      x.strokeStyle=rgba(col,(.3+R()*.4)*a);x.lineWidth=2+R()*2.5;x.beginPath();
+      for(let xx=0;xx<=W;xx+=6){const yy=base+Math.sin(xx*fr+ph)*amp*Math.sin(xx/W*Math.PI);xx?x.lineTo(xx,yy):x.moveTo(xx,yy)}x.stroke()}
+  }else if(bg==="grid"){
+    blob(W/2,H*.45,Math.max(W,H)*.7,c1,.26);
+    x.strokeStyle=`rgba(255,255,255,${.08*a})`;x.lineWidth=1;
+    for(let gx=0;gx<W;gx+=24){x.beginPath();x.moveTo(gx+.5,0);x.lineTo(gx+.5,H);x.stroke()}
+    for(let gy=0;gy<H;gy+=24){x.beginPath();x.moveTo(0,gy+.5);x.lineTo(W,gy+.5);x.stroke()}
+  }
+  x.restore();
 }
+let finalCache={key:"",c:null};
+function bootFinalCanvas(cfg){const{W,H}=bootGeom();const key=bootSig(cfg);
+  if(finalCache.key!==key){const c=document.createElement("canvas");c.width=W;c.height=H;const fx=c.getContext("2d");drawBackdrop(fx,cfg,W,H);drawTitle(fx,cfg,W,H,1);finalCache={key,c}}
+  return finalCache.c}
 function drawBoot(x,cfg,t,frame){
   const{W,H,keys}=bootGeom();const R=rng(1234+frame*97);
   x.clearRect(0,0,W,H);x.fillStyle="#000";x.fillRect(0,0,W,H);
@@ -1884,6 +2113,80 @@ function drawBoot(x,cfg,t,frame){
     const M=Math.hypot(W,H)*.6;
     for(let i=0;i<4;i++){const rr=(t*1.6-i*.18)*M;if(rr<=0)continue;const a=clamp01(1-rr/M);x.strokeStyle=rgba(i%2?cfg.c2:cfg.c1,a);x.lineWidth=10*a+2;x.beginPath();x.arc(W/2,H/2,rr,0,Math.PI*2);x.stroke()}
     const a=smooth(.45,.85,t);drawTitle(x,cfg,W,H,a,1+(1-a)*.6);
+  }else if(cfg.style==="glitch"){
+    // corrupted blocks and RGB-split slices that settle into a clean title
+    const fin=bootFinalCanvas(cfg),calm=smooth(.55,.92,t),noise=1-calm;
+    x.globalAlpha=smooth(0,.35,t);x.drawImage(fin,0,0);x.globalAlpha=1;
+    for(let i=0;i<Math.round(26*noise);i++){const y=R()*H,h=3+R()*26,dx=(R()-.5)*120*noise;x.drawImage(fin,0,y,W,h,dx,y,W,h)}
+    if(noise>.05){x.globalCompositeOperation="lighter";x.globalAlpha=.55*noise;x.drawImage(fin,-6*noise*R()*3,0);x.globalAlpha=1;x.globalCompositeOperation="source-over";
+      for(let i=0;i<Math.round(14*noise);i++){x.fillStyle=R()<.5?rgba(cfg.c1,.7):rgba(cfg.c2,.7);x.fillRect(R()*W,R()*H,10+R()*90,2+R()*10)}
+      for(let i=0;i<Math.round(8*noise);i++){x.fillStyle=`rgba(255,255,255,${.6*R()})`;x.fillRect(R()*W,R()*H,R()*W*.4,1)}}
+  }else if(cfg.style==="matrix"){
+    // falling code rain per 14px column; the title resolves through it
+    drawBackdrop(x,cfg,W,H,smooth(.55,1,t));
+    const fade=1-smooth(.62,.95,t),cw=14,glyphs="01アイウエオカキクケコ#$%&*+=<>ABCDEF";x.font='600 13px "Geist Mono", Menlo, monospace';x.textAlign="center";
+    const C=rng(77);
+    for(let cx=cw/2;cx<W;cx+=cw){const speed=.8+C()*1.6,off=C()*H,len=6+Math.floor(C()*10);const head=(off+t*speed*H*1.6)%(H+len*14);
+      for(let j=0;j<len;j++){const yy=head-j*14;if(yy<0||yy>H)continue;const g2=glyphs[Math.floor(rng(cx*31+j*7+frame)()*glyphs.length)];
+        x.fillStyle=j===0?`rgba(255,255,255,${.95*fade})`:rgba(j%5===0?cfg.c2:cfg.c1,(1-j/len)*.85*fade);x.fillText(g2,cx,yy)}}
+    drawTitle(x,cfg,W,H,smooth(.5,.85,t));
+  }else if(cfg.style==="warp"){
+    // a 3D starfield: ~650 stars at different depths fly toward the viewer and wrap around, so the deck stays full.
+    // Streaks stretch as the jump accelerates, a tunnel glow builds, a white flash hits, then the streaks fade under the title.
+    const cx=W/2,cy=H/2,M=Math.hypot(W,H)*.5,S2=rng(91),flashAt=.6,flash=Math.exp(-Math.pow((t-flashAt)/.045,2));
+    const sp=Math.pow(smooth(0,flashAt,t),1.5);                 // speed 0..1 up to the flash
+    const u=t*.55+Math.pow(smooth(0,flashAt,t),2.4)*2.6;        // distance travelled (accelerates), keeps going after the flash
+    const fadeOut=1-smooth(flashAt,.92,t);
+    drawBackdrop(x,cfg,W,H,smooth(flashAt,1,t));
+    // tunnel core and rings
+    const core=x.createRadialGradient(cx,cy,0,cx,cy,M*(.25+sp*.5));core.addColorStop(0,`rgba(255,255,255,${.35*sp*fadeOut})`);core.addColorStop(.25,rgba(cfg.c1,.35*sp*fadeOut));core.addColorStop(1,"rgba(0,0,0,0)");
+    x.fillStyle=core;x.fillRect(0,0,W,H);
+    for(let k=0;k<7;k++){const ph=((k/7)+u*.9)%1,rr=Math.pow(ph,2)*M*1.4;x.strokeStyle=rgba(k%2?cfg.c2:cfg.c1,(.06+.22*sp)*(1-ph)*fadeOut);x.lineWidth=2+ph*10;x.beginPath();x.arc(cx,cy,rr,0,Math.PI*2);x.stroke()}
+    x.lineCap="round";
+    const F=M*.16;
+    for(let i=0;i<650;i++){
+      const ang=S2()*Math.PI*2,lat=.15+Math.sqrt(S2())*1.6,z0=S2(),v=.6+S2()*.8,roll=S2(),col=roll<.7?null:roll<.85?cfg.c1:cfg.c2;
+      const z=.03+((z0-u*v*.5)%1+1)%1;                          // depth 0.03..1.03, wraps to the back
+      const head=lat*F/z,tail=lat*F/(z+.008+sp*.22+(t>flashAt?.12*fadeOut:0));
+      if(tail>M*1.3)continue;
+      const near=1-Math.min(1,z),al=Math.min(1,(.25+near*.9))*(t<flashAt?(.45+.55*Math.min(1,u*2)):fadeOut);
+      if(al<.02)continue;
+      const c=Math.cos(ang),s3=Math.sin(ang),x1=cx+c*tail,y1=cy+s3*tail,x2=cx+c*head,y2=cy+s3*head,w=.8+near*near*3.6+sp*1.2;
+      // coloured glow under a bright core
+      x.strokeStyle=rgba(col||(i%2?cfg.c1:cfg.c2),al*.35);x.lineWidth=w*2.6;x.beginPath();x.moveTo(x1,y1);x.lineTo(x2,y2);x.stroke();
+      x.strokeStyle=col?rgba(col,al):`rgba(255,255,255,${al})`;x.lineWidth=w;x.beginPath();x.moveTo(x1,y1);x.lineTo(x2,y2);x.stroke();
+    }
+    drawTitle(x,cfg,W,H,smooth(flashAt+.02,.85,t),1+(1-smooth(flashAt,.9,t))*.25);
+    if(flash>.01){x.fillStyle=`rgba(255,255,255,${flash*.92})`;x.fillRect(0,0,W,H)}
+  }else if(cfg.style==="tiles"){
+    // every key switches on in a random order with a white flash, showing its slice of the final screen
+    const fin=bootFinalCanvas(cfg),O=rng(55);const order=keys.map(k=>({k,at:.05+O()*.7}));
+    for(const{k,at}of order){const since=t-at;
+      if(since<0){x.fillStyle="#0b0b0d";x.fillRect(k.x,k.y,72,72);x.strokeStyle=rgba(cfg.c1,.15+.15*Math.sin(t*30+k.x));x.lineWidth=2;x.strokeRect(k.x+6,k.y+6,60,60);continue}
+      x.drawImage(fin,k.x,k.y,72,72,k.x,k.y,72,72);const fl=Math.max(0,1-since/.12);
+      if(fl>0){x.fillStyle=`rgba(255,255,255,${fl*.9})`;x.fillRect(k.x,k.y,72,72);x.strokeStyle=rgba(cfg.c1,fl);x.lineWidth=4;x.strokeRect(k.x+2,k.y+2,68,68)}}
+  }else if(cfg.style==="countdown"){
+    // a big 3, 2, 1 across the whole deck, then the title
+    drawBackdrop(x,cfg,W,H,smooth(.6,1,t));
+    const seg=Math.floor(t/.2);
+    if(seg<3){const lt=(t-seg*.2)/.2,n=3-seg,col=seg%2?cfg.c2:cfg.c1;x.save();x.translate(W/2,H/2);const sc=1.25-lt*.35;x.scale(sc,sc);x.globalAlpha=1-Math.pow(lt,3);
+      x.font=`800 ${H*.95}px Geist, "Helvetica Neue", Arial, sans-serif`;x.textAlign="center";x.textBaseline="middle";x.shadowColor=rgba(col,.8);x.shadowBlur=40;x.fillStyle="#fff";x.fillText(String(n),0,H*.04);
+      x.shadowBlur=0;x.strokeStyle=rgba(col,.9);x.lineWidth=6;x.beginPath();x.arc(0,0,H*.48,-Math.PI/2,-Math.PI/2+Math.PI*2*(1-lt));x.stroke();x.restore()}
+    drawTitle(x,cfg,W,H,smooth(.6,.85,t),1+(1-smooth(.6,.85,t))*.3);
+  }else if(cfg.style==="radar"){
+    // a rotating sweep reveals the final screen, with range rings
+    const fin=bootFinalCanvas(cfg),cx=W/2,cy=H/2,M=Math.hypot(W,H),ang=-Math.PI/2+smooth(0,.85,t)*Math.PI*2;
+    x.save();x.beginPath();x.moveTo(cx,cy);x.arc(cx,cy,M,-Math.PI/2,ang);x.closePath();x.clip();x.drawImage(fin,0,0);x.restore();
+    x.strokeStyle=rgba(cfg.c1,.35);x.lineWidth=1.5;for(let r=60;r<M/2;r+=70){x.beginPath();x.arc(cx,cy,r,0,Math.PI*2);x.stroke()}
+    if(t<.9){const g=x.createConicGradient?x.createConicGradient(ang-.6,cx,cy):null;
+      if(g){g.addColorStop(0,"rgba(0,0,0,0)");g.addColorStop(.095,rgba(cfg.c1,.55));g.addColorStop(.1,"rgba(0,0,0,0)");x.fillStyle=g;x.fillRect(0,0,W,H)}
+      x.strokeStyle="#fff";x.lineWidth=2.5;x.beginPath();x.moveTo(cx,cy);x.lineTo(cx+Math.cos(ang)*M,cy+Math.sin(ang)*M);x.stroke()}
+  }else if(cfg.style==="type"){
+    // the title types out with a blinking cursor, then the subtitle
+    drawBackdrop(x,cfg,W,H,smooth(0,.5,t));
+    const title=String(cfg.title||""),sub=String(cfg.subtitle||""),tp=smooth(.08,.6,t),sp=smooth(.62,.9,t);
+    const blink=Math.floor(frame/3)%2===0;
+    drawTitle(x,{...cfg,__typed:Math.round(tp*title.length),__subTyped:sp>0?Math.round(sp*sub.length):undefined,__cursor:blink||tp<1},W,H,1);
   }else{ // meters: an LED level meter per key column that settles into the title
     drawBackdrop(x,cfg,W,H,smooth(.6,1,t));
     const d=dev();const fall=1-smooth(.5,.78,t);
@@ -1903,38 +2206,79 @@ async function buildBootCache(cfg){
   drawBoot(bx,cfg,1,F+1);const finals=slice();
   bootCache={sig,finals,frames,F};return bootCache;
 }
-function bootFeedbacks(b){
-  if(!b.boot||!bootCache||!S.boot||bootCache.sig!==bootSig(S.boot))return[];
-  const{keys}=bootGeom();const idx=keys.findIndex(k=>k.r===b.boot.r&&k.c===b.boot.c);if(idx<0)return[];
-  return bootCache.frames.map((fr,f)=>({id:uid(16),type:"variable_value",instance_id:"internal",options:{variable:"internal:custom_"+BOOT_VAR,op:"eq",value:String(f+1)},style:{png64:fr[idx]},isInverted:false}));
+function bootFeedbacksAt(r,c,finalValues){
+  if(!bootCache||!S.boot||bootCache.sig!==bootSig(S.boot))return[];
+  const{keys}=bootGeom();const idx=keys.findIndex(k=>k.r===r&&k.c===c);if(idx<0)return[];
+  const fb=(value,png)=>({id:uid(16),type:"variable_value",instance_id:"internal",options:{variable:"internal:custom_"+BOOT_VAR,op:"eq",value},style:{png64:png},isInverted:false});
+  const out=bootCache.frames.map((fr,f)=>fb(String(f+1),fr[idx]));
+  for(const v of finalValues||[])out.push(fb(v,bootCache.finals[idx]));
+  return out;
 }
+// own-page mode: the boot page's keys are black until the animation runs, then show the final screen once it's "done".
+// (Their normal image used to be the final screen, which showed for the ~2 s before the trigger started.)
+function bootFeedbacks(b){return b.boot?bootFeedbacksAt(b.boot.r,b.boot.c,["done"]):[]}
+// over-a-page mode: which page (if any) the animation plays over
+const bootOverlayPage=()=>S.boot&&S.boot.mode==="overlay"?S.pages.find(p=>p.id===S.boot.overlayPage)||null:null;
+const BOOT_BUSY="boot_busy";
+// The startup trigger. Plugging a deck in updates Companion's surface variables more than once, so the
+// "deck connected" event can fire twice in quick succession; a busy flag plus a trigger condition makes
+// any second run wait out the first instead of overlapping it. boot_busy is created with default "0",
+// so a restart never leaves it stuck on.
 function bootTriggerExport(){
   const cfg=S.boot;const F=bootFrameCount(cfg),wait=Math.round(1000/cfg.fps);
   const act=(action,options)=>({id:uid(16),action,instance:"internal",options});
   const deck=String(cfg.deckId||"").trim();
-  const actions=[];
-  if(deck)actions.push(act("set_page",{controller:deck,controller_from_variable:false,page:1,page_from_variable:false}));
-  actions.push(act("custom_variable_create_value",{name:BOOT_VAR,value:"0"}));
+  const actions=[act("custom_variable_create_value",{name:BOOT_BUSY,value:"0"}),act("custom_variable_set_value",{name:BOOT_BUSY,value:"1"}),
+    act("custom_variable_create_value",{name:BOOT_VAR,value:"0"}),act("custom_variable_set_value",{name:BOOT_VAR,value:"0"})]; // black keys first, never the final screen
+  const overlay=cfg.mode==="overlay",target=overlay?Math.max(1,+cfg.companionPage||1):1;
+  if(deck)actions.push(act("set_page",{controller:deck,controller_from_variable:false,page:target,page_from_variable:false}));
+  actions.push(act("wait",{time:600})); // let a just-connected deck settle so the first frames are not lost
   for(let f=1;f<=F;f++){actions.push(act("custom_variable_set_value",{name:BOOT_VAR,value:String(f)}));actions.push(act("wait",{time:wait}))}
+  // over a page: hold the title screen, then reveal the page's real buttons
+  if(overlay&&+cfg.hold>0){actions.push(act("custom_variable_set_value",{name:BOOT_VAR,value:"final"}));actions.push(act("wait",{time:Math.round(+cfg.hold*1000)}))}
   actions.push(act("custom_variable_set_value",{name:BOOT_VAR,value:"done"}));
-  return{version:6,type:"trigger_list",triggers:{[uid()]:{type:"trigger",options:{name:"DeckWriter boot animation",enabled:true,sortOrder:0},action_sets:{0:actions},condition:[],
+  actions.push(act("custom_variable_set_value",{name:BOOT_BUSY,value:"0"}));
+  const notBusy={id:uid(16),type:"variable_value",instance_id:"internal",options:{variable:"internal:custom_"+BOOT_BUSY,op:"ne",value:"1"},style:{},isInverted:false};
+  return{version:6,type:"trigger_list",triggers:{[uid()]:{type:"trigger",options:{name:"DeckWriter boot animation",enabled:true,sortOrder:0},action_sets:{0:actions},condition:[notBusy],
     events:[{id:uid(),type:"startup",enabled:true,options:{delay:1500}}].concat(deck?[{id:uid(),type:"variable_changed",enabled:true,options:{variableId:"internal:surface_"+deck.replaceAll(":","_")+"_location"}}]:[])}},instances:{}};
 }
 
 /* studio dialog */
 let bootCfg=null,bootAnim=0;
 function bootForm(){
-  const c=bootCfg;
+  const c=bootCfg;bootLayoutOpen=!!document.querySelector(".boot-layout[open]")||bootLayoutOpen;
+  const showPages=S.pages.filter(p=>!p.boot);
+  if(!showPages.some(p=>p.id===c.overlayPage))c.overlayPage=(showPages[0]||{}).id||null;
+  if(!c.companionPage)c.companionPage=Math.max(1,showPages.findIndex(p=>p.id===c.overlayPage)+1);
+  const overlay=c.mode==="overlay";
   $("#bootForm").innerHTML=`
+    <div class="field"><span class="label">Where it plays</span><div class="seg" id="bootMode"><button data-v="overlay" aria-pressed="${overlay}">Over a page</button><button data-v="page" aria-pressed="${!overlay}">Its own page</button></div>
+      <span class="empty-note">${overlay?"Plays over your show page, holds the title, then reveals the page's buttons. There is no boot page to land on while paging.":"A separate page 1 that stays on the title until you press a key."}</span></div>
+    ${overlay?`<div class="row2"><div class="field"><span class="label">Play over</span><select class="inp" id="bootOverPage">${showPages.map(p=>`<option value="${esc(p.id)}" ${p.id===c.overlayPage?"selected":""}>${esc(p.name||"Page")}</option>`).join("")}</select></div>
+      <div class="field"><span class="label">Its page number in Companion</span><input class="inp" type="number" id="bootCompPage" min="1" max="99" value="${+c.companionPage||1}"></div></div>
+      <div class="field"><span class="label">Hold the title</span><select class="inp" id="bootHold">${[["2","2 seconds"],["3","3 seconds"],["5","5 seconds"],["10","10 seconds"],["0","Don't hold"]].map(([v,l])=>`<option value="${v}" ${String(c.hold)===v?"selected":""}>${l}</option>`).join("")}</select>
+        <span class="empty-note">The page's buttons appear on their own after the hold. To keep the title up until you press a key, use "Its own page".</span></div>`:""}
     <div class="field"><span class="label">Title</span><input class="inp" id="bootTitle" value="${esc(c.title)}" maxlength="18"></div>
     <div class="field"><span class="label">Subtitle</span><input class="inp" id="bootSub" value="${esc(c.subtitle)}" maxlength="28"></div>
     <div class="row2"><div class="field"><span class="label">Title size <span class="mono" id="bootTSv">${c.titleSize}</span></span><input type="range" id="bootTS" min="32" max="72" step="2" value="${c.titleSize}"></div>
     <div class="field"><span class="label">Subtitle size <span class="mono" id="bootSSv">${c.subSize}</span></span><input type="range" id="bootSS" min="12" max="34" step="1" value="${c.subSize}"></div></div>
+    <details class="boot-layout" ${bootLayoutOpen?"open":""}><summary>Text layout <span class="empty-note">rows, position, spacing</span></summary>
+      <div class="row2"><label class="check"><input type="checkbox" id="bootSnap" ${c.snap?"checked":""}> Title: one letter per key</label>
+      <label class="check"><input type="checkbox" id="bootSubSnap" ${c.subSnap?"checked":""}> Subtitle: one word per key</label></div>
+      <span class="empty-note" style="margin-top:-6px">Keeps text out of the gaps between keys. Up to ${dev().cols} letters or words. Left / right then moves by whole keys.</span>
+      <div class="row2"><div class="field"><span class="label">Title row</span><select class="inp" id="bootTRow"><option value="auto">Auto</option>${Array.from({length:dev().rows},(_,i)=>`<option value="${i+1}" ${String(c.tRow)===String(i+1)?"selected":""}>Row ${i+1}</option>`).join("")}</select></div>
+      <div class="field"><span class="label">Subtitle row</span><select class="inp" id="bootSRow"><option value="auto">Auto (under title)</option>${Array.from({length:dev().rows},(_,i)=>`<option value="${i+1}" ${String(c.sRow)===String(i+1)?"selected":""}>Row ${i+1}</option>`).join("")}<option value="none" ${c.sRow==="none"?"selected":""}>Hidden</option></select></div></div>
+      <div class="row2">${bootSlider("bootTX","Title left / right",c.tX,-180,180,1,c.snap?"keys":"px")}${bootSlider("bootTY","Title up / down",c.tY,-36,36,1,"px")}</div>
+      <div class="row2">${bootSlider("bootTSp","Title letter spacing",c.tSpace,0,60,1,"px")}${bootSlider("bootSSp","Subtitle letter spacing",c.sSpace,0,30,1,"px")}</div>
+      <div class="row2">${bootSlider("bootSX","Subtitle left / right",c.sX,-180,180,1,c.subSnap?"keys":"px")}${bootSlider("bootSY","Subtitle up / down",c.sY,-36,36,1,"px")}</div>
+      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap"><label class="check"><input type="checkbox" id="bootUnder" ${c.underline!==false?"checked":""}> Line under subtitle</label><span style="flex:1"></span><button class="btn sm" id="bootLayoutReset">Reset text layout</button></div>
+    </details>
     <div class="field"><span class="label">Animation</span><div class="seg" id="bootStyle">${BOOT_STYLES.map(([v,l])=>`<button data-v="${v}" aria-pressed="${c.style===v}">${l}</button>`).join("")}</div></div>
+    <div class="field"><span class="label">Final background</span><div class="seg" id="bootBg">${BOOT_BGS.map(([v,l])=>`<button data-v="${v}" aria-pressed="${(c.bg||"aurora")===v}">${l}</button>`).join("")}</div></div>
     <div class="row2">${colorField("bootC1","Main colour",c.c1)}${colorField("bootC2","Second colour",c.c2)}</div>
     <div class="row2"><div class="field"><span class="label">Length</span><select class="inp" id="bootSecs">${[1.5,2,3,4].map(v=>`<option value="${v}" ${c.secs==v?"selected":""}>${v} seconds</option>`).join("")}</select></div>
     <div class="field"><span class="label">Smoothness</span><select class="inp" id="bootFps">${[[8,"8 fps (lightest)"],[12,"12 fps"],[15,"15 fps (smoothest)"]].map(([v,l])=>`<option value="${v}" ${c.fps==v?"selected":""}>${l}</option>`).join("")}</select></div></div>
-    <div class="field"><span class="label">Pressing any key afterwards</span><select class="inp" id="bootAfter"><option value="0" ${!c.afterPage?"selected":""}>Does nothing</option>${[2,3,4,5].map(n=>`<option value="${n}" ${c.afterPage==n?"selected":""}>Goes to page ${n}</option>`).join("")}</select></div>
+    <div class="field" ${overlay?"hidden":""}><span class="label">Pressing any key afterwards</span><select class="inp" id="bootAfter"><option value="0" ${!c.afterPage?"selected":""}>Does nothing</option>${[2,3,4,5].map(n=>`<option value="${n}" ${c.afterPage==n?"selected":""}>Goes to page ${n}</option>`).join("")}</select></div>
     <div class="field"><span class="label">Also play when this Stream Deck is plugged in</span><input class="inp mono" id="bootDeck" value="${esc(c.deckId||"")}" placeholder="streamdeck:SERIAL (leave blank for startup only)" spellcheck="false"><span class="empty-note">Find it in Companion under Surfaces. The trigger also switches this deck to page 1 before playing.</span></div>`;
 }
 // play=true runs the animation once and then holds the final screen; play=false jumps straight to the final screen
@@ -1953,18 +2297,37 @@ async function bootPreview(play=true){
     bootAnim=requestAnimationFrame(step)};
   bootAnim=requestAnimationFrame(step);
 }
-function openBoot(){bootCfg={...bootDefaults(),...(S.boot||{})};bootForm();$("#bootDlg").showModal();bootPreview()}
+let bootLayoutOpen=false;
+function bootSlider(id,label,val,min,max,step,unit){const v=+val||0;
+  return `<div class="field"><span class="label">${label} <span class="mono" id="${id}v">${unit==="keys"?(Math.round(v/90)||0)+" keys":unit==="s"?v+" s":v+" px"}</span></span><input type="range" id="${id}" min="${min}" max="${max}" step="${unit==="keys"?90:step}" value="${v}"></div>`}
+function openBoot(){bootCfg={...bootDefaults(),...(S.boot||{})};bootForm();syncBootApply();$("#bootDlg").showModal();bootPreview()}
 function readBootForm(){const c=bootCfg;c.title=$("#bootTitle").value;c.subtitle=$("#bootSub").value;c.c1=normHex($("#bootC1H").value)||c.c1;c.c2=normHex($("#bootC2H").value)||c.c2;
   c.secs=+$("#bootSecs").value;c.fps=+$("#bootFps").value;c.afterPage=+$("#bootAfter").value;
-  c.titleSize=+$("#bootTS").value;c.subSize=+$("#bootSS").value;c.deckId=$("#bootDeck").value.trim();$("#bootTSv").textContent=c.titleSize;$("#bootSSv").textContent=c.subSize}
+  if($("#bootOverPage")){c.overlayPage=$("#bootOverPage").value;c.companionPage=Math.max(1,+$("#bootCompPage").value||1);c.hold=+$("#bootHold").value}
+  c.titleSize=+$("#bootTS").value;c.subSize=+$("#bootSS").value;c.deckId=$("#bootDeck").value.trim();$("#bootTSv").textContent=c.titleSize;$("#bootSSv").textContent=c.subSize;
+  const snapWas=c.snap,subSnapWas=c.subSnap;c.snap=$("#bootSnap").checked;c.subSnap=$("#bootSubSnap").checked;c.tRow=$("#bootTRow").value;c.sRow=$("#bootSRow").value;c.underline=$("#bootUnder").checked;
+  c.tX=+$("#bootTX").value;c.tY=+$("#bootTY").value;c.sX=+$("#bootSX").value;c.sY=+$("#bootSY").value;c.tSpace=+$("#bootTSp").value;c.sSpace=+$("#bootSSp").value;
+  for(const[id,v]of[["bootTY",c.tY],["bootTSp",c.tSpace],["bootSSp",c.sSpace],["bootSY",c.sY]])$("#"+id+"v").textContent=v+" px";
+  $("#bootSXv").textContent=c.subSnap?(Math.round(c.sX/90)||0)+" keys":c.sX+" px";
+  $("#bootTXv").textContent=c.snap?(Math.round(c.tX/90)||0)+" keys":c.tX+" px";
+  if(snapWas!==c.snap||subSnapWas!==c.subSnap){if(snapWas!==c.snap)c.tX=0;if(subSnapWas!==c.subSnap)c.sX=0;bootLayoutOpen=true;bootForm()}}
 document.addEventListener("input",e=>{if(!e.target.closest("#bootForm"))return;const t=e.target;
   if(t.id==="bootC1C"||t.id==="bootC2C"){$("#"+t.id.slice(0,-1)+"H").value=t.value}
   readBootForm();bootPreview(false)});
-document.addEventListener("change",e=>{if(!e.target.closest("#bootForm"))return;readBootForm();bootPreview(e.target.id==="bootSecs"||e.target.id==="bootFps")});
+document.addEventListener("change",e=>{if(!e.target.closest("#bootForm"))return;readBootForm();if(e.target.id==="bootOverPage")syncBootApply();bootPreview(e.target.id==="bootSecs"||e.target.id==="bootFps")});
+function syncBootApply(){const b=$("#bootApply");if(!b||!bootCfg)return;const pg=S.pages.find(p=>p.id===bootCfg.overlayPage);b.textContent=bootCfg.mode==="overlay"?`Use on “${pg?.name||"page"}”`:"Put on page 1"}
 async function applyBoot(){
   readBootForm();const btn=$("#bootApply");btn.disabled=true;btn.textContent="Rendering frames…";
   try{
     const cfg={...bootCfg};const cache=await buildBootCache(cfg);const{keys}=bootGeom();
+    if(cfg.mode==="overlay"){
+      let removed=0;
+      commit(()=>{S.boot=cfg;removed=S.pages.filter(p=>p.boot).length;S.pages=S.pages.filter(p=>!p.boot);
+        S.pageIdx=Math.max(0,S.pages.findIndex(p=>p.id===cfg.overlayPage));selected=null;multi.clear();S.example=false});
+      $("#bootDlg").close();
+      toast(`The boot animation now plays over “${page().name}”${removed?" and the separate boot page is gone (Undo brings it back)":""}. Export this page and save the startup trigger.`);
+      setTimeout(()=>playBootOnDeck(),250);return;
+    }
     commit(()=>{S.boot=cfg;let i=S.pages.findIndex(p=>p.boot);
       if(i<0){S.pages.unshift({id:uid(),name:"Boot",boot:true,buttons:{}});i=0}else if(i!==0){const[p]=S.pages.splice(i,1);S.pages.unshift(p)}
       const pg=S.pages[0];pg.buttons={};
@@ -1974,7 +2337,7 @@ async function applyBoot(){
       S.pageIdx=0;selected=null;multi.clear();S.example=false});
     $("#bootDlg").close();toast(`Boot screen is on page 1: ${cache.F} frames across ${keys.length} keys. Now save the startup trigger. Companion needs both files.`);
     setTimeout(()=>playBootOnDeck(),250);
-  }finally{btn.disabled=false;btn.textContent="Put on page 1"}
+  }finally{btn.disabled=false;syncBootApply()}
 }
 async function saveBootTrigger(){
   if(!S.boot){readBootForm();S.boot={...bootCfg};persist()}
@@ -1982,8 +2345,15 @@ async function saveBootTrigger(){
   try{toast(savedNote(await saveFile("DeckWriter boot trigger.companionconfig",data)))}catch(e){if(e?.code!=="declined")toast("Couldn't save here. Try again")}
 }
 async function playBootOnDeck(){
-  const pg=page();if(!pg.boot||!S.boot)return;const cache=await buildBootCache(S.boot);const{keys}=bootGeom();
-  const imgs=keys.map(k=>$(`#deck [data-k="${keyId(k.r,k.c)}"] .art`));const dt=1000/S.boot.fps;
+  const pg=page();if(!S.boot)return;const over=bootOverlayPage()===pg;if(!pg.boot&&!over)return;
+  const cache=await buildBootCache(S.boot);const{keys}=bootGeom();const dt=1000/S.boot.fps;
+  if(over){
+    const imgs=keys.map(k=>{const el=$(`#deck [data-k="${keyId(k.r,k.c)}"]`);if(!el)return null;const im=document.createElement("img");im.className="boot-over";im.alt="";el.appendChild(im);return im});
+    for(const fr of cache.frames){imgs.forEach((im,j)=>{if(im)im.src=fr[j]});await new Promise(r=>setTimeout(r,dt))}
+    if(+S.boot.hold>0){imgs.forEach((im,j)=>{if(im)im.src=cache.finals[j]});await new Promise(r=>setTimeout(r,Math.min(+S.boot.hold,4)*1000))}
+    imgs.forEach(im=>im?.remove());return;
+  }
+  const imgs=keys.map(k=>$(`#deck [data-k="${keyId(k.r,k.c)}"] .art`));
   for(const fr of cache.frames){imgs.forEach((im,j)=>{if(im)im.src=fr[j]});await new Promise(r=>setTimeout(r,dt))}
   imgs.forEach((im,j)=>{if(im)im.src=cache.finals[j]});
 }
@@ -1991,6 +2361,9 @@ document.addEventListener("click",e=>{const t=e.target.closest("button")||e.targ
   if(t.id==="bootBtn"||t.id==="bootEdit"){openBoot();return}
   const bs=t.closest("#bootStyle [data-v]");if(bs){bootCfg.style=bs.dataset.v;[...$("#bootStyle").children].forEach(x=>x.setAttribute("aria-pressed",x===bs));bootPreview(true);return}
   if(t.id==="bootReplay"){bootPreview(true);return}
+  const bm=t.closest("#bootMode [data-v]");if(bm){readBootForm();bootCfg.mode=bm.dataset.v;bootForm();syncBootApply();bootPreview(false);return}
+  if(t.id==="bootLayoutReset"){Object.assign(bootCfg,{tRow:"auto",sRow:"auto",tX:0,tY:0,sX:0,sY:0,tSpace:0,sSpace:0,snap:false,subSnap:false,underline:true});bootLayoutOpen=true;bootForm();bootPreview(false);return}
+  const bb=t.closest("#bootBg [data-v]");if(bb){bootCfg.bg=bb.dataset.v;[...$("#bootBg").children].forEach(x=>x.setAttribute("aria-pressed",x===bb));bootPreview(false);return}
   if(t.id==="bootApply"){applyBoot();return}
   if(t.id==="bootTrigger"||t.id==="bootTrigger2"){saveBootTrigger();return}
   if(t.id==="bootPlayDeck"){playBootOnDeck();return}
@@ -2006,7 +2379,7 @@ function openCtx(x,y,k){
     item("copy","Copy","⌘C",!b||many)+item("paste",clipboard?"Paste":"Paste (nothing copied)","⌘V",!clipboard||many)+
     item("dup","Duplicate","⌘D",!b||many)+
     (b||many?"":item("new",dial?"New dial":"New button","",false)+(dial?"":item("presets","Browse presets…","",false)))+
-    `<div class="ctx-sep"></div>`+item("del",many?`Delete ${multi.size} keys`:"Delete","⌫",!b&&!many,"danger")+item("wipe","Wipe page","",!Object.keys(page().buttons).length,"danger");
+    `<div class="ctx-sep"></div>`+item("del",many?`Delete ${multi.size} keys`:"Delete","⌫",!b&&!many,"danger")+item("wipe","Wipe page","",!Object.keys(page().buttons).length&&!liveExtraKeys(page()).length,"danger");
   m.hidden=false;
   const r=m.getBoundingClientRect();m.style.left=Math.min(x,innerWidth-r.width-8)+"px";m.style.top=Math.min(y,innerHeight-r.height-8)+"px";
   m.querySelector("button:not([disabled])")?.focus();
@@ -2029,6 +2402,260 @@ document.addEventListener("click",e=>{const it=e.target.closest("[data-ctx]");
 document.addEventListener("keydown",e=>{if(e.key==="Escape")closeCtx()},true);
 window.addEventListener("blur",closeCtx);
 document.addEventListener("scroll",closeCtx,true);
+
+/* ---------- live link to Companion ---------- */
+// Companion's HTTP API answers GET /api/connections (CORS-enabled) with each connection's id, label,
+// moduleId, enabled flag and live status. Linking adopts those real ids so exported pages point at the
+// user's existing connections. Works wherever the page may reach the Mac (GitHub Pages, a local file);
+// the Claude artifact viewer blocks network requests, so there it explains instead.
+const live={list:null,error:"",at:0,busy:false,timer:0};
+const liveOf=id=>live.list?.find(x=>x.id===id)||null;
+const liveCat=x=>!x.enabled?"off":x.status?.category==="good"?"good":x.status?.category==="warning"?"warn":"bad";
+const liveText=x=>!x.enabled?"Disabled in Companion":[x.status?.level,x.status?.message].filter(Boolean).join(": ")||"Unknown";
+function renderCompLink(){
+  const el=$("#compLink");if(!el)return;const on=S.companionLinked;
+  const n=live.list?.length||0,good=live.list?.filter(x=>liveCat(x)==="good").length||0;
+  el.innerHTML=on&&live.list?`<span class="dot st-${good===n?"good":"warn"}"></span><span class="grow"><b>Companion</b> · ${good}/${n} connected</span><button class="btn ghost sm" id="compRefresh">Refresh</button><button class="btn ghost sm" id="compUnlink">Unlink</button>`
+    :on&&live.error?`<span class="dot st-bad"></span><span class="grow"><b>Companion</b> · can't reach it</span><button class="btn ghost sm" id="compRefresh">Retry</button><button class="btn ghost sm" id="compUnlink">Unlink</button><span class="st-msg st-bad" style="flex-basis:100%">${esc(live.error)}</span>`
+    :on?`<span class="dot"></span><span class="grow"><b>Companion</b> · connecting…</span>`
+    :`<button class="btn sm" id="compLinkBtn">${ico("link")}Link to Companion</button><span class="empty-note">See your real connections and their live status.</span>`;
+}
+async function pollCompanion(){
+  if(!S.companionLinked||live.busy)return;live.busy=true;
+  try{
+    const ctl=new AbortController();const t=setTimeout(()=>ctl.abort(),4000);
+    const r=await fetch(companionUrl()+"/api/connections",{signal:ctl.signal,cache:"no-store"});clearTimeout(t);
+    if(r.status===403)throw new Error("Companion's HTTP API is turned off. In Companion open Settings → Protocols and turn on the HTTP API.");
+    if(!r.ok)throw new Error(`Companion answered ${r.status}.`);
+    const list=await r.json();if(!Array.isArray(list))throw new Error("Unexpected answer from Companion.");
+    const first=!live.list;live.list=list;live.error="";live.at=Date.now();
+    // adopt Companion's connections: add missing ones with their real ids, keep labels in step
+    let changed=false;
+    for(const x of list){const c=S.connections.find(y=>y.id===x.id);
+      if(!c){S.connections.push({id:x.id,label:x.label,module:x.moduleId,fromCompanion:true});changed=true}
+      else if(c.label!==x.label||c.module!==x.moduleId){c.label=x.label;c.module=x.moduleId;changed=true}}
+    if(changed)persist();
+    if(first&&changed)toast(`Linked to Companion: ${list.length} connections`);
+  }catch(e){
+    live.list=null;
+    const inClaude=!!window.claude;
+    live.error=inClaude?"Claude blocks pages from reaching your Mac. Open DeckWriter from bryanchorton.github.io/deckwriter to link it."
+      :e.name==="AbortError"||e instanceof TypeError?`No answer from ${companionUrl()}. Check Companion is running, the address is right (Send to Companion → Companion address), and allow local network access if the browser asks.`:e.message;
+  }finally{live.busy=false;renderRail()}
+}
+function startCompanionLink(){clearInterval(live.timer);if(!S.companionLinked)return;pollCompanion();live.timer=setInterval(()=>{if(!document.hidden)pollCompanion()},5000)}
+// point every key and feedback that uses one connection at another, then drop the old one
+function remapConnection(fromId,toId){
+  for(const pg of S.pages)for(const b of Object.values(pg.buttons)){
+    for(const st of b.steps||[])for(const L of[st.down,st.up,st.rotL,st.rotR])for(const a of L||[])if(a.connection===fromId)a.connection=toId;
+    for(const f of b.feedbacks||[])if(f.connection===fromId)f.connection=toId}
+  const from=S.connections.find(c=>c.id===fromId),to=S.connections.find(c=>c.id===toId);
+  if(from&&to&&from.config&&!to.config)to.config=from.config;
+  S.connections=S.connections.filter(c=>c.id!==fromId);
+}
+document.addEventListener("click",e=>{const t=e.target.closest("button")||e.target;
+  if(t.id==="compLinkBtn"){S.companionLinked=true;persist();renderRail();startCompanionLink();return}
+  if(t.id==="compRefresh"){pollCompanion();return}
+  if(t.id==="compUnlink"){S.companionLinked=false;clearInterval(live.timer);live.list=null;live.error="";persist();renderRail();return}
+});
+document.addEventListener("change",e=>{const m=e.target.closest("[data-matchconn]");if(!m||!m.value)return;
+  const from=S.connections.find(c=>c.id===m.dataset.matchconn),x=liveOf(m.value);
+  commit(()=>{if(!S.connections.some(c=>c.id===x.id))S.connections.push({id:x.id,label:x.label,module:x.moduleId,fromCompanion:true});remapConnection(from.id,x.id)});
+  toast(`Keys that used “${from.label}” now use Companion's “${x.label}”`)});
+document.addEventListener("visibilitychange",()=>{if(!document.hidden&&S.companionLinked)pollCompanion()});
+
+/* ---------- Live: push key changes straight to a running Companion ---------- */
+// DeckWriter talks to the local relay (tools/live/relay.mjs), which drives Companion's own editor channel.
+// For each DeckWriter page that is mapped to a Companion page, only keys whose content changed are sent.
+// Keys DeckWriter has sent are remembered (S.live.owned) so it only ever clears keys it put there, and it
+// asks before replacing a key that was already in Companion.
+const RELAY="http://127.0.0.1:8790";
+const RELAY_CMD='curl -fsSL https://raw.githubusercontent.com/bryanchorton/deckwriter/main/tools/live/relay.mjs -o ~/.deckwriter-relay.mjs && "/Applications/Companion.app/Contents/Resources/node-runtimes/node22/bin/node" ~/.deckwriter-relay.mjs';
+const liveRT={status:null,error:"",busy:false,timer:0,pending:false,skip:{},asking:false,lastMsg:""};
+const liveCfg=()=>{const c=(S.live??={on:false,map:{},owned:{}});c.base??={};c.at??={};return c};
+// what Live sent is remembered per Companion page: when a DeckWriter page points somewhere new, start over there
+function liveTarget(pg,num){const c=liveCfg();const was=c.at[pg.id]??(c.map[pg.id]||S.pages.indexOf(pg)+1); // older versions numbered pages straight through
+  if(was!==num){c.owned[pg.id]={};delete c.base[pg.id]}c.at[pg.id]=num}
+// stable fingerprint of an exported key: ignore the random entity ids
+const keyHash=ctl=>JSON.stringify(ctl,(k,val)=>k==="id"?undefined:val);
+async function relayStatus(){
+  try{const ctl=new AbortController();const t=setTimeout(()=>ctl.abort(),2500);
+    const r=await fetch(RELAY+"/status",{signal:ctl.signal,cache:"no-store"});clearTimeout(t);
+    liveRT.status=await r.json();liveRT.error=liveRT.status.companion?"":"The relay is running but can't reach Companion. Is Companion open?";
+  }catch(_){liveRT.status=null;liveRT.error=window.claude?"Live can't run inside Claude. Open DeckWriter from bryanchorton.github.io/deckwriter.":"The relay isn't running on this Mac."}
+  renderLive();liveFollow();const w=$("#wipePage");if(w)w.disabled=!Object.keys(page().buttons).length&&!liveExtraKeys(page()).length;return liveRT.status;
+}
+// Live always follows the page you're on: DeckWriter's show pages line up with Companion's, in order, after the boot screen.
+const bootOnPage1=()=>!!((S.boot&&S.boot.mode!=="overlay")||S.pages.some(p=>p.boot)||/^boot$/i.test(liveRT.status?.pages?.find(p=>p.number===1)?.name||""));
+// Pages deleted or brought back (Cmd+Z) in DeckWriter are deleted or put back in Companion at the same number,
+// so DeckWriter's pages and Companion's keep lining up. Only for the same project: opening another one changes nothing here.
+const liveNames={}; // last known name of each page, so a deleted page can be matched to Companion's by name
+const liveShowIds=()=>S.pages.filter(p=>!p.boot).map(p=>(liveNames[p.id]=p.name.trim(),p.id));
+async function livePagesChanged(before,after){
+  const c=S.live;if(!c?.on||(after.length&&!before.some(id=>after.includes(id))))return; // no page in common: another project, leave Companion alone
+  const off=bootOnPage1()?1:0,removed=before.map((id,i)=>[id,i+1+off,liveNames[id]]).filter(([id])=>!after.includes(id)).reverse(),
+    added=after.map((id,i)=>[id,i+1+off]).filter(([id])=>!before.includes(id));
+  if(!removed.length&&!added.length)return;
+  while(liveRT.busy)await new Promise(r=>setTimeout(r,60));liveRT.busy=true;
+  const post=(path,body)=>fetch(RELAY+path,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(body)}).then(r=>r.json()).then(r=>{if(!r.ok)throw new Error(r.error);return r});
+  const done=[];
+  try{let st=await relayStatus();if(!st?.companion)throw new Error("the relay or Companion isn't connected");
+    for(const[id,num,name]of removed){delete c.owned[id];delete c.base[id];delete c.at[id];
+      if(num>st.pages.length)continue; // never made it to Companion
+      await post("/removepage",{page:num,name});done.push(`removed page ${num}`);st=await relayStatus()}
+    for(const[id,num]of added){const pg=S.pages.find(p=>p.id===id);
+      if(num<=st.pages.length+1){await post("/insertpage",{page:num,name:pg?.name||""});done.push(`added page ${num}`);st=await relayStatus()}
+      c.owned[id]={};c.base[id]={}}
+    after.forEach((id,i)=>{c.at[id]=i+1+off}); // every page's Companion number after the shuffle
+    try{localStorage.setItem("deckwright.v1",JSON.stringify(S))}catch(_){}
+    if(done.length){liveRT.lastMsg="Companion: "+done.join(", ");toast(liveRT.lastMsg)}}
+  catch(e){liveRT.lastMsg="Live couldn't update Companion's pages: "+e.message;toast(liveRT.lastMsg)}
+  finally{liveRT.busy=false;liveRT.shown=null;await relayStatus();scheduleLive()}
+}
+function livePageAt(n){const shows=S.pages.filter(p=>!p.boot);return shows[n-1-(bootOnPage1()?1:0)]||null}
+function livePageNum(pg){const shows=S.pages.filter(p=>!p.boot);return Math.max(1,shows.indexOf(pg)+1+(bootOnPage1()?1:0))}
+// never send live buttons onto the boot screen
+function liveBlocked(num,cp){if((bootOnPage1()&&num===1)||(cp&&/^boot$/i.test(cp.name||"")))return`Companion page ${num} is your boot screen, so Live won't touch it.`;return""}
+// a button made with DeckWriter's own connection is switched to Companion's, when Companion has exactly one of that kind
+function liveAutoLink(ids){const done=[],unsure=[];
+  for(const id of ids){const mine=S.connections.find(c=>c.id===id);if(!mine)continue;
+    const cands=(live.list||[]).filter(x=>x.moduleId===mine.module);
+    if(cands.length===1){const x=cands[0];if(!S.connections.some(c=>c.id===x.id))S.connections.push({id:x.id,label:x.label,module:x.moduleId,fromCompanion:true});remapConnection(id,x.id);done.push(`${mine.label} → Companion's “${x.label}”`)}
+    else if(cands.length>1)unsure.push(`${mine.label} (Companion has ${cands.map(x=>"“"+x.label+"”").join(" and ")}: pick one with Link in Connections)`)}
+  if(done.length){persist();renderRail()}
+  return{done,unsure}}
+function renderLive(){
+  const c=liveCfg(),st=liveRT.status,ok=!!(st&&st.companion),pg=page();
+  const btn=$("#liveBtn");if(btn){btn.classList.toggle("on",c.on&&ok);btn.classList.toggle("ready",!c.on&&ok);btn.classList.toggle("problem",c.on&&!ok);
+    $("#liveLabel").textContent=c.on?(ok?`Live · page ${livePageNum(pg)}`:"Live · offline"):"Live"}
+  if(!$("#liveDlg").open)return;
+  $("#liveStatus").innerHTML=`<div class="row"><span class="dot ${st?"st-good":"st-bad"}"></span>Relay ${st?`running (v${esc(st.relay)})`:"not running"}</div>
+    <div class="row"><span class="dot ${ok?"st-good":"st-bad"}"></span>Companion ${ok?`connected · ${st.pages.length} pages`:"not reachable"}</div>${liveRT.error?`<span class="st-msg st-warn">${esc(liveRT.error)}</span>`:""}`;
+  $("#liveSetup").innerHTML=st||window.claude?"":`<div class="field live-setup"><span class="label">Start the relay: paste this into Terminal and leave it running</span><pre class="mono" style="background:var(--field);border:1px solid var(--stroke);border-radius:10px;padding:10px;font-size:11.5px;margin:0">${esc(RELAY_CMD)}</pre><div><button class="btn sm" id="liveCopyCmd">Copy command</button></div></div>`;
+  const n=livePageNum(pg),cp=st?.pages?.find(p=>p.number===n);
+  $("#liveTargetInfo").textContent=pg.boot?"nothing (the boot page isn't sent live)":`Companion page ${n}${cp?` · “${cp.name}”`:st?" (not in Companion yet: Live adds it)":""}`;$("#liveOn").checked=!!c.on;
+  $("#liveLog").textContent=liveRT.lastMsg||(cp?`Companion page ${n} is “${cp.name}” with ${cp.keys.length} key${cp.keys.length===1?"":"s"}.`:st?`Companion has no page ${n} yet. Live adds it with your next change.`:"");
+}
+// Live also turns the Stream Deck to whichever page is open in DeckWriter
+function liveFollow(){const c=S.live,pg=page();if(!c?.on||!pg||liveRT.shown===pg.id||!liveRT.status?.companion)return;
+  if(pg.boot){liveRT.shown=pg.id;return}const num=livePageNum(pg);
+  if(!liveRT.status.pages.some(p=>p.number===num)){scheduleLive();return} // the update adds the page, then this runs again
+  liveRT.shown=pg.id;if(liveBlocked(num,liveRT.status.pages.find(p=>p.number===num)))return;
+  fetch(RELAY+"/page",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({page:num})}).then(r=>r.json()).then(r=>{if(!r.ok)throw new Error(r.error);if(!r.surfaces)toast("Live: no Stream Deck is connected to Companion")}).catch(e=>toast("Live couldn't change the Stream Deck page: "+e.message));
+  scheduleLive()}
+function scheduleLive(){const c=S.live;if(!c?.on)return;clearTimeout(liveRT.timer);liveRT.timer=setTimeout(liveSync,450)}
+function desiredControls(pi){
+  const{data}=buildExport(pi);const out={};
+  for(const[r,row]of Object.entries(data.page.controls))for(const[col,ctl]of Object.entries(row)){
+    if(ctl.feedbacks)ctl.feedbacks=ctl.feedbacks.filter(f=>f.options?.variable!=="internal:custom_"+BOOT_VAR); // boot frames are not sent live
+    out[r+","+col]=ctl}
+  return out;
+}
+const ctlConnections=ctl=>{const ids=new Set();for(const st of Object.values(ctl.steps||{}))for(const set of Object.values(st.action_sets||{}))for(const a of set||[])if(a.instance!=="internal")ids.add(a.instance);for(const f of ctl.feedbacks||[])if(f.instance_id!=="internal")ids.add(f.instance_id);return[...ids]};
+async function liveSync(force){
+  const c=liveCfg();if(!c.on&&!force)return;if(liveRT.busy){liveRT.pending=true;return}
+  const pg=page(),pi=S.pageIdx;if(pg.boot){liveRT.lastMsg="The boot page isn't sent live.";renderLive();return}
+  const st=await relayStatus();if(!st?.companion){renderLive();return} // always fresh: Companion may have changed since the last poll
+  if(liveRT.busy){liveRT.pending=true;return} // a move started while we were asking
+  const num=livePageNum(pg);let cp=st.pages.find(p=>p.number===num);
+  if(!cp){ // a page made in DeckWriter: add it (and any before it) at the end of Companion's pages, then carry on
+    liveRT.busy=true;
+    try{const names={};for(let n=st.pages.length+1;n<=num;n++){const p=livePageAt(n);if(p)names[n]=p.name}
+      const r=await fetch(RELAY+"/addpages",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({upTo:num,names})}).then(x=>x.json());
+      if(!r.ok)throw new Error(r.error);toast(`Added page ${num} “${pg.name}” to Companion`)}
+    catch(e){liveRT.lastMsg=`Couldn't add page ${num} to Companion: ${e.message}`;toast(liveRT.lastMsg);renderLive();return}
+    finally{liveRT.busy=false}
+    const st2=await relayStatus();cp=st2?.pages?.find(p=>p.number===num);if(!cp)return;
+    const c0=liveCfg();c0.owned[pg.id]={};c0.base[pg.id]={};liveTarget(pg,num);
+    if(liveRT.busy){liveRT.pending=true;return}
+  }
+  {const b=liveBlocked(num,cp);if(b){liveRT.lastMsg=b;toast(b);renderLive();return}}
+  if(pg.name.trim()&&cp.name!==pg.name.trim())fetch(RELAY+"/pagename",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({page:num,name:pg.name.trim()})}).catch(()=>{});
+  liveTarget(pg,num);
+  if(live.list){const known=new Set(live.list.map(x=>x.id)),ids=new Set();for(const ctl of Object.values(desiredControls(pi)))for(const id of ctlConnections(ctl))if(!known.has(id))ids.add(id);
+    if(ids.size){const{done}=liveAutoLink([...ids]);if(done.length)toast("Linked "+done.join(", "))}}
+  liveRT.busy=true;
+  try{
+    const want=desiredControls(pi),owned=(c.owned[pg.id]??={}),occupied=new Set(cp.keys.map(([r,cc])=>r+","+cc));
+    // first time Live sees this page: remember what's already here and send nothing. Only later changes go out.
+    if(!force&&!c.base[pg.id]&&!Object.keys(owned).length){c.base[pg.id]=Object.fromEntries(Object.entries(want).filter(([k])=>occupied.has(k)).map(([k,ctl])=>[k,keyHash(ctl)])); // keys Companion lacks still get sent
+      try{localStorage.setItem("deckwright.v1",JSON.stringify(S))}catch(_){}
+      liveRT.lastMsg=`Watching this page. Keys you add or change go to Companion page ${num}.`;return}
+    const base=force?{}:(c.base[pg.id]||{});
+    const skip=(liveRT.skip[pg.id]??=new Set()),conflicts=[],problems=[];let sent=0,cleared=0;
+    const knownConns=new Set((live.list||[]).map(x=>x.id));
+    for(const[k,ctl]of Object.entries(want)){
+      const h=keyHash(ctl);if(owned[k]===h||skip.has(k)||(!owned[k]&&base[k]===h))continue;
+      const missing=ctlConnections(ctl).filter(id=>live.list?!knownConns.has(id):!S.connections.some(x=>x.id===id&&x.fromCompanion));
+      if(missing.length){const names=missing.map(id=>{const m=S.connections.find(x=>x.id===id),n=(live.list||[]).filter(x=>x.moduleId===m?.module).length;return(m?.label||id)+(n>1?" (Companion has "+n+" of these, pick one with Link in Connections)":n?"":" (add this connection in Companion first)")});problems.push(`${keyCodeK(k)} uses ${names.join(", ")}, not linked to Companion`);continue}
+      if(!owned[k]&&base[k]==null&&occupied.has(k)){conflicts.push(k);continue}
+      const[r,col]=parseKey(k);
+      const res=await fetch(RELAY+"/push",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({page:num,row:r,column:col,control:ctl})}).then(x=>x.json());
+      if(!res.ok)throw new Error(res.error||"push failed");
+      owned[k]=h;sent++;if(res.notes?.length)problems.push(`${keyCodeK(k)}: ${res.notes.join("; ")}`);
+    }
+    // a key deleted in DeckWriter is cleared in Companion when DeckWriter sent it or it was there when Live started
+    for(const k of new Set([...Object.keys(owned),...Object.keys(base)]))if(!want[k]){
+      if(owned[k]==null&&!occupied.has(k)){delete c.base[pg.id]?.[k];continue}
+      const[r,col]=parseKey(k);
+      const res=await fetch(RELAY+"/clear",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({page:num,row:r,column:col})}).then(x=>x.json());
+      if(!res.ok)throw new Error(res.error||"clear failed");delete owned[k];delete c.base[pg.id]?.[k];cleared++}
+    try{localStorage.setItem("deckwright.v1",JSON.stringify(S))}catch(_){}
+    const parts=[];if(sent)parts.push(`sent ${sent} key${sent===1?"":"s"}`);if(cleared)parts.push(`cleared ${cleared}`);
+    liveRT.lastMsg=parts.length?`Companion page ${num}: ${parts.join(", ")}`:"Up to date";
+    if(problems.length)toast(problems[0]+(problems.length>1?` (+${problems.length-1} more)`:""));else if(sent||cleared)toast(liveRT.lastMsg);
+    if(conflicts.length){askReplace(pg,conflicts);liveRT.lastMsg=`Waiting on you: replace ${conflicts.map(keyCodeK).join(", ")} in Companion?`;
+      const d=$("#liveDlg");if(!d.open)d.show();toast(`Companion already has a button at ${conflicts.map(keyCodeK).join(", ")}. Replace or leave it in the Live panel.`)}
+  }catch(e){liveRT.lastMsg="Live update failed: "+e.message;toast(liveRT.lastMsg);relayStatus()}
+  finally{liveRT.busy=false;renderLive();if(liveRT.pending){liveRT.pending=false;scheduleLive()}}
+}
+// A drag in DeckWriter is mirrored in Companion as a swap (a move onto an empty key, a trade onto a full one),
+// or a copy for Option-drag, and the bookkeeping moves with it so the key isn't sent again.
+async function liveMoved(pg,from,to,copy){
+  const c=S.live;if(!c?.on||pg.boot)return;
+  const why=m=>{liveRT.lastMsg=m;toast(m);renderLive()};
+  while(liveRT.busy)await new Promise(r=>setTimeout(r,60));
+  liveRT.busy=true;
+  try{
+    const st=await relayStatus(); // fresh: a key cleared a moment ago must not look occupied
+    if(!st?.companion)return why("Live: move not sent, the relay or Companion isn't connected");
+    const num=livePageNum(pg),cp=st.pages.find(p=>p.number===num);if(!cp)return why(`Live: Companion has no page ${num}`);
+    {const b=liveBlocked(num,cp);if(b)return why(b)}
+    liveTarget(pg,num);
+    const occ=new Set(cp.keys.map(([r,cc])=>r+","+cc)),owned=(c.owned[pg.id]??={}),base=(c.base[pg.id]??={});
+    // the dragged key is the same button in both apps; only a Companion button DeckWriter never had at the target stays put
+    const hadTo=copy?false:!!pg.buttons[from];
+    if(occ.has(to)&&!hadTo&&owned[to]==null&&base[to]==null)return why(`Live: ${keyCodeK(to)} has a different button in Companion, so it wasn't moved there`);
+    if(copy&&occ.has(to))return why(`Live: ${keyCodeK(to)} already has a button in Companion, so it wasn't copied`);
+    const swapRec=(m)=>{const a=m[from],b=m[to];if(b!=null)m[from]=b;else delete m[from];if(a!=null)m[to]=a;else delete m[to]};
+    const copyRec=(m)=>{if(m[from]!=null)m[to]=m[from];else delete m[to]};
+    (copy?copyRec:swapRec)(owned);(copy?copyRec:swapRec)(base);
+    try{localStorage.setItem("deckwright.v1",JSON.stringify(S))}catch(_){}
+    const[fr,fc]=parseKey(from),[tr,tc]=parseKey(to);
+    const res=await fetch(RELAY+"/transfer",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({page:num,op:copy?"copy":"swap",from:{row:fr,column:fc},to:{row:tr,column:tc}})}).then(r=>r.json());
+    if(!res.ok)throw new Error(res.error);
+    liveRT.lastMsg=`Companion page ${num}: ${copy?"copied":"moved"} ${keyCodeK(from)} → ${keyCodeK(to)}`;toast(liveRT.lastMsg);
+  }catch(e){liveRT.lastMsg="Live move failed: "+e.message;toast(liveRT.lastMsg)}
+  finally{liveRT.busy=false;scheduleLive()}
+}
+function askReplace(pg,keys){
+  const el=$("#liveAsk");el.hidden=false;
+  el.innerHTML=`<span>Companion already has button${keys.length>1?"s":""} at <b>${keys.map(keyCodeK).join(", ")}</b> on page ${livePageNum(pg)}. Replace ${keys.length>1?"them":"it"}?</span><button class="btn sm danger" id="liveAskYes">Replace</button><button class="btn sm" id="liveAskNo">Leave ${keys.length>1?"them":"it"}</button>`;
+  el.dataset.keys=JSON.stringify(keys);el.dataset.page=pg.id;
+}
+document.addEventListener("click",async e=>{const t=e.target.closest("button")||e.target;
+  if(t.id==="liveBtn"){const d=$("#liveDlg");if(d.open){d.close();return}d.show();renderLive();relayStatus();return}
+  if(t.id==="liveClose"){$("#liveDlg").close();return}
+  if(t.id==="liveCopyCmd"){copyText(RELAY_CMD,"Copied. Paste it into Terminal and leave that window open.");return}
+  if(t.id==="livePushAll"){if(!liveRT.status?.companion){toast("Start the relay and open Companion first");return}const c=liveCfg();c.base[page().id]={};liveRT.skip[page().id]=new Set();await liveSync(true);return}
+  if(t.id==="liveAskYes"||t.id==="liveAskNo"){const el=$("#liveAsk"),keys=JSON.parse(el.dataset.keys||"[]"),pid=el.dataset.page;el.hidden=true;
+    if(t.id==="liveAskNo"){const sk=(liveRT.skip[pid]??=new Set());keys.forEach(k=>sk.add(k));toast("Left those keys alone");return}
+    const owned=(liveCfg().owned[pid]??={});keys.forEach(k=>{owned[k]="replace"});liveSync();return}
+});
+document.addEventListener("change",e=>{
+  if(e.target.id==="liveOn"){const c=liveCfg();c.on=e.target.checked;if(c.on){c.base={};c.owned={};liveRT.shown=null}persist();renderLive();if(c.on){liveFollow();toast(`Live on: changes on this page go to Companion page ${livePageNum(page())}`);liveSync()}return}
+});
+setInterval(()=>{if(!document.hidden&&(S.live?.on||$("#liveDlg")?.open))relayStatus()},4000);
 
 /* ---------- sources card tabs ---------- */
 document.addEventListener("click",e=>{const b=e.target.closest("[data-src]");if(!b)return;
@@ -2111,6 +2738,7 @@ const SHEET_CSS='.sheet{--kk:58px;background:#fff;color:#16191c;font:13px/1.45 "
 document.querySelectorAll("[data-ico]").forEach(el=>{el.innerHTML=ico(el.dataset.ico)});
 S=load();
 syncCompanionLink();
+setTimeout(startCompanionLink,300);
 render();
 // wait for lucide (it loads before this script, but art for the sample needs it)
 refreshAllArt();
