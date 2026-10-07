@@ -23,7 +23,7 @@ const arg = (name, def) => {
 const COMPANION = arg('--companion', 'http://127.0.0.1:8000').replace(/\/+$/, '')
 const PORT = Number(arg('--port', 8790))
 const ALLOWED = [/^https:\/\/bryanchorton\.github\.io$/, /^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/, /^null$/]
-const VERSION = '1.0.0'
+const VERSION = '1.1.1'
 
 const log = (...a) => console.log(new Date().toLocaleTimeString(), ...a)
 
@@ -54,6 +54,8 @@ function connect() {
 	}
 	ws.onerror = () => {}
 	ws.onmessage = (ev) => {
+		// Companion's tRPC server keeps the socket alive with "PING" and closes it if no "PONG" comes back
+		if (ev.data === 'PING') return ws.send('PONG')
 		let msg
 		try {
 			msg = JSON.parse(ev.data)
@@ -264,6 +266,22 @@ async function pushKey(page, row, column, control) {
 	return { notes, controlId }
 }
 
+// Mirror a DeckWriter drag. "swap" uses Companion's swapControl, which never deletes anything: swapping with
+// an empty key is a move. "copy" uses copyControl, which overwrites its destination, so it is refused unless
+// that key is empty in Companion. (moveControl is never used: it deletes whatever is at the destination.)
+async function transferKey(page, op, from, to) {
+	if (!pages.order[page - 1]) throw new Error(`Companion has no page ${page}`)
+	const fromLocation = { pageNumber: page, row: from.row, column: from.column }
+	const toLocation = { pageNumber: page, row: to.row, column: to.column }
+	if (op === 'copy') {
+		if (controlAt(page, to.row, to.column)) throw new Error('that key already has a button in Companion')
+		if (!controlAt(page, from.row, from.column)) return false
+		return call('controls.copyControl', { fromLocation, toLocation })
+	}
+	if (!controlAt(page, from.row, from.column) && !controlAt(page, to.row, to.column)) return false
+	return call('controls.swapControl', { fromLocation, toLocation })
+}
+
 async function clearKey(page, row, column) {
 	if (!pages.order[page - 1]) throw new Error(`Companion has no page ${page}`)
 	await call('controls.resetControl', { location: { pageNumber: page, row, column } })
@@ -330,6 +348,13 @@ http
 				const out = await serial(() => pushKey(Number(b.page), Number(b.row), Number(b.column), b.control))
 				log(`pushed page ${b.page} row ${b.row} col ${b.column}`, out.notes.length ? out.notes.join('; ') : '')
 				return send(res, 200, { ok: true, notes: out.notes })
+			}
+			if (req.method === 'POST' && path === '/transfer') {
+				const b = await body(req)
+				const op = b.op === 'copy' ? 'copy' : 'swap'
+				const done = await serial(() => transferKey(Number(b.page), op, b.from, b.to))
+				log(`${op} page ${b.page} ${b.from.row},${b.from.column} -> ${b.to.row},${b.to.column}${done ? '' : ' (nothing there)'}`)
+				return send(res, 200, { ok: true, moved: !!done })
 			}
 			if (req.method === 'POST' && path === '/clear') {
 				const b = await body(req)

@@ -65,6 +65,7 @@ check('boot trigger cannot overlap itself', () => scripts[0].includes('condition
 import { execFileSync } from 'node:child_process'
 check('live relay script parses', () => execFileSync(process.execPath, ['--check', join(root, 'tools/live/relay.mjs')]) !== undefined)
 check('live relay only accepts DeckWriter origins', () => readFileSync(join(root, 'tools/live/relay.mjs'), 'utf8').includes("const ALLOWED = [/^https:\\/\\/bryanchorton\\.github\\.io$/"))
+check('live moves never use the deleting moveControl', () => !readFileSync(join(root, 'tools/live/relay.mjs'), 'utf8').includes("call('controls.moveControl'"))
 check('live mode never clears keys it did not send', () => scripts[0].includes('for(const k of Object.keys(owned))if(!want[k])'))
 
 const test = build('test')
