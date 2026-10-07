@@ -536,7 +536,7 @@ dialog.live-panel{position:fixed;inset:64px 16px auto auto;margin:0;width:min(42
   <p>Changes you make to keys on this page go straight to your Stream Deck, one key at a time, without importing.</p>
   <div class="live-status" id="liveStatus"></div>
   <div id="liveSetup"></div>
-  <div class="live-row"><span class="label">This page goes to Companion page</span><input class="inp" type="number" min="1" max="99" id="livePage" style="width:80px"></div>
+  <div class="live-row"><span class="label">This page goes to</span><b id="liveTargetInfo"></b></div>
   <label class="check live-switch"><input type="checkbox" id="liveOn"> Live updates on</label>
   <ul class="live-rules">
     <li>Only keys you add or change are sent.</li>
@@ -2433,11 +2433,11 @@ async function relayStatus(){
   renderLive();return liveRT.status;
 }
 // With a boot page, Companion page 1 is the boot screen, so DeckWriter's show pages start at Companion page 2.
-const bootOnPage1=()=>!!(S.boot&&S.boot.mode!=="overlay");
-function livePageNum(pg){const c=liveCfg();if(c.map[pg.id])return c.map[pg.id];
-  const shows=S.pages.filter(p=>!p.boot);return Math.max(1,shows.indexOf(pg)+1+(bootOnPage1()?1:0))}
+// Live always follows the page you're on: DeckWriter's show pages line up with Companion's, in order, after the boot screen.
+const bootOnPage1=()=>!!((S.boot&&S.boot.mode!=="overlay")||S.pages.some(p=>p.boot)||/^boot$/i.test(liveRT.status?.pages?.find(p=>p.number===1)?.name||""));
+function livePageNum(pg){const shows=S.pages.filter(p=>!p.boot);return Math.max(1,shows.indexOf(pg)+1+(bootOnPage1()?1:0))}
 // never send live buttons onto the boot screen
-function liveBlocked(num,cp){if((bootOnPage1()&&num===1)||(cp&&/^boot$/i.test(cp.name||"")))return`Companion page ${num} is your boot screen, so Live won't touch it. Pick another page in Live.`;return""}
+function liveBlocked(num,cp){if((bootOnPage1()&&num===1)||(cp&&/^boot$/i.test(cp.name||"")))return`Companion page ${num} is your boot screen, so Live won't touch it.`;return""}
 // a button made with DeckWriter's own connection is switched to Companion's, when Companion has exactly one of that kind
 function liveAutoLink(ids){const done=[],unsure=[];
   for(const id of ids){const mine=S.connections.find(c=>c.id===id);if(!mine)continue;
@@ -2455,7 +2455,7 @@ function renderLive(){
     <div class="row"><span class="dot ${ok?"st-good":"st-bad"}"></span>Companion ${ok?`connected · ${st.pages.length} pages`:"not reachable"}</div>${liveRT.error?`<span class="st-msg st-warn">${esc(liveRT.error)}</span>`:""}`;
   $("#liveSetup").innerHTML=st||window.claude?"":`<div class="field live-setup"><span class="label">Start the relay: paste this into Terminal and leave it running</span><pre class="mono" style="background:var(--field);border:1px solid var(--stroke);border-radius:10px;padding:10px;font-size:11.5px;margin:0">${esc(RELAY_CMD)}</pre><div><button class="btn sm" id="liveCopyCmd">Copy command</button></div></div>`;
   const n=livePageNum(pg),cp=st?.pages?.find(p=>p.number===n);
-  $("#livePage").value=n;$("#liveOn").checked=!!c.on;
+  $("#liveTargetInfo").textContent=pg.boot?"nothing (the boot page isn't sent live)":`Companion page ${n}${cp?` · “${cp.name}”`:st?" (Companion doesn't have this page yet)":""}`;$("#liveOn").checked=!!c.on;
   $("#liveLog").textContent=liveRT.lastMsg||(cp?`Companion page ${n} is “${cp.name}” with ${cp.keys.length} key${cp.keys.length===1?"":"s"}.`:st?`Companion has no page ${n}.`:"");
 }
 function scheduleLive(){const c=S.live;if(!c?.on)return;clearTimeout(liveRT.timer);liveRT.timer=setTimeout(liveSync,450)}
@@ -2548,8 +2548,7 @@ document.addEventListener("click",async e=>{const t=e.target.closest("button")||
     const owned=(liveCfg().owned[pid]??={});keys.forEach(k=>{owned[k]="replace"});liveSync();return}
 });
 document.addEventListener("change",e=>{
-  if(e.target.id==="livePage"){const c=liveCfg(),n=Math.max(1,+e.target.value||1),b=liveBlocked(n,liveRT.status?.pages?.find(p=>p.number===n));if(b){toast(b);renderLive();return}c.map[page().id]=n;c.owned[page().id]={};delete c.base[page().id];persist();renderLive();return}
-  if(e.target.id==="liveOn"){const c=liveCfg();c.on=e.target.checked;c.map[page().id]=livePageNum(page());if(c.on){c.base={};c.owned={}}persist();renderLive();if(c.on){toast(`Live on: changes on this page go to Companion page ${livePageNum(page())}`);liveSync()}return}
+  if(e.target.id==="liveOn"){const c=liveCfg();c.on=e.target.checked;if(c.on){c.base={};c.owned={}}persist();renderLive();if(c.on){toast(`Live on: changes on this page go to Companion page ${livePageNum(page())}`);liveSync()}return}
 });
 setInterval(()=>{if(!document.hidden&&(S.live?.on||$("#liveDlg")?.open))relayStatus()},4000);
 

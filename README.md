@@ -48,7 +48,7 @@ Live sends each key you add, change, move or delete straight to Companion, one k
    ```
 
 2. Open DeckWriter from this site in Chrome (Live can't run inside Claude). Link Companion in **Connections**.
-3. Click **Live** in the top bar, set which Companion page this DeckWriter page goes to, and switch **Live updates on**.
+3. Click **Live** in the top bar and switch **Live updates on**. Live follows the page you have open: DeckWriter's pages line up with Companion's in order, the boot page is always Companion page 1, and Live never touches it.
 
 When Live switches on it remembers the keys already on the page and sends nothing; only keys you add or change after that go out. It never clears a Companion key it didn't put there, asks before replacing a button that was already in Companion, and refuses keys whose connections aren't real Companion connections. **Send whole page now** pushes every key (still asking before replacing).
 
