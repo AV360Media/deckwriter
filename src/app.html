@@ -793,7 +793,7 @@ function renderPagebar(){
    <span class="count">${S.pageIdx+1}/${n}</span><input class="pagename" id="pageName" aria-label="Page name" value="${esc(page().name)}">
    <button class="ic" id="nextPage" aria-label="Next page" ${S.pageIdx>=n-1?"disabled":""}>${ico("chevron-right")}</button>
    <span class="vsep"></span><button class="ic" id="addPage" title="New page" aria-label="New page">${ico("plus")}</button>
-   <button class="ic" id="wipePage" title="Wipe this page (clear every key)" aria-label="Wipe this page" ${Object.keys(page().buttons).length?"":"disabled"}>${ico("eraser")}</button>
+   <button class="ic" id="wipePage" title="Wipe this page (clear every key)" aria-label="Wipe this page" ${Object.keys(page().buttons).length||liveExtraKeys(page()).length?"":"disabled"}>${ico("eraser")}</button>
    ${n>1?`<button class="ic" id="delPage" title="Delete this page" aria-label="Delete this page">${ico("trash-2")}</button>`:""}`;
 }
 
@@ -1894,7 +1894,25 @@ async function paintPresetPreviews(){
   }
 }
 
-function wipePage(){const n=Object.keys(page().buttons).length;if(!n)return;commit(()=>{page().buttons={};selected=null;multi.clear();S.example=false});toast(`Wiped ${n} keys from “${page().name||"this page"}”. Press ⌘Z to undo.`)}
+function wipePage(){const n=Object.keys(page().buttons).length,extra=liveExtraKeys(page());if(!n&&!extra.length)return;
+  if(n)commit(()=>{page().buttons={};selected=null;multi.clear();S.example=false});
+  if(extra.length||(S.live?.on&&n))liveWipe(page());
+  toast(n?`Wiped ${n} keys from “${page().name||"this page"}”${S.live?.on?` and Companion page ${livePageNum(page())}`:""}. Press ⌘Z to undo in DeckWriter.`:`Clearing Companion page ${livePageNum(page())}…`)}
+// keys Companion has on this page's Live target that DeckWriter doesn't have (only while Live is on)
+function liveExtraKeys(pg){const c=S.live;if(!c?.on||pg.boot)return[];try{if(!liveRT.status?.companion)return[]}catch(_){return[]} // liveRT is declared further down
+  const num=livePageNum(pg),cp=liveRT.status.pages.find(p=>p.number===num);
+  if(!cp||liveBlocked(num,cp))return[];return cp.keys.map(([r,cc])=>r+","+cc).filter(k=>!pg.buttons[k])}
+// Wipe with Live on empties the Companion page too, including buttons DeckWriter never sent
+async function liveWipe(pg){const c=liveCfg(),num=livePageNum(pg);
+  const st=await relayStatus(),cp=st?.pages?.find(p=>p.number===num);if(!cp||liveBlocked(num,cp))return;
+  while(liveRT.busy)await new Promise(r=>setTimeout(r,100));liveRT.busy=true;let n=0;
+  try{for(const[r,col]of cp.keys){if(pg.buttons[r+","+col])continue;
+      const res=await fetch(RELAY+"/clear",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({page:num,row:r,column:col})}).then(x=>x.json());
+      if(!res.ok)throw new Error(res.error||"clear failed");n++}
+    c.owned[pg.id]={};c.base[pg.id]={};liveTarget(pg,num);try{localStorage.setItem("deckwright.v1",JSON.stringify(S))}catch(_){}
+    liveRT.lastMsg=`Companion page ${num}: cleared ${n} key${n===1?"":"s"}`;toast(liveRT.lastMsg)}
+  catch(e){liveRT.lastMsg="Live wipe failed: "+e.message;toast(liveRT.lastMsg)}
+  finally{liveRT.busy=false;await relayStatus();render()}}
 
 /* ---------- boot screen: an animation across every key on page 1, played by a startup trigger ---------- */
 // How it works in Companion: every key's normal image is the final title screen. Each key also carries one
@@ -2318,7 +2336,7 @@ function openCtx(x,y,k){
     item("copy","Copy","⌘C",!b||many)+item("paste",clipboard?"Paste":"Paste (nothing copied)","⌘V",!clipboard||many)+
     item("dup","Duplicate","⌘D",!b||many)+
     (b||many?"":item("new",dial?"New dial":"New button","",false)+(dial?"":item("presets","Browse presets…","",false)))+
-    `<div class="ctx-sep"></div>`+item("del",many?`Delete ${multi.size} keys`:"Delete","⌫",!b&&!many,"danger")+item("wipe","Wipe page","",!Object.keys(page().buttons).length,"danger");
+    `<div class="ctx-sep"></div>`+item("del",many?`Delete ${multi.size} keys`:"Delete","⌫",!b&&!many,"danger")+item("wipe","Wipe page","",!Object.keys(page().buttons).length&&!liveExtraKeys(page()).length,"danger");
   m.hidden=false;
   const r=m.getBoundingClientRect();m.style.left=Math.min(x,innerWidth-r.width-8)+"px";m.style.top=Math.min(y,innerHeight-r.height-8)+"px";
   m.querySelector("button:not([disabled])")?.focus();
@@ -2422,7 +2440,7 @@ async function relayStatus(){
     const r=await fetch(RELAY+"/status",{signal:ctl.signal,cache:"no-store"});clearTimeout(t);
     liveRT.status=await r.json();liveRT.error=liveRT.status.companion?"":"The relay is running but can't reach Companion. Is Companion open?";
   }catch(_){liveRT.status=null;liveRT.error=window.claude?"Live can't run inside Claude. Open DeckWriter from bryanchorton.github.io/deckwriter.":"The relay isn't running on this Mac."}
-  renderLive();liveFollow();return liveRT.status;
+  renderLive();liveFollow();const w=$("#wipePage");if(w)w.disabled=!Object.keys(page().buttons).length&&!liveExtraKeys(page()).length;return liveRT.status;
 }
 // Live always follows the page you're on: DeckWriter's show pages line up with Companion's, in order, after the boot screen.
 const bootOnPage1=()=>!!((S.boot&&S.boot.mode!=="overlay")||S.pages.some(p=>p.boot)||/^boot$/i.test(liveRT.status?.pages?.find(p=>p.number===1)?.name||""));
