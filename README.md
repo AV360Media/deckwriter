@@ -58,6 +58,8 @@ Live sends each key you add, change, move or delete straight to Companion, one k
 
 Companion is the source of truth. When Live switches on (and whenever DeckWriter opens with Live on, or you come back to its window) DeckWriter loads Companion's pages and buttons, so edits made in Companion show up here; keys that already match are left alone. From then on every key you add, change, move or delete here goes straight to Companion, and so do new, deleted and renamed pages and Cmd+Z. Wipe page empties the Companion page too. Opening a project file pauses Live so Companion doesn't replace it. **Load from Companion** reloads by hand; **Send whole page now** pushes every key on the page.
 
+**Mirror** (deck header) lays Companion's own picture of every key over DeckWriter's deck, live: real variable values, tally, timers. **Show mode** opens a full-screen deck on this Mac where tapping a key presses it in Companion (holding holds); its page arrows and page up/down keys change pages in Show mode only. **Colours** (bottom bar) colours every key by the app it controls; with Live on only the background and text colour change in Companion.
+
 The relay (`tools/live/relay.mjs`) listens only on 127.0.0.1:8790 and only answers DeckWriter's own origins. It drives Companion's internal editor API (the one Companion's web UI uses), which is unofficial and was built against Companion 5.0.x: after a Companion update, try Live on a spare page before relying on it.
 
 ## Other tools
