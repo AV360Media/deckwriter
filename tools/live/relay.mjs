@@ -23,7 +23,7 @@ const arg = (name, def) => {
 const COMPANION = arg('--companion', 'http://127.0.0.1:8000').replace(/\/+$/, '')
 const PORT = Number(arg('--port', 8790))
 const ALLOWED = [/^https:\/\/bryanchorton\.github\.io$/, /^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/, /^null$/]
-const VERSION = '1.3.0'
+const VERSION = '1.4.0'
 
 const log = (...a) => console.log(new Date().toLocaleTimeString(), ...a)
 
@@ -305,14 +305,32 @@ async function clearKey(page, row, column) {
 async function addPages(upTo, names) {
 	let made = 0
 	for (let n = pages.order.length + 1; n <= upTo; n++) {
-		await call('pages.insert', { asPageNumber: n, pageNames: [String(names?.[n] || `Page ${n}`)] })
-		await waitFor(() => pages.order.length >= n)
-		await waitFor(() => Object.values(pages.byId[pages.order[n - 1]]?.controls || {}).some((r) => Object.keys(r).length), 1500)
-		for (const [r, row] of Object.entries(pages.byId[pages.order[n - 1]]?.controls || {}))
-			for (const c of Object.keys(row)) await call('controls.resetControl', { location: { pageNumber: n, row: Number(r), column: Number(c) } })
+		await insertPage(n, names?.[n] || `Page ${n}`)
 		made++
 	}
 	return made
+}
+// one empty page at number n (n may be in the middle: the pages after it move up one, as DeckWriter's did)
+async function insertPage(n, name) {
+	const count = pages.order.length
+	if (n < 1 || n > count + 1) throw new Error(`can't add page ${n}: Companion has ${count} pages`)
+	if (n === 1 && /^boot$/i.test(pages.byId[pages.order[0]]?.name || '')) throw new Error('page 1 is the boot screen')
+	await call('pages.insert', { asPageNumber: n, pageNames: [String(name || `Page ${n}`)] })
+	await waitFor(() => pages.order.length > count)
+	const id = pages.order[n - 1]
+	await waitFor(() => Object.values(pages.byId[id]?.controls || {}).some((r) => Object.keys(r).length), 1500)
+	for (const [r, row] of Object.entries(pages.byId[id]?.controls || {}))
+		for (const c of Object.keys(row)) await call('controls.resetControl', { location: { pageNumber: n, row: Number(r), column: Number(c) } })
+}
+async function removePage(n, expectName) {
+	guardPage(n)
+	const have = pages.byId[pages.order[n - 1]]?.name || ''
+	if (expectName != null && have.trim() !== String(expectName).trim()) throw new Error(`Companion page ${n} is "${have}", not "${expectName}", so it was left alone`)
+	if (pages.order.length <= 1) throw new Error("Companion can't remove its last page")
+	const count = pages.order.length
+	const r = await call('pages.remove', { pageNumber: n })
+	if (r === 'fail') throw new Error('Companion refused to remove the page')
+	await waitFor(() => pages.order.length < count)
 }
 async function renamePage(page, name) {
 	guardPage(page)
@@ -409,6 +427,19 @@ http
 				const made = await serial(() => addPages(Number(b.upTo), b.names || {}))
 				if (made) log(`added ${made} page${made === 1 ? '' : 's'}, Companion now has ${pages.order.length}`)
 				return send(res, 200, { ok: true, made })
+			}
+			if (req.method === 'POST' && path === '/insertpage') {
+				const b = await body(req)
+				await serial(() => insertPage(Number(b.page), b.name))
+				log(`added page ${b.page} "${b.name || ''}", Companion now has ${pages.order.length}`)
+				return send(res, 200, { ok: true })
+			}
+			if (req.method === 'POST' && path === '/removepage') {
+				const b = await body(req)
+				const name = pages.byId[pages.order[Number(b.page) - 1]]?.name
+				await serial(() => removePage(Number(b.page), b.name))
+				log(`removed page ${b.page} "${name || ''}", Companion now has ${pages.order.length}`)
+				return send(res, 200, { ok: true })
 			}
 			if (req.method === 'POST' && path === '/pagename') {
 				const b = await body(req)

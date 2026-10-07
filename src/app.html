@@ -663,7 +663,7 @@ function sanitizeSvgInner(src){
 function starterKeys(name){const d=dev(),out={},nav={bg:"#1d2226",color:"#ffffff"};
   const at=d.rows>=3?[keyId(d.rows-3,0),keyId(d.rows-2,0),keyId(d.rows-1,0)]:[keyId(0,0),d.cols>1?keyId(0,1):null,keyId(d.rows-1,0)];
   out[at[0]]={...newButton(nav),kind:"pageup"};
-  if(at[1])out[at[1]]=newButton({...nav,text:name,size:"auto",pageTitle:true});
+  if(at[1])out[at[1]]=newButton({...nav,text:name,size:"14",pageTitle:true});
   out[at[2]]={...newButton(nav),kind:"pagedown"};
   return out}
 function newButton(o={}){return Object.assign({kind:"button",text:"",size:"auto",color:"#ffffff",bg:"#000000",align:"center:center",
@@ -701,14 +701,16 @@ function sampleProject(){
 }
 
 let S; let selected=null; const multi=new Set(); const undoStack=[]; const redoStack=[]; let clipboard=null; let tab="look"; let stepIdx=0;
-function load(){try{const raw=localStorage.getItem("deckwright.v1");if(raw){const s=JSON.parse(raw);if(s&&s.pages)return s}}catch(e){}return sampleProject()}
+function load(){try{const raw=localStorage.getItem("deckwright.v1");if(raw){const s=JSON.parse(raw);if(s&&s.pages){fixTitleKeys(s);return s}}}catch(e){}return sampleProject()}
+// page title keys used to be auto-sized, which Companion blows up to fill the key: give them the nav keys' size
+function fixTitleKeys(s){for(const p of s.pages||[])for(const b of Object.values(p.buttons||{}))if(b?.pageTitle&&b.size==="auto")b.size="14"}
 function persist(){clearTimeout(persist.t);persist.t=setTimeout(()=>{try{localStorage.setItem("deckwright.v1",JSON.stringify(S))}catch(e){}},250);if(typeof scheduleLive==="function")scheduleLive()}
 function commit(fn,{renderArtFor}={}){undoStack.push(JSON.stringify(S));if(undoStack.length>80)undoStack.shift();redoStack.length=0;fn();persist();
   if(renderArtFor){refreshArt(renderArtFor).then(render)}else render()}
 // Live's record of what is on the Stream Deck is never rolled back: undo changes DeckWriter and Live sends the difference
 function restore(json){const live=S.live,companionLinked=S.companionLinked;S=JSON.parse(json);if(live)S.live=live;S.companionLinked=companionLinked}
-function undo(){if(!undoStack.length)return;redoStack.push(JSON.stringify(S));restore(undoStack.pop());persist();render()}
-function redo(){if(!redoStack.length)return;undoStack.push(JSON.stringify(S));restore(redoStack.pop());persist();render()}
+function undo(){if(!undoStack.length)return;const before=liveShowIds();redoStack.push(JSON.stringify(S));restore(undoStack.pop());persist();render();livePagesChanged(before,liveShowIds())}
+function redo(){if(!redoStack.length)return;const before=liveShowIds();undoStack.push(JSON.stringify(S));restore(redoStack.pop());persist();render();livePagesChanged(before,liveShowIds())}
 const page=()=>S.pages[S.pageIdx];
 const dev=()=>DEVICES[S.device]||DEVICES.mk2;
 const isSel=k=>multi.size>1?multi.has(k):selected===k;
@@ -978,7 +980,7 @@ document.addEventListener("click",e=>{
   const t=e.target.closest("button")||e.target;
   const p=t.closest("[data-p]");if(p){S.pageIdx=+p.dataset.p;selected=null;multi.clear();persist();render();return}
   if(t.id==="addPage"){commit(()=>{const name="Page "+(S.pages.length+1);S.pages.push({id:uid(),name,buttons:starterKeys(name)});S.pageIdx=S.pages.length-1;selected=null});return}
-  if(t.id==="delPage"){if(t.dataset.armed){commit(()=>{S.pages.splice(S.pageIdx,1);S.pageIdx=Math.max(0,S.pageIdx-1);selected=null})}else{t.dataset.armed="1";t.classList.add("armed");toast("Click the bin again to delete this page");setTimeout(()=>{if(t.isConnected){delete t.dataset.armed;t.classList.remove("armed")}},2500)}return}
+  if(t.id==="delPage"){if(t.dataset.armed){const before=liveShowIds();commit(()=>{S.pages.splice(S.pageIdx,1);S.pageIdx=Math.max(0,S.pageIdx-1);selected=null});livePagesChanged(before,liveShowIds())}else{t.dataset.armed="1";t.classList.add("armed");toast("Click the bin again to delete this page");setTimeout(()=>{if(t.isConnected){delete t.dataset.armed;t.classList.remove("armed")}},2500)}return}
   if(t.id==="wipePage"){if(t.dataset.armed){wipePage()}else{t.dataset.armed="1";t.classList.add("armed");toast("Click the eraser again to wipe every key on this page");setTimeout(()=>{if(t.isConnected){delete t.dataset.armed;t.classList.remove("armed")}},2500)}return}
   if(t.id==="prevPage"||t.id==="nextPage"){const d=t.id==="prevPage"?-1:1;S.pageIdx=Math.max(0,Math.min(S.pages.length-1,S.pageIdx+d));selected=null;multi.clear();persist();render();return}
   const gt=t.closest("[data-goto]");if(gt){tab=gt.dataset.goto;renderInspector();return}
@@ -1576,7 +1578,7 @@ $("#saveProject").onclick=async()=>{const d=new Date(),p=n=>String(n).padStart(2
 function openProject(o,fileName){
   const st=o?.deckwriter==="project"?o.state:o; // older saves were the bare project
   if(!st||!Array.isArray(st.pages)||!st.pages.length||!st.pages.every(p=>p&&typeof p.buttons==="object"))throw new Error("not a project");
-  if(!DEVICES[st.device])st.device=S.device;
+  if(!DEVICES[st.device])st.device=S.device;fixTitleKeys(st);
   st.connections??=[];st.learned??={};st.pageIdx=Math.min(Math.max(0,st.pageIdx|0),st.pages.length-1);delete st.live;
   if(fileName)st.projectName=fileName.replace(/(\.json)+$/i,"").replace(/\s+\d{4}-\d{2}-\d{2}( \d{4})?$/,"").trim();
   commit(()=>{const live=S.live;S=st;if(live)S.live=live;selected=null;multi.clear()});
@@ -2472,6 +2474,31 @@ async function relayStatus(){
 }
 // Live always follows the page you're on: DeckWriter's show pages line up with Companion's, in order, after the boot screen.
 const bootOnPage1=()=>!!((S.boot&&S.boot.mode!=="overlay")||S.pages.some(p=>p.boot)||/^boot$/i.test(liveRT.status?.pages?.find(p=>p.number===1)?.name||""));
+// Pages deleted or brought back (Cmd+Z) in DeckWriter are deleted or put back in Companion at the same number,
+// so DeckWriter's pages and Companion's keep lining up. Only for the same project: opening another one changes nothing here.
+const liveNames={}; // last known name of each page, so a deleted page can be matched to Companion's by name
+const liveShowIds=()=>S.pages.filter(p=>!p.boot).map(p=>(liveNames[p.id]=p.name.trim(),p.id));
+async function livePagesChanged(before,after){
+  const c=S.live;if(!c?.on||(after.length&&!before.some(id=>after.includes(id))))return; // no page in common: another project, leave Companion alone
+  const off=bootOnPage1()?1:0,removed=before.map((id,i)=>[id,i+1+off,liveNames[id]]).filter(([id])=>!after.includes(id)).reverse(),
+    added=after.map((id,i)=>[id,i+1+off]).filter(([id])=>!before.includes(id));
+  if(!removed.length&&!added.length)return;
+  while(liveRT.busy)await new Promise(r=>setTimeout(r,60));liveRT.busy=true;
+  const post=(path,body)=>fetch(RELAY+path,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(body)}).then(r=>r.json()).then(r=>{if(!r.ok)throw new Error(r.error);return r});
+  const done=[];
+  try{let st=await relayStatus();if(!st?.companion)throw new Error("the relay or Companion isn't connected");
+    for(const[id,num,name]of removed){delete c.owned[id];delete c.base[id];delete c.at[id];
+      if(num>st.pages.length)continue; // never made it to Companion
+      await post("/removepage",{page:num,name});done.push(`removed page ${num}`);st=await relayStatus()}
+    for(const[id,num]of added){const pg=S.pages.find(p=>p.id===id);
+      if(num<=st.pages.length+1){await post("/insertpage",{page:num,name:pg?.name||""});done.push(`added page ${num}`);st=await relayStatus()}
+      c.owned[id]={};c.base[id]={}}
+    after.forEach((id,i)=>{c.at[id]=i+1+off}); // every page's Companion number after the shuffle
+    try{localStorage.setItem("deckwright.v1",JSON.stringify(S))}catch(_){}
+    if(done.length){liveRT.lastMsg="Companion: "+done.join(", ");toast(liveRT.lastMsg)}}
+  catch(e){liveRT.lastMsg="Live couldn't update Companion's pages: "+e.message;toast(liveRT.lastMsg)}
+  finally{liveRT.busy=false;liveRT.shown=null;await relayStatus();scheduleLive()}
+}
 function livePageAt(n){const shows=S.pages.filter(p=>!p.boot);return shows[n-1-(bootOnPage1()?1:0)]||null}
 function livePageNum(pg){const shows=S.pages.filter(p=>!p.boot);return Math.max(1,shows.indexOf(pg)+1+(bootOnPage1()?1:0))}
 // never send live buttons onto the boot screen
