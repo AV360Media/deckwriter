@@ -60,6 +60,7 @@ check('no logic blocks in exports', () => !scripts[0].includes('logic_if'))
 check('page keys skip a separate boot page', () => scripts[0].includes('const nav=navSkipBoot(b,pi)'))
 check('buttons export without the top bar', () => scripts[0].includes('show_topbar:false'))
 check('boot trigger is a v6 trigger list', () => scripts[0].includes('version:6,type:"trigger_list"'))
+check('boot keys stay black until the animation is done', () => scripts[0].includes('bootFeedbacksAt(b.boot.r,b.boot.c,["done"])') && scripts[0].includes('Object.assign(style,{png64:null,text:"",bgcolor:0})'))
 check('boot trigger cannot overlap itself', () => scripts[0].includes('condition:[notBusy]') && scripts[0].includes('name:BOOT_BUSY,value:"0"}));\n  const notBusy'))
 
 import { execFileSync } from 'node:child_process'
