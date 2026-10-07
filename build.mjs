@@ -39,7 +39,8 @@ export function body() {
 
 /** mode: 'prod' | 'test' | 'artifact' */
 export function build(mode = 'test') {
-	let html = body() // test builds are stamped with the build time so a stale copy is easy to spot
+	const stamp = new Date().toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit', timeZone: 'America/Phoenix' })
+	let html = body().replace('const BUILD="dev";', `const BUILD=${JSON.stringify(stamp)};`) // every build shows its time in the Live panel; test builds also on the badge
 	if (mode === 'artifact') return html
 	if (mode === 'test') {
 		// separate autosave so testing never touches the production project

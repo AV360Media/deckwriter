@@ -544,7 +544,7 @@ dialog.live-panel{position:fixed;inset:64px 16px auto auto;margin:0;width:min(42
     <li>DeckWriter never clears a Companion key it didn't put there, and asks before replacing one that was already in Companion.</li>
     <li>Keys must use connections that exist in Companion (link them in Connections).</li>
   </ul>
-  <div class="dlg-foot"><span class="empty-note" id="liveLog" style="margin-right:auto;align-self:center"></span><button class="btn ghost" id="livePull">Load from Companion</button><button class="btn" id="livePushAll">Send whole page now</button></div>
+  <div class="dlg-foot"><span class="empty-note" id="liveLog" style="margin-right:auto;align-self:center"></span><span class="empty-note" id="buildStamp" style="align-self:center;font-size:11px"></span><button class="btn ghost" id="livePull">Load from Companion</button><button class="btn" id="livePushAll">Send whole page now</button></div>
 </div></dialog>
 <div class="live-ask" id="liveAsk" hidden></div>
 
@@ -2558,7 +2558,9 @@ function liveAutoLink(ids){const done=[],unsure=[];
     else if(cands.length>1)unsure.push(`${mine.label} (Companion has ${cands.map(x=>"“"+x.label+"”").join(" and ")}: pick one with Link in Connections)`)}
   if(done.length){persist();renderRail()}
   return{done,unsure}}
+const BUILD="Oct 7, 1:41 AM";
 function renderLive(){
+  const bs=$("#buildStamp");if(bs)bs.textContent="Build "+BUILD;
   const c=liveCfg(),st=liveRT.status,ok=!!(st&&st.companion),pg=page();
   const btn=$("#liveBtn");if(btn){btn.classList.toggle("on",c.on&&ok);btn.classList.toggle("ready",!c.on&&ok);btn.classList.toggle("problem",c.on&&!ok);
     $("#liveLabel").textContent=c.on?(ok?`Live · page ${livePageNum(pg)}`:"Live · offline"):"Live"}
@@ -2615,12 +2617,13 @@ async function livePull(why){
         if(sameAsCompanion(pg?.buttons[k],dw[k],ctl))continue;
         const nb=fromCompanionControl(ctl);if(!nb)continue;buttons[k]=nb;changed++;ch=true}
       for(const k of Object.keys(buttons))if(!seen.has(k)){delete buttons[k];changed++;ch=true}
+      if(!seen.size&&!Object.keys(buttons).length){Object.assign(buttons,starterKeys(cp.name));ch=true} // an empty page is a new page: it gets page up, title, page down
       if(ch)pagesChanged++;
       next.push(ch?{...(pg||{id:uid()}),name:cp.name,buttons}:pg)});
     if(shows.length>cps.length)pagesChanged+=shows.length-cps.length;
     // a page up/down key whose page number in Companion is out of date is left out, so liveNavSync re-sends it
     const inSync=()=>{S.pages.filter(p=>!p.boot).forEach((p,si)=>{const pi=S.pages.indexOf(p);c.at[p.id]=livePageNum(p);c.owned[p.id]={};
-      c.base[p.id]=Object.fromEntries(Object.entries(desiredControls(pi)).filter(([k,ctl])=>!((p.buttons[k]?.kind==="pageup"||p.buttons[k]?.kind==="pagedown")&&navTarget(ctl)!==navTarget(cpAt[si+"|"+k]))).map(([k,ctl])=>[k,keyHash(ctl)]))});
+      c.base[p.id]=Object.fromEntries(Object.entries(desiredControls(pi)).filter(([k,ctl])=>cpAt[si+"|"+k]&&!((p.buttons[k]?.kind==="pageup"||p.buttons[k]?.kind==="pagedown")&&navTarget(ctl)!==navTarget(cpAt[si+"|"+k]))).map(([k,ctl])=>[k,keyHash(ctl)]))});
       try{localStorage.setItem("deckwright.test.v1",JSON.stringify(S))}catch(_){}};
     liveRT.pulled=true;
     if(!pagesChanged){inSync();if(conns)persist();liveRT.lastMsg="DeckWriter matches Companion";return false}
@@ -2863,6 +2866,6 @@ refreshAllArt();
 })();
 </script>
 
-<div style="position:fixed;left:12px;bottom:12px;z-index:200;background:#e5484d;color:#fff;font:700 11px/1 system-ui,sans-serif;letter-spacing:.08em;padding:6px 8px;border-radius:6px;pointer-events:none">TEST BUILD · Oct 7, 1:37 AM</div>
+<div style="position:fixed;left:12px;bottom:12px;z-index:200;background:#e5484d;color:#fff;font:700 11px/1 system-ui,sans-serif;letter-spacing:.08em;padding:6px 8px;border-radius:6px;pointer-events:none">TEST BUILD · Oct 7, 1:41 AM</div>
 </body>
 </html>
