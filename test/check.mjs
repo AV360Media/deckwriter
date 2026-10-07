@@ -58,6 +58,7 @@ check('every element the script looks up exists', () => {
 check('exports target Companion format v6', () => scripts[0].includes('{data:{version:6,type:"page"'))
 check('buttons export without the top bar', () => scripts[0].includes('show_topbar:false'))
 check('boot trigger is a v6 trigger list', () => scripts[0].includes('version:6,type:"trigger_list"'))
+check('boot trigger cannot overlap itself', () => scripts[0].includes('condition:[notBusy]') && scripts[0].includes('name:BOOT_BUSY,value:"0"}));\n  const notBusy'))
 
 const test = build('test')
 check('test build is marked', () => test.includes('TEST BUILD') && test.includes('"deckwright.test.v1"'))

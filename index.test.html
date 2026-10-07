@@ -2079,16 +2079,24 @@ function bootFeedbacks(b){
   const{keys}=bootGeom();const idx=keys.findIndex(k=>k.r===b.boot.r&&k.c===b.boot.c);if(idx<0)return[];
   return bootCache.frames.map((fr,f)=>({id:uid(16),type:"variable_value",instance_id:"internal",options:{variable:"internal:custom_"+BOOT_VAR,op:"eq",value:String(f+1)},style:{png64:fr[idx]},isInverted:false}));
 }
+const BOOT_BUSY="boot_busy";
+// The startup trigger. Plugging a deck in updates Companion's surface variables more than once, so the
+// "deck connected" event can fire twice in quick succession; a busy flag plus a trigger condition makes
+// any second run wait out the first instead of overlapping it. boot_busy is created with default "0",
+// so a restart never leaves it stuck on.
 function bootTriggerExport(){
   const cfg=S.boot;const F=bootFrameCount(cfg),wait=Math.round(1000/cfg.fps);
   const act=(action,options)=>({id:uid(16),action,instance:"internal",options});
   const deck=String(cfg.deckId||"").trim();
-  const actions=[];
+  const actions=[act("custom_variable_create_value",{name:BOOT_BUSY,value:"0"}),act("custom_variable_set_value",{name:BOOT_BUSY,value:"1"})];
   if(deck)actions.push(act("set_page",{controller:deck,controller_from_variable:false,page:1,page_from_variable:false}));
   actions.push(act("custom_variable_create_value",{name:BOOT_VAR,value:"0"}));
+  actions.push(act("wait",{time:600})); // let a just-connected deck settle so the first frames are not lost
   for(let f=1;f<=F;f++){actions.push(act("custom_variable_set_value",{name:BOOT_VAR,value:String(f)}));actions.push(act("wait",{time:wait}))}
   actions.push(act("custom_variable_set_value",{name:BOOT_VAR,value:"done"}));
-  return{version:6,type:"trigger_list",triggers:{[uid()]:{type:"trigger",options:{name:"DeckWriter boot animation",enabled:true,sortOrder:0},action_sets:{0:actions},condition:[],
+  actions.push(act("custom_variable_set_value",{name:BOOT_BUSY,value:"0"}));
+  const notBusy={id:uid(16),type:"variable_value",instance_id:"internal",options:{variable:"internal:custom_"+BOOT_BUSY,op:"ne",value:"1"},style:{},isInverted:false};
+  return{version:6,type:"trigger_list",triggers:{[uid()]:{type:"trigger",options:{name:"DeckWriter boot animation",enabled:true,sortOrder:0},action_sets:{0:actions},condition:[notBusy],
     events:[{id:uid(),type:"startup",enabled:true,options:{delay:1500}}].concat(deck?[{id:uid(),type:"variable_changed",enabled:true,options:{variableId:"internal:surface_"+deck.replaceAll(":","_")+"_location"}}]:[])}},instances:{}};
 }
 
