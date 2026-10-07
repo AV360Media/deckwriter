@@ -2508,7 +2508,8 @@ document.addEventListener("visibilitychange",()=>{if(!document.hidden&&S.compani
 // Keys DeckWriter has sent are remembered (S.live.owned) so it only ever clears keys it put there, and it
 // asks before replacing a key that was already in Companion.
 const RELAY="http://127.0.0.1:8790";
-const RELAY_CMD='curl -fsSL https://raw.githubusercontent.com/bryanchorton/deckwriter/main/tools/live/relay.mjs -o ~/.deckwriter-relay.mjs && "/Applications/Companion.app/Contents/Resources/node-runtimes/node22/bin/node" ~/.deckwriter-relay.mjs';
+// one-time setup: installs the relay as a background service (no Terminal window, starts at login, updates itself)
+const RELAY_CMD='curl -fsSL https://raw.githubusercontent.com/bryanchorton/deckwriter/main/tools/live/install.sh | bash';
 const liveRT={status:null,error:"",busy:false,timer:0,pending:false,skip:{},asking:false,lastMsg:""};
 const liveCfg=()=>{const c=(S.live??={on:false,map:{},owned:{}});c.base??={};c.at??={};return c};
 // what Live sent is remembered per Companion page: when a DeckWriter page points somewhere new, start over there
@@ -2562,7 +2563,7 @@ function liveAutoLink(ids){const done=[],unsure=[];
     else if(cands.length>1)unsure.push(`${mine.label} (Companion has ${cands.map(x=>"“"+x.label+"”").join(" and ")}: pick one with Link in Connections)`)}
   if(done.length){persist();renderRail()}
   return{done,unsure}}
-const BUILD="Oct 7, 12:48 PM";
+const BUILD="Oct 7, 1:01 PM";
 function renderLive(){
   const bs=$("#buildStamp");if(bs)bs.textContent="Build "+BUILD;
   const c=liveCfg(),st=liveRT.status,ok=!!(st&&st.companion),pg=page();
@@ -2571,7 +2572,7 @@ function renderLive(){
   if(!$("#liveDlg").open)return;
   $("#liveStatus").innerHTML=`<div class="row"><span class="dot ${st?"st-good":"st-bad"}"></span>Relay ${st?`running (v${esc(st.relay)})`:"not running"}</div>
     <div class="row"><span class="dot ${ok?"st-good":"st-bad"}"></span>Companion ${ok?`connected · ${st.pages.length} pages`:"not reachable"}</div>${liveRT.error?`<span class="st-msg st-warn">${esc(liveRT.error)}</span>`:""}`;
-  $("#liveSetup").innerHTML=st||window.claude?"":`<div class="field live-setup"><span class="label">Start the relay: paste this into Terminal and leave it running</span><pre class="mono" style="background:var(--field);border:1px solid var(--stroke);border-radius:10px;padding:10px;font-size:11.5px;margin:0">${esc(RELAY_CMD)}</pre><div><button class="btn sm" id="liveCopyCmd">Copy command</button></div></div>`;
+  $("#liveSetup").innerHTML=st||window.claude?"":`<div class="field live-setup"><span class="label">Set up Live on this Mac (once): paste this into Terminal. After that it runs in the background, starts with your Mac and updates itself. You can close Terminal.</span><pre class="mono" style="background:var(--field);border:1px solid var(--stroke);border-radius:10px;padding:10px;font-size:11.5px;margin:0">${esc(RELAY_CMD)}</pre><div><button class="btn sm" id="liveCopyCmd">Copy command</button></div></div>`;
   const n=livePageNum(pg),cp=st?.pages?.find(p=>p.number===n);
   $("#liveTargetInfo").textContent=pg.boot?"nothing (the boot page isn't sent live)":`Companion page ${n}${cp?` · “${cp.name}”`:st?" (not in Companion yet: Live adds it)":""}`;$("#liveOn").checked=!!c.on;
   $("#liveLog").textContent=liveRT.lastMsg||(cp?`Companion page ${n} is “${cp.name}” with ${cp.keys.length} key${cp.keys.length===1?"":"s"}.`:st?`Companion has no page ${n} yet. Live adds it with your next change.`:"");
@@ -2870,6 +2871,6 @@ refreshAllArt();
 })();
 </script>
 
-<div style="position:fixed;left:12px;bottom:12px;z-index:200;background:#e5484d;color:#fff;font:700 11px/1 system-ui,sans-serif;letter-spacing:.08em;padding:6px 8px;border-radius:6px;pointer-events:none">TEST BUILD · Oct 7, 12:48 PM</div>
+<div style="position:fixed;left:12px;bottom:12px;z-index:200;background:#e5484d;color:#fff;font:700 11px/1 system-ui,sans-serif;letter-spacing:.08em;padding:6px 8px;border-radius:6px;pointer-events:none">TEST BUILD · Oct 7, 1:01 PM</div>
 </body>
 </html>
