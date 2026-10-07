@@ -68,7 +68,8 @@ check('live relay only accepts DeckWriter origins', () => readFileSync(join(root
 check('live moves never use the deleting moveControl', () => !readFileSync(join(root, 'tools/live/relay.mjs'), 'utf8').includes("call('controls.moveControl'"))
 check('live never sends to the boot screen page', () => scripts[0].includes('{const b=liveBlocked(num,cp);if(b){liveRT.lastMsg=b') && scripts[0].includes('{const b=liveBlocked(num,cp);if(b)return why(b)}'))
 check('live follows the open page with no page picker', () => !scripts[0].includes('livePage"') && !app.includes('id="livePage"'))
-check('live mode never clears keys it did not send', () => scripts[0].includes('for(const k of Object.keys(owned))if(!want[k])'))
+check('live only clears keys DeckWriter sent or had when Live started', () => scripts[0].includes('if(owned[k]==null&&!occupied.has(k)){delete c.base[pg.id]?.[k];continue}'))
+check('relay never edits the boot page', () => { const r = readFileSync(join(root, 'tools/live/relay.mjs'), 'utf8'); return (r.match(/\tguardPage\(page\)/g) || []).length === 3 })
 
 const test = build('test')
 check('test build is marked', () => test.includes('TEST BUILD') && test.includes('"deckwright.test.v1"'))

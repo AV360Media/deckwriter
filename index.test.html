@@ -915,7 +915,7 @@ function render(){renderPagebar();renderDeck();renderRail();renderInspector();re
   $("#device").value=S.device;$("#undo").disabled=!undoStack.length;$("#redo").disabled=!redoStack.length;
   $("#exampleBanner").hidden=!S.example;
   $("#selHint").textContent=multi.size>1?`${multi.size} selected`:"";
-  if(typeof renderLive==="function")renderLive();}
+  if(typeof renderLive==="function")renderLive();if(typeof liveFollow==="function")liveFollow();}
 
 /* ---------- mutations ---------- */
 function mutSel(fn,art=false){if(!selected)return;commit(()=>{fn(page().buttons[selected])},art?{renderArtFor:[selected]}:{})}
@@ -1079,7 +1079,7 @@ document.addEventListener("keydown",e=>{
   const typing=e.target.closest("input,textarea,select,[contenteditable]");
   const mod=e.metaKey||e.ctrlKey;
   if(mod&&e.key.toLowerCase()==="z"&&!typing){e.preventDefault();e.shiftKey?redo():undo();return}
-  if(typing||document.querySelector("dialog[open]"))return;
+  if(typing||document.querySelector("dialog[open]:modal"))return; // the Live panel is not modal: shortcuts keep working while it is open
   if(mod&&e.key==="c"){copy();return}
   if(mod&&e.key==="v"){paste();return}
   if(mod&&e.key==="d"){e.preventDefault();duplicate();return}
@@ -2430,9 +2430,8 @@ async function relayStatus(){
     const r=await fetch(RELAY+"/status",{signal:ctl.signal,cache:"no-store"});clearTimeout(t);
     liveRT.status=await r.json();liveRT.error=liveRT.status.companion?"":"The relay is running but can't reach Companion. Is Companion open?";
   }catch(_){liveRT.status=null;liveRT.error=window.claude?"Live can't run inside Claude. Open DeckWriter from bryanchorton.github.io/deckwriter.":"The relay isn't running on this Mac."}
-  renderLive();return liveRT.status;
+  renderLive();liveFollow();return liveRT.status;
 }
-// With a boot page, Companion page 1 is the boot screen, so DeckWriter's show pages start at Companion page 2.
 // Live always follows the page you're on: DeckWriter's show pages line up with Companion's, in order, after the boot screen.
 const bootOnPage1=()=>!!((S.boot&&S.boot.mode!=="overlay")||S.pages.some(p=>p.boot)||/^boot$/i.test(liveRT.status?.pages?.find(p=>p.number===1)?.name||""));
 function livePageNum(pg){const shows=S.pages.filter(p=>!p.boot);return Math.max(1,shows.indexOf(pg)+1+(bootOnPage1()?1:0))}
@@ -2458,6 +2457,11 @@ function renderLive(){
   $("#liveTargetInfo").textContent=pg.boot?"nothing (the boot page isn't sent live)":`Companion page ${n}${cp?` · “${cp.name}”`:st?" (Companion doesn't have this page yet)":""}`;$("#liveOn").checked=!!c.on;
   $("#liveLog").textContent=liveRT.lastMsg||(cp?`Companion page ${n} is “${cp.name}” with ${cp.keys.length} key${cp.keys.length===1?"":"s"}.`:st?`Companion has no page ${n}.`:"");
 }
+// Live also turns the Stream Deck to whichever page is open in DeckWriter
+function liveFollow(){const c=S.live,pg=page();if(!c?.on||!pg||liveRT.shown===pg.id||!liveRT.status?.companion)return;liveRT.shown=pg.id;
+  if(pg.boot)return;const num=livePageNum(pg);if(!liveRT.status.pages.some(p=>p.number===num)||liveBlocked(num,liveRT.status.pages.find(p=>p.number===num)))return;
+  fetch(RELAY+"/page",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({page:num})}).then(r=>r.json()).then(r=>{if(!r.ok)throw new Error(r.error);if(!r.surfaces)toast("Live: no Stream Deck is connected to Companion")}).catch(e=>toast("Live couldn't change the Stream Deck page: "+e.message));
+  scheduleLive()}
 function scheduleLive(){const c=S.live;if(!c?.on)return;clearTimeout(liveRT.timer);liveRT.timer=setTimeout(liveSync,450)}
 function desiredControls(pi){
   const{data}=buildExport(pi);const out={};
@@ -2496,9 +2500,12 @@ async function liveSync(force){
       if(!res.ok)throw new Error(res.error||"push failed");
       owned[k]=h;sent++;if(res.notes?.length)problems.push(`${keyCodeK(k)}: ${res.notes.join("; ")}`);
     }
-    for(const k of Object.keys(owned))if(!want[k]){const[r,col]=parseKey(k);
+    // a key deleted in DeckWriter is cleared in Companion when DeckWriter sent it or it was there when Live started
+    for(const k of new Set([...Object.keys(owned),...Object.keys(base)]))if(!want[k]){
+      if(owned[k]==null&&!occupied.has(k)){delete c.base[pg.id]?.[k];continue}
+      const[r,col]=parseKey(k);
       const res=await fetch(RELAY+"/clear",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({page:num,row:r,column:col})}).then(x=>x.json());
-      if(!res.ok)throw new Error(res.error||"clear failed");delete owned[k];cleared++}
+      if(!res.ok)throw new Error(res.error||"clear failed");delete owned[k];delete c.base[pg.id]?.[k];cleared++}
     try{localStorage.setItem("deckwright.test.v1",JSON.stringify(S))}catch(_){}
     const parts=[];if(sent)parts.push(`sent ${sent} key${sent===1?"":"s"}`);if(cleared)parts.push(`cleared ${cleared}`);
     liveRT.lastMsg=parts.length?`Companion page ${num}: ${parts.join(", ")}`:"Up to date";
@@ -2548,7 +2555,7 @@ document.addEventListener("click",async e=>{const t=e.target.closest("button")||
     const owned=(liveCfg().owned[pid]??={});keys.forEach(k=>{owned[k]="replace"});liveSync();return}
 });
 document.addEventListener("change",e=>{
-  if(e.target.id==="liveOn"){const c=liveCfg();c.on=e.target.checked;if(c.on){c.base={};c.owned={}}persist();renderLive();if(c.on){toast(`Live on: changes on this page go to Companion page ${livePageNum(page())}`);liveSync()}return}
+  if(e.target.id==="liveOn"){const c=liveCfg();c.on=e.target.checked;if(c.on){c.base={};c.owned={};liveRT.shown=null}persist();renderLive();if(c.on){liveFollow();toast(`Live on: changes on this page go to Companion page ${livePageNum(page())}`);liveSync()}return}
 });
 setInterval(()=>{if(!document.hidden&&(S.live?.on||$("#liveDlg")?.open))relayStatus()},4000);
 

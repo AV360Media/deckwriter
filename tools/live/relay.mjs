@@ -23,7 +23,7 @@ const arg = (name, def) => {
 const COMPANION = arg('--companion', 'http://127.0.0.1:8000').replace(/\/+$/, '')
 const PORT = Number(arg('--port', 8790))
 const ALLOWED = [/^https:\/\/bryanchorton\.github\.io$/, /^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/, /^null$/]
-const VERSION = '1.1.1'
+const VERSION = '1.2.0'
 
 const log = (...a) => console.log(new Date().toLocaleTimeString(), ...a)
 
@@ -87,8 +87,8 @@ function subscribe(path, input, onData) {
 	subs.set(id, onData)
 	ws.send(JSON.stringify({ id, jsonrpc: '2.0', method: 'subscription', params: { path, input } }))
 }
-// one-shot read of a control's full config (the editor's watchControl subscription, stopped after "init")
-function controlConfig(controlId) {
+// one-shot read: subscribe, keep the first "init", stop
+function readOnce(path, input, what) {
 	return new Promise((resolve, reject) => {
 		const id = nextId++
 		const done = (fn, v) => {
@@ -98,11 +98,16 @@ function controlConfig(controlId) {
 			} catch {}
 			fn(v)
 		}
-		subs.set(id, (d) => d?.type === 'init' && done(resolve, d.config))
-		ws.send(JSON.stringify({ id, jsonrpc: '2.0', method: 'subscription', params: { path: 'controls.watchControl', input: { controlId } } }))
-		setTimeout(() => subs.has(id) && done(reject, new Error('reading the button timed out')), 5000)
+		subs.set(id, (d) => {
+			const init = Array.isArray(d) ? d.find((x) => x?.type === 'init') : d?.type === 'init' ? d : null
+			if (init) done(resolve, init)
+		})
+		ws.send(JSON.stringify({ id, jsonrpc: '2.0', method: 'subscription', params: { path, input } }))
+		setTimeout(() => subs.has(id) && done(reject, new Error(`reading ${what} timed out`)), 5000)
 	})
 }
+// a control's full config (the editor's watchControl subscription)
+const controlConfig = async (controlId) => (await readOnce('controls.watchControl', { controlId }, 'the button')).config
 function onPages(d) {
 	if (d.type === 'init') {
 		pages.order = d.order
@@ -122,6 +127,12 @@ function onPages(d) {
 		}
 	}
 }
+// the boot screen page is never edited live, whatever DeckWriter asks
+function guardPage(page) {
+	const id = pages.order[page - 1]
+	if (!id) throw new Error(`Companion has no page ${page}`)
+	if (/^boot$/i.test(pages.byId[id]?.name || '')) throw new Error(`Companion page ${page} is the boot screen, which Live never changes`)
+}
 const controlAt = (page, row, column) => pages.byId[pages.order[page - 1]]?.controls?.[row]?.[column] ?? null
 const waitFor = async (fn, ms = 3000) => {
 	const t0 = Date.now()
@@ -140,7 +151,7 @@ const ALIGN_V = { top: 'top', center: 'center', bottom: 'bottom' }
 
 // control: a DeckWriter export control (Companion export format 6 shape)
 async function pushKey(page, row, column, control) {
-	if (!pages.order[page - 1]) throw new Error(`Companion has no page ${page}`)
+	guardPage(page)
 	const loc = { pageNumber: page, row, column }
 	const notes = []
 	if (['pageup', 'pagedown', 'pagenum'].includes(control.type)) {
@@ -270,7 +281,7 @@ async function pushKey(page, row, column, control) {
 // an empty key is a move. "copy" uses copyControl, which overwrites its destination, so it is refused unless
 // that key is empty in Companion. (moveControl is never used: it deletes whatever is at the destination.)
 async function transferKey(page, op, from, to) {
-	if (!pages.order[page - 1]) throw new Error(`Companion has no page ${page}`)
+	guardPage(page)
 	const fromLocation = { pageNumber: page, row: from.row, column: from.column }
 	const toLocation = { pageNumber: page, row: to.row, column: to.column }
 	if (op === 'copy') {
@@ -283,8 +294,20 @@ async function transferKey(page, op, from, to) {
 }
 
 async function clearKey(page, row, column) {
-	if (!pages.order[page - 1]) throw new Error(`Companion has no page ${page}`)
+	guardPage(page)
+	if (!controlAt(page, row, column)) return false
 	await call('controls.resetControl', { location: { pageNumber: page, row, column } })
+	return true
+}
+
+// Turn every connected Stream Deck to a page: the same setting as "Current page" in Companion's Surfaces tab.
+async function showPage(page) {
+	const pageId = pages.order[page - 1]
+	if (!pageId) throw new Error(`Companion has no page ${page}`)
+	const { info } = await readOnce('surfaces.watchSurfaces', undefined, 'the surfaces')
+	const groups = Object.values(info || {}).filter((g) => g?.surfaces?.some((x) => x.isConnected && x.enabled !== false))
+	for (const g of groups) await call('surfaces.groupSetConfigKey', { groupId: g.id, key: 'last_page_id', value: pageId })
+	return groups.length
 }
 
 /* ---------- HTTP API for DeckWriter ---------- */
@@ -358,9 +381,15 @@ http
 			}
 			if (req.method === 'POST' && path === '/clear') {
 				const b = await body(req)
-				await serial(() => clearKey(Number(b.page), Number(b.row), Number(b.column)))
-				log(`cleared page ${b.page} row ${b.row} col ${b.column}`)
+				const done = await serial(() => clearKey(Number(b.page), Number(b.row), Number(b.column)))
+				log(`cleared page ${b.page} row ${b.row} col ${b.column}${done ? '' : ' (already empty)'}`)
 				return send(res, 200, { ok: true })
+			}
+			if (req.method === 'POST' && path === '/page') {
+				const b = await body(req)
+				const n = await serial(() => showPage(Number(b.page)))
+				log(`stream deck${n === 1 ? '' : 's'} to page ${b.page}${n ? '' : ' (no deck connected)'}`)
+				return send(res, 200, { ok: true, surfaces: n })
 			}
 			send(res, 404, { ok: false, error: 'Not found' })
 		} catch (e) {
