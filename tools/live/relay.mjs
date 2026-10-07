@@ -23,7 +23,7 @@ const arg = (name, def) => {
 const COMPANION = arg('--companion', 'http://127.0.0.1:8000').replace(/\/+$/, '')
 const PORT = Number(arg('--port', 8790))
 const ALLOWED = [/^https:\/\/bryanchorton\.github\.io$/, /^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/, /^null$/]
-const VERSION = '1.4.1'
+const VERSION = '1.5.0'
 
 const log = (...a) => console.log(new Date().toLocaleTimeString(), ...a)
 
@@ -207,7 +207,7 @@ async function pushKey(page, row, column, control) {
 			await set(imageId, 'fillMode', 'fit')
 		} else notes.push('image layer could not be added')
 	}
-	await set('text0', 'text', st.text ?? '')
+	await call('controls.styles.updateOption', { controlId, elementId: 'text0', key: 'text', value: { value: st.text ?? '', isExpression: !!st.textExpression } })
 	if (st.color != null) await set('text0', 'color', st.color)
 	const [h, va] = String(st.alignment || 'center:center').split(':')
 	await set('text0', 'halign', ALIGN_H[h] || 'center')
@@ -362,6 +362,27 @@ async function renamePage(page, name) {
 	await call('pages.setName', { pageNumber: page, name: String(name) })
 }
 
+// Everything DeckWriter needs to mirror Companion: each page's buttons (Companion's own page export, without
+// connection secrets) and the connections they use. The boot screen page is listed but not exported: it's big and
+// DeckWriter keeps its own copy.
+async function readAll() {
+	const out = { pages: [], connections: {} }
+	for (let n = 1; n <= pages.order.length; n++) {
+		const name = pages.byId[pages.order[n - 1]]?.name || ''
+		if (/^boot$/i.test(name)) {
+			out.pages.push({ number: n, name, boot: true })
+			continue
+		}
+		const r = await fetch(`${COMPANION}/int/export/page/${n}?format=json&includeSecrets=false`)
+		if (!r.ok) throw new Error(`Companion would not export page ${n} (${r.status})`)
+		const j = await r.json()
+		out.pages.push({ number: n, name: j.page?.name ?? name, controls: j.page?.controls || {} })
+		for (const [id, c] of Object.entries(j.instances || {}))
+			if (c && id !== 'internal') out.connections[id] = { label: c.label || id, moduleId: c.instance_type || c.moduleId || '' }
+	}
+	return out
+}
+
 // Turn every connected Stream Deck to a page: the same setting as "Current page" in Companion's Surfaces tab.
 async function showPage(page) {
 	const pageId = pages.order[page - 1]
@@ -427,6 +448,11 @@ http
 						return { number: i + 1, name: p.name || '', keys }
 					}),
 				})
+			}
+			if (req.method === 'GET' && path === '/pull') {
+				if (!connected) throw new Error('Not connected to Companion')
+				const all = await serial(() => readAll())
+				return send(res, 200, { ok: true, ...all })
 			}
 			if (req.method === 'POST' && path === '/push') {
 				const b = await body(req)

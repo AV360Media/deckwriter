@@ -54,7 +54,7 @@ Live sends each key you add, change, move or delete straight to Companion, one k
 2. Open DeckWriter from this site in Chrome (Live can't run inside Claude). Link Companion in **Connections**.
 3. Click **Live** in the top bar and switch **Live updates on**. Live follows the page you have open: DeckWriter's pages line up with Companion's in order, the boot page is always Companion page 1, and Live never touches it.
 
-When Live switches on it remembers the keys already on the page and sends nothing; only keys you add or change after that go out. It never clears a Companion key it didn't put there, asks before replacing a button that was already in Companion, and refuses keys whose connections aren't real Companion connections. **Send whole page now** pushes every key (still asking before replacing).
+Companion is the source of truth. When Live switches on (and whenever DeckWriter opens with Live on, or you come back to its window) DeckWriter loads Companion's pages and buttons, so edits made in Companion show up here; keys that already match are left alone. From then on every key you add, change, move or delete here goes straight to Companion, and so do new, deleted and renamed pages and Cmd+Z. Wipe page empties the Companion page too. Opening a project file pauses Live so Companion doesn't replace it. **Load from Companion** reloads by hand; **Send whole page now** pushes every key on the page.
 
 The relay (`tools/live/relay.mjs`) listens only on 127.0.0.1:8790 and only answers DeckWriter's own origins. It drives Companion's internal editor API (the one Companion's web UI uses), which is unofficial and was built against Companion 5.0.x: after a Companion update, try Live on a spare page before relying on it.
 

@@ -539,11 +539,12 @@ dialog.live-panel{position:fixed;inset:64px 16px auto auto;margin:0;width:min(42
   <div class="live-row"><span class="label">This page goes to</span><b id="liveTargetInfo"></b></div>
   <label class="check live-switch"><input type="checkbox" id="liveOn"> Live updates on</label>
   <ul class="live-rules">
-    <li>Only keys you add or change are sent.</li>
+    <li>DeckWriter loads your pages from Companion when Live starts, and again whenever you come back to this window, so edits made in Companion show up here.</li>
+    <li>Your edits here go straight to Companion.</li>
     <li>DeckWriter never clears a Companion key it didn't put there, and asks before replacing one that was already in Companion.</li>
     <li>Keys must use connections that exist in Companion (link them in Connections).</li>
   </ul>
-  <div class="dlg-foot"><span class="empty-note" id="liveLog" style="margin-right:auto;align-self:center"></span><button class="btn" id="livePushAll">Send whole page now</button></div>
+  <div class="dlg-foot"><span class="empty-note" id="liveLog" style="margin-right:auto;align-self:center"></span><button class="btn ghost" id="livePull">Load from Companion</button><button class="btn" id="livePushAll">Send whole page now</button></div>
 </div></dialog>
 <div class="live-ask" id="liveAsk" hidden></div>
 
@@ -1501,7 +1502,7 @@ function exportAction(a){return{id:uid(16),action:a.action,instance:a.connection
 function toControl(b,dial){
   if(b.kind!=="button")return{type:b.kind};
   const baked=b.image.bake&&b.image.mode!=="none"&&b.png64;
-  const style={text:baked?"":b.text,textExpression:false,size:b.size==="auto"?"auto":Number(b.size),png64:b.png64||null,alignment:b.align,pngalignment:"center:center",color:hexToInt(b.color),bgcolor:hexToInt(b.bg),show_topbar:false};
+  const style={text:baked?"":b.text,textExpression:!!b.textExpr,size:b.size==="auto"?"auto":Number(b.size),png64:b.png64||null,alignment:b.align,pngalignment:"center:center",color:hexToInt(b.color),bgcolor:hexToInt(b.bg),show_topbar:false};
   const steps={};b.steps.forEach((s,i)=>{const sets={down:s.down.map(exportAction),up:s.up.map(exportAction)};if(dial){sets.rotate_left=s.rotL.map(exportAction);sets.rotate_right=s.rotR.map(exportAction)}steps[i]={action_sets:sets,options:{runWhileHeld:[]}}});
   const bootFb=bootFeedbacks(b);
   if(bootFb.length){Object.assign(style,{png64:null,text:"",bgcolor:0});
@@ -1593,7 +1594,9 @@ function openProject(o,fileName){
   if(!DEVICES[st.device])st.device=S.device;fixTitleKeys(st);
   st.connections??=[];st.learned??={};st.pageIdx=Math.min(Math.max(0,st.pageIdx|0),st.pages.length-1);delete st.live;
   if(fileName)st.projectName=fileName.replace(/(\.json)+$/i,"").replace(/\s+\d{4}-\d{2}-\d{2}( \d{4})?$/,"").trim();
+  const wasLive=!!S.live?.on;if(wasLive)S.live.on=false; // otherwise the next look at Companion would replace what was just opened
   commit(()=>{const live=S.live;S=st;if(live)S.live=live;selected=null;multi.clear()});
+  if(wasLive)setTimeout(()=>toast("Live is paused so Companion doesn't replace the project you opened. Switching it back on loads Companion's pages."),2600);
   refreshAllArt();
   const keys=st.pages.reduce((n,p)=>n+Object.keys(p.buttons).length,0);
   toast(`Opened “${projectName()}”: ${st.pages.length} page${st.pages.length===1?"":"s"}, ${keys} keys. ⌘Z goes back to what you had.`);
@@ -1648,17 +1651,38 @@ function importFile(file){
       (pageList.filter(p=>p.n).length?`<span class="label" style="margin-top:6px">Open a page in the editor</span><div style="display:flex;flex-wrap:wrap;gap:6px">${pageList.filter(p=>p.n).map((p,i)=>`<button class="btn sm" data-loadpage="${pageList.indexOf(p)}">${esc(p.num)}. ${esc(p.name)} <span class="mono" style="color:var(--muted)">${p.n}</span></button>`).join("")}</div><span class="empty-note">Opens as a new page here. Layered or unusual button types are skipped.</span>`:"");
   }).catch(e=>{out.innerHTML=`<p class="warn">${e.message==="notcompanion"?"That doesn't look like a Companion export. Export from Companion's Import / Export tab and try again.":"Couldn't read that file. Use a .companionconfig (JSON or gzipped) or .yaml export from Companion."}</p>`});
 }
+// One Companion key (old "button" or Companion 5's "button-layered") as a DeckWriter button; null for kinds DeckWriter can't edit
+const uv=x=>x&&typeof x==="object"&&!Array.isArray(x)&&"value"in x&&"isExpression"in x?x.value:x;
+const nearestSize=n=>{const v=Number(n);if(!isFinite(v)||v<=0)return"auto";let best="14",d=1e9;for(const s of SIZES)if(s!=="auto"&&Math.abs(+s-v)<d){d=Math.abs(+s-v);best=s}return best};
+function fromCompanionControl(ctl){
+  if(!ctl)return null;
+  if(["pageup","pagedown","pagenum"].includes(ctl.type))return{...newButton(),kind:ctl.type};
+  const conv=a=>({connection:a.instance??a.connectionId??"internal",action:a.action??a.definitionId??"",options:unwrap(a.options||{})});
+  const stepsOf=()=>Object.keys(ctl.steps||{}).sort((x,y)=>+x-+y).map(k=>{const as=ctl.steps[k].action_sets||{};return{down:(as.down||[]).map(conv),up:(as.up||[]).map(conv),rotL:(as.rotate_left||[]).map(conv),rotR:(as.rotate_right||[]).map(conv)}});
+  let b;
+  if(ctl.type==="button"&&ctl.style){const s=ctl.style;
+    b=newButton({text:String(s.text??""),size:SIZES.includes(String(s.size))?String(s.size):"auto",color:intToHex(s.color??0xffffff),bg:intToHex(s.bgcolor??0),align:s.alignment||"center:center"});
+    if(s.png64)b.png64=s.png64.startsWith("data:")?s.png64:"data:image/png;base64,"+s.png64;
+    b.feedbacks=(ctl.feedbacks||[]).filter(f=>f).map(f=>({connection:f.instance_id??f.connectionId??"internal",type:f.definitionId??f.type,options:unwrap(f.options||{}),style:{bgcolor:f.style?.bgcolor!=null?intToHex(f.style.bgcolor):"#c8102e",color:f.style?.color!=null?intToHex(f.style.color):"#ffffff"},inverted:!!f.isInverted}))}
+  else if(ctl.type==="button-layered"&&ctl.style?.layers){const L=ctl.style.layers;
+    const box=L.find(l=>l.type==="box"),txt=L.find(l=>l.type==="text"),img=L.find(l=>l.type==="image"&&uv(l.base64Image));
+    const fs=uv(txt?.fontsize),auto=fs==null||fs==="auto"||(uv(txt?.fontsizeAllowShrink)!==false&&+fs>=100); // Companion's default: 100, shrink to fit
+    b=newButton({text:String(uv(txt?.text)??""),size:auto?"auto":nearestSize(+fs*0.6),color:intToHex(uv(txt?.color)??0xffffff),bg:intToHex(uv(box?.color)??0),align:`${uv(txt?.halign)||"center"}:${uv(txt?.valign)||"center"}`});
+    if(txt?.text?.isExpression)b.textExpr=true;
+    if(img)b.png64=String(uv(img.base64Image));
+    b.feedbacks=(ctl.feedbacks||[]).filter(f=>f&&(f.definitionId||f.type)).map(f=>{const st={};
+      for(const o of f.styleOverrides||[]){const v=uv(o.override);if(o.elementProperty!=="color"||typeof v!=="number")continue;
+        if(o.elementId===box?.id)st.bgcolor=intToHex(v);else if(o.elementId===txt?.id)st.color=intToHex(v)}
+      return{connection:f.connectionId??f.instance_id??"internal",type:f.definitionId??f.type,options:unwrap(f.options||{}),style:st,inverted:!!uv(f.isInverted)}})}
+  else return null;
+  if(b.png64){b.image.mode="upload";b.image.src=b.png64;b.image.fit="contain"}
+  const steps=stepsOf();if(steps.length)b.steps=steps;
+  return b;
+}
 document.addEventListener("click",e=>{const lp=e.target.closest("[data-loadpage]");if(!lp)return;const P=importFile.pages[+lp.dataset.loadpage];if(!P)return;
   const buttons={};let skipped=0;
   for(const[r,row]of Object.entries(P.p.controls||{}))for(const[c,ctl]of Object.entries(row||{})){if(!ctl)continue;
-    if(["pageup","pagedown","pagenum"].includes(ctl.type)){buttons[keyId(+r,+c)]={...newButton(),kind:ctl.type};continue}
-    if(ctl.type!=="button"||!ctl.style){skipped++;continue}
-    const s=ctl.style;const b=newButton({text:String(s.text??""),size:SIZES.includes(String(s.size))?String(s.size):"auto",color:intToHex(s.color??0xffffff),bg:intToHex(s.bgcolor??0),align:s.alignment||"center:center"});
-    if(s.png64){b.png64=s.png64.startsWith("data:")?s.png64:"data:image/png;base64,"+s.png64;b.image.mode="upload";b.image.src=b.png64;b.image.fit="contain"}
-    const conv=a=>({connection:a.instance??a.connectionId??"internal",action:a.action??a.definitionId??"",options:unwrap(a.options||{})});
-    const steps=Object.keys(ctl.steps||{}).sort((x,y)=>+x-+y).map(k=>{const as=ctl.steps[k].action_sets||{};return{down:(as.down||[]).map(conv),up:(as.up||[]).map(conv),rotL:(as.rotate_left||[]).map(conv),rotR:(as.rotate_right||[]).map(conv)}});
-    if(steps.length)b.steps=steps;
-    b.feedbacks=(ctl.feedbacks||[]).filter(f=>f).map(f=>({connection:f.instance_id??f.connectionId??"internal",type:f.definitionId??f.type,options:unwrap(f.options||{}),style:{bgcolor:f.style?.bgcolor!=null?intToHex(f.style.bgcolor):"#c8102e",color:f.style?.color!=null?intToHex(f.style.color):"#ffffff"},inverted:!!f.isInverted}));
+    const b=fromCompanionControl(ctl);if(!b){skipped++;continue}
     buttons[keyId(+r,+c)]=b}
   commit(()=>{S.pages.push({id:uid(),name:P.name,buttons});S.pageIdx=S.pages.length-1;selected=null;S.example=false});
   $("#importDlg").close();toast(skipped?`Page opened. ${skipped} button(s) used a type DeckWriter can't edit and were skipped.`:"Page opened");
@@ -2483,6 +2507,7 @@ async function relayStatus(){
     const r=await fetch(RELAY+"/status",{signal:ctl.signal,cache:"no-store"});clearTimeout(t);
     liveRT.status=await r.json();liveRT.error=liveRT.status.companion?"":"The relay is running but can't reach Companion. Is Companion open?";
   }catch(_){liveRT.status=null;liveRT.error=window.claude?"Live can't run inside Claude. Open DeckWriter from bryanchorton.github.io/deckwriter.":"The relay isn't running on this Mac."}
+  if(liveRT.status?.companion&&S.live?.on&&!liveRT.pulledOnce){liveRT.pulledOnce=true;setTimeout(()=>livePull("start"),0)}
   renderLive();liveFollow();const w=$("#wipePage");if(w)w.disabled=!Object.keys(page().buttons).length&&!liveExtraKeys(page()).length;return liveRT.status;
 }
 // Live always follows the page you're on: DeckWriter's show pages line up with Companion's, in order, after the boot screen.
@@ -2543,7 +2568,62 @@ function liveFollow(){const c=S.live,pg=page();if(!c?.on||!pg||liveRT.shown===pg
   liveRT.shown=pg.id;if(liveBlocked(num,liveRT.status.pages.find(p=>p.number===num)))return;
   fetch(RELAY+"/page",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({page:num})}).then(r=>r.json()).then(r=>{if(!r.ok)throw new Error(r.error);if(!r.surfaces)toast("Live: no Stream Deck is connected to Companion")}).catch(e=>toast("Live couldn't change the Stream Deck page: "+e.message));
   scheduleLive()}
-function scheduleLive(){const c=S.live;if(!c?.on)return;clearTimeout(liveRT.timer);liveRT.timer=setTimeout(liveSync,450)}
+function scheduleLive(){const c=S.live;if(!c?.on)return;liveRT.dirty=true;clearTimeout(liveRT.timer);liveRT.timer=setTimeout(liveSync,450)}
+
+/* ---------- matching Companion: DeckWriter loads what's in Companion, then Live sends DeckWriter's edits back ---------- */
+// Is DeckWriter's key the same as Companion's? DeckWriter's own export (e) against Companion's control. A key Live sent comes
+// back with every default option filled in and its size in Companion units, so options only need to agree where DeckWriter set them.
+function sameAsCompanion(b,e,ctl){
+  if(["pageup","pagedown","pagenum"].includes(ctl.type))return b?.kind===ctl.type;
+  if(!b||!e)return false;
+  const cb=fromCompanionControl(ctl);if(!cb)return true; // a kind DeckWriter can't edit: leave DeckWriter's alone
+  const ce=toControl(cb,false),J=JSON.stringify;
+  const sub=(a,b2)=>Object.entries(a||{}).every(([k,v])=>J(v)===J(b2?.[k]));
+  const sz=x=>x==null||x==="auto"?"auto":String(Math.round(+x));
+  const st=(x)=>{const y=x.style||{};return J([String(y.text??""),sz(y.size),y.color??16777215,y.bgcolor??0,y.alignment||"center:center",y.png64||null])};
+  if(e.type!==ce.type||st(e)!==st(ce))return false;
+  const sk=x=>Object.keys(x.steps||{}).sort((a,b2)=>+a-+b2).map(k=>x.steps[k].action_sets||{});
+  const es=sk(e),cs=sk(ce);if(es.length!==cs.length)return false;
+  for(let i=0;i<es.length;i++)for(const set of new Set([...Object.keys(es[i]),...Object.keys(cs[i])])){const A=es[i][set]||[],B=cs[i][set]||[];
+    if(A.length!==B.length||A.some((a,j)=>a.instance!==B[j].instance||a.action!==B[j].action||!sub(a.options,B[j].options)))return false}
+  const ef=e.feedbacks||[],cf=ce.feedbacks||[];if(ef.length!==cf.length)return false;
+  return ef.every((f,j)=>{const g=cf[j];return f.instance_id===g.instance_id&&f.type===g.type&&sub(f.options,g.options)&&(f.style?.bgcolor??null)===(g.style?.bgcolor??null)&&(f.style?.color??null)===(g.style?.color??null)&&!!f.isInverted===!!g.isInverted});
+}
+// Load Companion into DeckWriter: its pages in order (after the boot screen), every key it has, nothing it doesn't.
+// Keys that already match are left exactly as they are, so DeckWriter keeps its icons and settings for them.
+async function livePull(why){
+  const c=S.live;if(!c?.on||liveRT.busy||liveRT.dirty)return false;
+  liveRT.busy=true;let changed=0,pagesChanged=0;
+  try{
+    const r=await fetch(RELAY+"/pull",{cache:"no-store"}).then(x=>x.json());if(!r.ok)throw new Error(r.error||"no answer");
+    let conns=0;for(const[id,x]of Object.entries(r.connections||{}))if(!S.connections.some(k=>k.id===id)){S.connections.push({id,label:x.label,module:x.moduleId,fromCompanion:true});conns++}
+    const cps=(r.pages||[]).filter(p=>!p.boot),boots=S.pages.filter(p=>p.boot),shows=S.pages.filter(p=>!p.boot),next=[];
+    cps.forEach((cp,i)=>{const pg=shows[i],pi=pg?S.pages.indexOf(pg):-1,dw=pg?desiredControls(pi):{},buttons=pg?{...pg.buttons}:{},seen=new Set();
+      let ch=!pg||pg.name!==cp.name;
+      for(const[rr,row]of Object.entries(cp.controls||{}))for(const[cc,ctl]of Object.entries(row||{})){if(!ctl)continue;const k=rr+","+cc;seen.add(k);
+        if(sameAsCompanion(pg?.buttons[k],dw[k],ctl))continue;
+        const nb=fromCompanionControl(ctl);if(!nb)continue;buttons[k]=nb;changed++;ch=true}
+      for(const k of Object.keys(buttons))if(!seen.has(k)){delete buttons[k];changed++;ch=true}
+      if(ch)pagesChanged++;
+      next.push(ch?{...(pg||{id:uid()}),name:cp.name,buttons}:pg)});
+    if(shows.length>cps.length)pagesChanged+=shows.length-cps.length;
+    const inSync=()=>{S.pages.forEach((p,pi)=>{if(p.boot)return;c.at[p.id]=livePageNum(p);c.owned[p.id]={};c.base[p.id]=Object.fromEntries(Object.entries(desiredControls(pi)).map(([k,ctl])=>[k,keyHash(ctl)]))});
+      try{localStorage.setItem("deckwright.test.v1",JSON.stringify(S))}catch(_){}};
+    if(!pagesChanged){inSync();if(conns)persist();liveRT.lastMsg="DeckWriter matches Companion";return false}
+    commit(()=>{const cur=page()?.id;S.pages=[...boots,...next];if(!S.pages.length)S.pages=[{id:uid(),name:"Page 1",buttons:{}}];
+      const i=S.pages.findIndex(p=>p.id===cur);S.pageIdx=Math.max(0,i>=0?i:Math.min(S.pageIdx,S.pages.length-1));S.example=false;
+      if(selected&&!page().buttons[selected])selected=null});
+    inSync(); // everything now matches Companion: nothing to send
+    clearTimeout(liveRT.timer);liveRT.dirty=false;liveRT.shown=null;
+    liveRT.lastMsg=`Loaded from Companion: ${changed} key${changed===1?"":"s"} on ${pagesChanged} page${pagesChanged===1?"":"s"}`;
+    toast(why==="focus"?`Updated from Companion (${changed} key${changed===1?"":"s"} changed there). ⌘Z to undo.`:liveRT.lastMsg+". ⌘Z to undo.");
+    return true;
+  }catch(e){liveRT.lastMsg="Couldn't load from Companion: "+e.message;if(why!=="focus")toast(liveRT.lastMsg);return false}
+  finally{liveRT.busy=false;renderLive();liveFollow()}
+}
+// coming back to DeckWriter (say from Companion's own editor) picks up whatever changed there
+let pullAt=0;const pullSoon=()=>{if(!S.live?.on||document.hidden||Date.now()-pullAt<2500)return;pullAt=Date.now();livePull("focus")};
+window.addEventListener("focus",pullSoon);document.addEventListener("visibilitychange",pullSoon);
 function desiredControls(pi){
   const{data}=buildExport(pi);const out={};
   for(const[r,row]of Object.entries(data.page.controls))for(const[col,ctl]of Object.entries(row)){
@@ -2576,6 +2656,7 @@ async function liveSync(force){
     if(ids.size){const{done}=liveAutoLink([...ids]);if(done.length)toast("Linked "+done.join(", "))}}
   liveRT.busy=true;
   try{
+    liveRT.dirty=false;
     const want=desiredControls(pi),owned=(c.owned[pg.id]??={}),occupied=new Set(cp.keys.map(([r,cc])=>r+","+cc));
     // first time Live sees this page: remember what's already here and send nothing. Only later changes go out.
     if(!force&&!c.base[pg.id]&&!Object.keys(owned).length){c.base[pg.id]=Object.fromEntries(Object.entries(want).filter(([k])=>occupied.has(k)).map(([k,ctl])=>[k,keyHash(ctl)])); // keys Companion lacks still get sent
@@ -2647,13 +2728,16 @@ document.addEventListener("click",async e=>{const t=e.target.closest("button")||
   if(t.id==="liveBtn"){const d=$("#liveDlg");if(d.open){d.close();return}d.show();renderLive();relayStatus();return}
   if(t.id==="liveClose"){$("#liveDlg").close();return}
   if(t.id==="liveCopyCmd"){copyText(RELAY_CMD,"Copied. Paste it into Terminal and leave that window open.");return}
+  if(t.id==="livePull"){if(!S.live?.on){toast("Switch Live on first");return}liveRT.dirty=false;livePull("button").then(d=>{if(!d&&!liveRT.lastMsg.startsWith("Couldn't"))toast(liveRT.lastMsg)});return}
   if(t.id==="livePushAll"){if(!liveRT.status?.companion){toast("Start the relay and open Companion first");return}const c=liveCfg();c.base[page().id]={};liveRT.skip[page().id]=new Set();await liveSync(true);return}
   if(t.id==="liveAskYes"||t.id==="liveAskNo"){const el=$("#liveAsk"),keys=JSON.parse(el.dataset.keys||"[]"),pid=el.dataset.page;el.hidden=true;
     if(t.id==="liveAskNo"){const sk=(liveRT.skip[pid]??=new Set());keys.forEach(k=>sk.add(k));toast("Left those keys alone");return}
     const owned=(liveCfg().owned[pid]??={});keys.forEach(k=>{owned[k]="replace"});liveSync();return}
 });
 document.addEventListener("change",e=>{
-  if(e.target.id==="liveOn"){const c=liveCfg();c.on=e.target.checked;if(c.on){c.base={};c.owned={};liveRT.shown=null}persist();renderLive();if(c.on){liveFollow();toast(`Live on: changes on this page go to Companion page ${livePageNum(page())}`);liveSync()}return}
+  if(e.target.id==="liveOn"){const c=liveCfg();c.on=e.target.checked;if(c.on){c.base={};c.owned={};liveRT.shown=null;liveRT.pulledOnce=true}persist();renderLive();
+    if(c.on){clearTimeout(liveRT.timer);liveRT.dirty=false} // nothing to send yet: load Companion first
+    if(c.on)livePull("on").then(done=>{if(!done){liveFollow();liveSync()}toast(done?liveRT.lastMsg+". From now on your edits go to Companion.":"Live on: DeckWriter matches Companion, and your edits go straight to it.")});return}
 });
 setInterval(()=>{if(!document.hidden&&(S.live?.on||$("#liveDlg")?.open))relayStatus()},4000);
 
@@ -2745,6 +2829,6 @@ refreshAllArt();
 })();
 </script>
 
-<div style="position:fixed;left:12px;bottom:12px;z-index:200;background:#e5484d;color:#fff;font:700 11px/1 system-ui,sans-serif;letter-spacing:.08em;padding:6px 8px;border-radius:6px;pointer-events:none">TEST BUILD · Oct 7, 1:09 AM</div>
+<div style="position:fixed;left:12px;bottom:12px;z-index:200;background:#e5484d;color:#fff;font:700 11px/1 system-ui,sans-serif;letter-spacing:.08em;padding:6px 8px;border-radius:6px;pointer-events:none">TEST BUILD · Oct 7, 1:24 AM</div>
 </body>
 </html>
