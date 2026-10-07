@@ -1999,15 +1999,33 @@ function drawBoot(x,cfg,t,frame){
         x.fillStyle=j===0?`rgba(255,255,255,${.95*fade})`:rgba(j%5===0?cfg.c2:cfg.c1,(1-j/len)*.85*fade);x.fillText(g2,cx,yy)}}
     drawTitle(x,cfg,W,H,smooth(.5,.85,t));
   }else if(cfg.style==="warp"){
-    // stars stretch into light-speed streaks, a white flash, then the title
-    const cx=W/2,cy=H/2,S2=rng(91),flash=Math.exp(-Math.pow((t-.62)/.05,2));
-    drawBackdrop(x,cfg,W,H,smooth(.62,1,t));
-    if(t<.66){const sp=Math.pow(smooth(0,.62,t),1.6),M=Math.hypot(W,H)*.55;
-      for(let i=0;i<190;i++){const ang=S2()*Math.PI*2,base=.05+S2()*.95,col=S2()<.75?"#ffffff":S2()<.5?cfg.c1:cfg.c2;
-        const r0=(base*.9+sp*1.1)*M,r1=r0+3+sp*sp*M*.7;x.strokeStyle=col==="#ffffff"?`rgba(255,255,255,${.6+.4*sp})`:rgba(col,.6+.4*sp);x.lineWidth=1.6+sp*2.4;x.lineCap="round";
-        x.beginPath();x.moveTo(cx+Math.cos(ang)*r0,cy+Math.sin(ang)*r0);x.lineTo(cx+Math.cos(ang)*r1,cy+Math.sin(ang)*r1);x.stroke()}}
-    drawTitle(x,cfg,W,H,smooth(.62,.85,t),1+(1-smooth(.62,.9,t))*.25);
-    if(flash>.01){x.fillStyle=`rgba(255,255,255,${flash*.9})`;x.fillRect(0,0,W,H)}
+    // a 3D starfield: ~650 stars at different depths fly toward the viewer and wrap around, so the deck stays full.
+    // Streaks stretch as the jump accelerates, a tunnel glow builds, a white flash hits, then the streaks fade under the title.
+    const cx=W/2,cy=H/2,M=Math.hypot(W,H)*.5,S2=rng(91),flashAt=.6,flash=Math.exp(-Math.pow((t-flashAt)/.045,2));
+    const sp=Math.pow(smooth(0,flashAt,t),1.5);                 // speed 0..1 up to the flash
+    const u=t*.55+Math.pow(smooth(0,flashAt,t),2.4)*2.6;        // distance travelled (accelerates), keeps going after the flash
+    const fadeOut=1-smooth(flashAt,.92,t);
+    drawBackdrop(x,cfg,W,H,smooth(flashAt,1,t));
+    // tunnel core and rings
+    const core=x.createRadialGradient(cx,cy,0,cx,cy,M*(.25+sp*.5));core.addColorStop(0,`rgba(255,255,255,${.35*sp*fadeOut})`);core.addColorStop(.25,rgba(cfg.c1,.35*sp*fadeOut));core.addColorStop(1,"rgba(0,0,0,0)");
+    x.fillStyle=core;x.fillRect(0,0,W,H);
+    for(let k=0;k<7;k++){const ph=((k/7)+u*.9)%1,rr=Math.pow(ph,2)*M*1.4;x.strokeStyle=rgba(k%2?cfg.c2:cfg.c1,(.06+.22*sp)*(1-ph)*fadeOut);x.lineWidth=2+ph*10;x.beginPath();x.arc(cx,cy,rr,0,Math.PI*2);x.stroke()}
+    x.lineCap="round";
+    const F=M*.16;
+    for(let i=0;i<650;i++){
+      const ang=S2()*Math.PI*2,lat=.15+Math.sqrt(S2())*1.6,z0=S2(),v=.6+S2()*.8,roll=S2(),col=roll<.7?null:roll<.85?cfg.c1:cfg.c2;
+      const z=.03+((z0-u*v*.5)%1+1)%1;                          // depth 0.03..1.03, wraps to the back
+      const head=lat*F/z,tail=lat*F/(z+.008+sp*.22+(t>flashAt?.12*fadeOut:0));
+      if(tail>M*1.3)continue;
+      const near=1-Math.min(1,z),al=Math.min(1,(.25+near*.9))*(t<flashAt?(.45+.55*Math.min(1,u*2)):fadeOut);
+      if(al<.02)continue;
+      const c=Math.cos(ang),s3=Math.sin(ang),x1=cx+c*tail,y1=cy+s3*tail,x2=cx+c*head,y2=cy+s3*head,w=.8+near*near*3.6+sp*1.2;
+      // coloured glow under a bright core
+      x.strokeStyle=rgba(col||(i%2?cfg.c1:cfg.c2),al*.35);x.lineWidth=w*2.6;x.beginPath();x.moveTo(x1,y1);x.lineTo(x2,y2);x.stroke();
+      x.strokeStyle=col?rgba(col,al):`rgba(255,255,255,${al})`;x.lineWidth=w;x.beginPath();x.moveTo(x1,y1);x.lineTo(x2,y2);x.stroke();
+    }
+    drawTitle(x,cfg,W,H,smooth(flashAt+.02,.85,t),1+(1-smooth(flashAt,.9,t))*.25);
+    if(flash>.01){x.fillStyle=`rgba(255,255,255,${flash*.92})`;x.fillRect(0,0,W,H)}
   }else if(cfg.style==="tiles"){
     // every key switches on in a random order with a white flash, showing its slice of the final screen
     const fin=bootFinalCanvas(cfg),O=rng(55);const order=keys.map(k=>({k,at:.05+O()*.7}));
