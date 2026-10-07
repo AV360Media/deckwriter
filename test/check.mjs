@@ -79,7 +79,8 @@ check('relay never edits the boot page', () => { const r = readFileSync(join(roo
 
 const test = build('test')
 check('test build is marked', () => test.includes('TEST BUILD') && test.includes('"deckwright.test.v1"'))
-check('index.test.html is up to date (run npm run build)', () => readFileSync(join(root, 'index.test.html'), 'utf8') === test)
+const unstamp = (h) => h.replace(/TEST BUILD · [^<]*/, 'TEST BUILD')
+check('index.test.html is up to date (run npm run build)', () => unstamp(readFileSync(join(root, 'index.test.html'), 'utf8')) === unstamp(test))
 if (process.argv.includes('--prod')) {
 	const prod = build('prod')
 	check('production build is not marked as test', () => !prod.includes('TEST BUILD') && prod.includes('"deckwright.v1"'))

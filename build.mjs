@@ -39,14 +39,16 @@ export function body() {
 
 /** mode: 'prod' | 'test' | 'artifact' */
 export function build(mode = 'test') {
-	let html = body()
+	let html = body() // test builds are stamped with the build time so a stale copy is easy to spot
 	if (mode === 'artifact') return html
 	if (mode === 'test') {
 		// separate autosave so testing never touches the production project
 		html = html.replaceAll('"deckwright.v1"', '"deckwright.test.v1"').replaceAll('"deckwright.drawer"', '"deckwright.test.drawer"')
 		html = html.replace('<title>DeckWriter</title>', '<title>DeckWriter (test)</title>')
 		html +=
-			'\n<div style="position:fixed;left:12px;bottom:12px;z-index:200;background:#e5484d;color:#fff;font:700 11px/1 system-ui,sans-serif;letter-spacing:.08em;padding:6px 8px;border-radius:6px;pointer-events:none">TEST BUILD</div>'
+			'\n<div style="position:fixed;left:12px;bottom:12px;z-index:200;background:#e5484d;color:#fff;font:700 11px/1 system-ui,sans-serif;letter-spacing:.08em;padding:6px 8px;border-radius:6px;pointer-events:none">TEST BUILD · ' +
+			new Date().toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit', timeZone: 'America/Phoenix' }) +
+			'</div>'
 	}
 	return HEAD + html + TAIL
 }
