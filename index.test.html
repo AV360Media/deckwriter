@@ -1515,8 +1515,11 @@ function toControl(b,dial){
 // Companion page numbers follow DeckWriter's page order (the boot page is page 1).
 function navSkipBoot(b,pi){
   if(b.kind!=="pageup"&&b.kind!=="pagedown")return null;
-  if(S.pages[pi]?.boot||!S.pages.some(p=>p.boot))return null;
-  const nums=S.pages.map((p,i)=>p.boot?0:i+1).filter(Boolean),at=nums.indexOf(pi+1);if(at<0)return null;
+  const pg=S.pages[pi];if(!pg||pg.boot)return null;
+  // a boot page here, or one Live sees as Companion's page 1: number the show pages the way Companion has them
+  let boot=S.pages.some(p=>p.boot);try{boot=boot||bootOnPage1()}catch(_){}
+  if(!boot)return null; // no boot page anywhere: Companion's own page up/down are fine
+  const shows=S.pages.filter(p=>!p.boot),nums=shows.map((p,i)=>i+2),at=shows.indexOf(pg);if(at<0)return null;
   const to=b.kind==="pageup"?nums[(at+1)%nums.length]:nums[(at-1+nums.length)%nums.length];
   return{type:"button",style:{text:b.kind==="pageup"?"▲\nPAGE UP":"▼\nPAGE DOWN",textExpression:false,size:14,png64:null,alignment:"center:center",pngalignment:"center:center",color:0xffffff,bgcolor:0x1d2226,show_topbar:false},
     options:{rotaryActions:false,stepAutoProgress:true},feedbacks:[],
@@ -1677,8 +1680,12 @@ function fromCompanionControl(ctl){
   else return null;
   if(b.png64){b.image.mode="upload";b.image.src=b.png64;b.image.fit="contain"}
   const steps=stepsOf();if(steps.length)b.steps=steps;
+  // DeckWriter's page up / page down keys go out as "go to page N" buttons (so they can skip the boot page): read them back as such
+  const navKind={"▲\nPAGE UP":"pageup","▼\nPAGE DOWN":"pagedown"}[b.text];
+  if(navKind&&!b.png64&&!b.feedbacks.length&&b.steps.length===1&&b.steps[0].down.length===1&&b.steps[0].down[0].action==="set_page")return{...newButton({bg:"#1d2226"}),kind:navKind};
   return b;
 }
+const navTarget=ctl=>{const a=ctl?.steps?.["0"]?.action_sets?.down?.[0];return a&&(a.action??a.definitionId)==="set_page"?Number(uv(a.options?.page)):null};
 document.addEventListener("click",e=>{const lp=e.target.closest("[data-loadpage]");if(!lp)return;const P=importFile.pages[+lp.dataset.loadpage];if(!P)return;
   const buttons={};let skipped=0;
   for(const[r,row]of Object.entries(P.p.controls||{}))for(const[c,ctl]of Object.entries(row||{})){if(!ctl)continue;
@@ -2535,7 +2542,7 @@ async function livePagesChanged(before,after){
     try{localStorage.setItem("deckwright.test.v1",JSON.stringify(S))}catch(_){}
     if(done.length){liveRT.lastMsg="Companion: "+done.join(", ");toast(liveRT.lastMsg)}}
   catch(e){liveRT.lastMsg="Live couldn't update Companion's pages: "+e.message;toast(liveRT.lastMsg)}
-  finally{liveRT.busy=false;liveRT.shown=null;await relayStatus();scheduleLive()}
+  finally{liveRT.busy=false;liveRT.shown=null;await relayStatus();scheduleLive();liveNavSync()}
 }
 function livePageAt(n){const shows=S.pages.filter(p=>!p.boot);return shows[n-1-(bootOnPage1()?1:0)]||null}
 function livePageNum(pg){const shows=S.pages.filter(p=>!p.boot);return Math.max(1,shows.indexOf(pg)+1+(bootOnPage1()?1:0))}
@@ -2575,6 +2582,7 @@ function scheduleLive(){const c=S.live;if(!c?.on)return;liveRT.dirty=true;clearT
 // back with every default option filled in and its size in Companion units, so options only need to agree where DeckWriter set them.
 function sameAsCompanion(b,e,ctl){
   if(["pageup","pagedown","pagenum"].includes(ctl.type))return b?.kind===ctl.type;
+  if(b?.kind==="pageup"||b?.kind==="pagedown")return fromCompanionControl(ctl)?.kind===b.kind; // where it points is fixed by liveNavSync
   if(!b||!e)return false;
   const cb=fromCompanionControl(ctl);if(!cb)return true; // a kind DeckWriter can't edit: leave DeckWriter's alone
   const ce=toControl(cb,false),J=JSON.stringify;
@@ -2597,17 +2605,20 @@ async function livePull(why){
   try{
     const r=await fetch(RELAY+"/pull",{cache:"no-store"}).then(x=>x.json());if(!r.ok)throw new Error(r.error||"no answer");
     let conns=0;for(const[id,x]of Object.entries(r.connections||{}))if(!S.connections.some(k=>k.id===id)){S.connections.push({id,label:x.label,module:x.moduleId,fromCompanion:true});conns++}
-    const cps=(r.pages||[]).filter(p=>!p.boot),boots=S.pages.filter(p=>p.boot),shows=S.pages.filter(p=>!p.boot),next=[];
+    const cps=(r.pages||[]).filter(p=>!p.boot),boots=S.pages.filter(p=>p.boot),shows=S.pages.filter(p=>!p.boot),next=[],cpAt={};
     cps.forEach((cp,i)=>{const pg=shows[i],pi=pg?S.pages.indexOf(pg):-1,dw=pg?desiredControls(pi):{},buttons=pg?{...pg.buttons}:{},seen=new Set();
       let ch=!pg||pg.name!==cp.name;
       for(const[rr,row]of Object.entries(cp.controls||{}))for(const[cc,ctl]of Object.entries(row||{})){if(!ctl)continue;const k=rr+","+cc;seen.add(k);
+        cpAt[i+"|"+k]=ctl;
         if(sameAsCompanion(pg?.buttons[k],dw[k],ctl))continue;
         const nb=fromCompanionControl(ctl);if(!nb)continue;buttons[k]=nb;changed++;ch=true}
       for(const k of Object.keys(buttons))if(!seen.has(k)){delete buttons[k];changed++;ch=true}
       if(ch)pagesChanged++;
       next.push(ch?{...(pg||{id:uid()}),name:cp.name,buttons}:pg)});
     if(shows.length>cps.length)pagesChanged+=shows.length-cps.length;
-    const inSync=()=>{S.pages.forEach((p,pi)=>{if(p.boot)return;c.at[p.id]=livePageNum(p);c.owned[p.id]={};c.base[p.id]=Object.fromEntries(Object.entries(desiredControls(pi)).map(([k,ctl])=>[k,keyHash(ctl)]))});
+    // a page up/down key whose page number in Companion is out of date is left out, so liveNavSync re-sends it
+    const inSync=()=>{S.pages.filter(p=>!p.boot).forEach((p,si)=>{const pi=S.pages.indexOf(p);c.at[p.id]=livePageNum(p);c.owned[p.id]={};
+      c.base[p.id]=Object.fromEntries(Object.entries(desiredControls(pi)).filter(([k,ctl])=>!((p.buttons[k]?.kind==="pageup"||p.buttons[k]?.kind==="pagedown")&&navTarget(ctl)!==navTarget(cpAt[si+"|"+k]))).map(([k,ctl])=>[k,keyHash(ctl)]))});
       try{localStorage.setItem("deckwright.test.v1",JSON.stringify(S))}catch(_){}};
     if(!pagesChanged){inSync();if(conns)persist();liveRT.lastMsg="DeckWriter matches Companion";return false}
     commit(()=>{const cur=page()?.id;S.pages=[...boots,...next];if(!S.pages.length)S.pages=[{id:uid(),name:"Page 1",buttons:{}}];
@@ -2619,7 +2630,25 @@ async function livePull(why){
     toast(why==="focus"?`Updated from Companion (${changed} key${changed===1?"":"s"} changed there). ⌘Z to undo.`:liveRT.lastMsg+". ⌘Z to undo.");
     return true;
   }catch(e){liveRT.lastMsg="Couldn't load from Companion: "+e.message;if(why!=="focus")toast(liveRT.lastMsg);return false}
-  finally{liveRT.busy=false;renderLive();liveFollow()}
+  finally{liveRT.busy=false;renderLive();liveFollow();liveNavSync()}
+}
+// Page up / page down jump to fixed page numbers (to skip the boot page), so adding, deleting or reloading pages can
+// leave them pointing at the wrong page. This re-sends the ones that changed, on every page, not just the open one.
+async function liveNavSync(){
+  const c=S.live;if(!c?.on)return;
+  while(liveRT.busy)await new Promise(r=>setTimeout(r,60));liveRT.busy=true;let n=0;
+  try{const st=await relayStatus();if(!st?.companion)return;
+    for(const[pi,p]of S.pages.entries()){if(p.boot)continue;const num=livePageNum(p),cp=st.pages.find(x=>x.number===num);if(!cp||liveBlocked(num,cp))continue;
+      const nav=Object.entries(p.buttons).filter(([,b])=>b.kind==="pageup"||b.kind==="pagedown");if(!nav.length)continue;
+      const dw=desiredControls(pi),owned=(c.owned[p.id]??={}),base=(c.base[p.id]??={});
+      for(const[k]of nav){const ctl=dw[k];if(!ctl)continue;const h=keyHash(ctl);if((owned[k]??base[k])===h)continue;
+        const[r,col]=parseKey(k);
+        const res=await fetch(RELAY+"/push",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({page:num,row:r,column:col,control:ctl})}).then(x=>x.json());
+        if(!res.ok)throw new Error(res.error||"push failed");owned[k]=h;n++}}
+    try{localStorage.setItem("deckwright.test.v1",JSON.stringify(S))}catch(_){}
+    if(n){liveRT.lastMsg=`Updated ${n} page up/down key${n===1?"":"s"} in Companion`;toast(liveRT.lastMsg)}}
+  catch(e){liveRT.lastMsg="Live couldn't update page up/down keys: "+e.message;toast(liveRT.lastMsg)}
+  finally{liveRT.busy=false;renderLive()}
 }
 // coming back to DeckWriter (say from Companion's own editor) picks up whatever changed there
 let pullAt=0;const pullSoon=()=>{if(!S.live?.on||document.hidden||Date.now()-pullAt<2500)return;pullAt=Date.now();livePull("focus")};
@@ -2646,7 +2675,7 @@ async function liveSync(force){
     catch(e){liveRT.lastMsg=`Couldn't add page ${num} to Companion: ${e.message}`;toast(liveRT.lastMsg);renderLive();return}
     finally{liveRT.busy=false}
     const st2=await relayStatus();cp=st2?.pages?.find(p=>p.number===num);if(!cp)return;
-    const c0=liveCfg();c0.owned[pg.id]={};c0.base[pg.id]={};liveTarget(pg,num);
+    const c0=liveCfg();c0.owned[pg.id]={};c0.base[pg.id]={};liveTarget(pg,num);setTimeout(liveNavSync,0); // the other pages' page up/down now have one more page to go to
     if(liveRT.busy){liveRT.pending=true;return}
   }
   {const b=liveBlocked(num,cp);if(b){liveRT.lastMsg=b;toast(b);renderLive();return}}
@@ -2669,7 +2698,7 @@ async function liveSync(force){
       const h=keyHash(ctl);if(owned[k]===h||skip.has(k)||(!owned[k]&&base[k]===h))continue;
       const missing=ctlConnections(ctl).filter(id=>live.list?!knownConns.has(id):!S.connections.some(x=>x.id===id&&x.fromCompanion));
       if(missing.length){const names=missing.map(id=>{const m=S.connections.find(x=>x.id===id),n=(live.list||[]).filter(x=>x.moduleId===m?.module).length;return(m?.label||id)+(n>1?" (Companion has "+n+" of these, pick one with Link in Connections)":n?"":" (add this connection in Companion first)")});problems.push(`${keyCodeK(k)} uses ${names.join(", ")}, not linked to Companion`);continue}
-      if(!owned[k]&&base[k]==null&&occupied.has(k)){conflicts.push(k);continue}
+      if(!owned[k]&&base[k]==null&&occupied.has(k)&&!["pageup","pagedown"].includes(pg.buttons[k]?.kind)){conflicts.push(k);continue}
       const[r,col]=parseKey(k);
       const res=await fetch(RELAY+"/push",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({page:num,row:r,column:col,control:ctl})}).then(x=>x.json());
       if(!res.ok)throw new Error(res.error||"push failed");
@@ -2829,6 +2858,6 @@ refreshAllArt();
 })();
 </script>
 
-<div style="position:fixed;left:12px;bottom:12px;z-index:200;background:#e5484d;color:#fff;font:700 11px/1 system-ui,sans-serif;letter-spacing:.08em;padding:6px 8px;border-radius:6px;pointer-events:none">TEST BUILD · Oct 7, 1:24 AM</div>
+<div style="position:fixed;left:12px;bottom:12px;z-index:200;background:#e5484d;color:#fff;font:700 11px/1 system-ui,sans-serif;letter-spacing:.08em;padding:6px 8px;border-radius:6px;pointer-events:none">TEST BUILD · Oct 7, 1:30 AM</div>
 </body>
 </html>
