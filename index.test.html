@@ -2542,21 +2542,21 @@ function liveTarget(pg,num){const c=liveCfg();const was=c.at[pg.id]??(c.map[pg.i
 // stable fingerprint of an exported key: ignore the random entity ids
 const keyHash=ctl=>JSON.stringify(ctl,(k,val)=>k==="id"?undefined:val);
 /* ---------- live mirror & show mode: Companion's own pictures of the keys, streamed by the relay ---------- */
-const mirror={on:false,num:0,es:null,imgs:{}};
+const mirror={on:false,es:null,imgs:{},streamNum:0};
 function mirrorStream(state,num,onKey){ // one EventSource per page
-  if(state.es&&state.num===num)return;
-  state.es?.close();state.imgs={};state.num=num;const d=dev();
+  if(state.es&&state.streamNum===num)return;
+  state.es?.close();state.imgs={};state.streamNum=num;const d=dev();
   const es=new EventSource(`${RELAY}/live?page=${num}&rows=${d.rows}&cols=${d.cols}`);state.es=es;
   es.onmessage=ev=>{try{const m=JSON.parse(ev.data);state.imgs[m.k]=m.used?m.img:null;onKey(m.k)}catch(_){}};
 }
-function mirrorStop(state){state.es?.close();state.es=null;state.imgs={};state.num=0}
+function mirrorStop(state){state.es?.close();state.es=null;state.imgs={};state.streamNum=0}
 function applyMirror(){
   $("#mirrorBtn")?.classList.toggle("on",mirror.on);
   const btn=$("#mirrorBtn");if(btn)btn.innerHTML=mirror.on?`<span class="mirror-chip"><span class="live-dot"></span>Mirror</span>`:"Mirror";
   if(!mirror.on)return;
   const pg=page();if(pg.boot){mirrorStop(mirror);return}
   const num=livePageNum(pg);
-  if(mirror.num!==num)mirrorStream(mirror,num,k=>paintMirror(k));
+  if(mirror.streamNum!==num)mirrorStream(mirror,num,k=>paintMirror(k));
   for(const k of Object.keys(mirror.imgs))paintMirror(k);
 }
 function paintMirror(k){
@@ -2574,7 +2574,10 @@ async function toggleMirror(){
   applyMirror();
 }
 // Show mode: its own page (it doesn't turn the physical deck), page keys page locally, everything else is pressed in Companion
-const show={num:0,es:null,imgs:{}};
+const show={num:0,es:null,imgs:{},nav:{}};
+// page up/down keys straight from Companion (DeckWriter's copy of a page may be out of date while Live is off)
+async function loadShowNav(){try{const r=await fetch(RELAY+"/pull",{cache:"no-store"}).then(x=>x.json());if(!r.ok)return;show.nav={};
+  for(const p of r.pages||[]){if(p.boot)continue;const m=show.nav[p.number]={};for(const[rr,row]of Object.entries(p.controls||{}))for(const[cc,ctl]of Object.entries(row||{})){const k=fromCompanionControl(ctl)?.kind;if(k==="pageup"||k==="pagedown")m[rr+","+cc]=k}}}catch(_){}}
 function showPages(){return(liveRT.status?.pages||[]).filter(p=>!/^boot$/i.test(p.name||"")).map(p=>p.number)}
 function renderShow(){
   const d=dev(),el=$("#showMode"),nums=showPages();if(!nums.includes(show.num))show.num=nums[0]||0;
@@ -2585,18 +2588,18 @@ function renderShow(){
   let g="";for(let r=0;r<d.rows;r++)for(let c=0;c<d.cols;c++){const key=keyId(r,c),src=show.imgs[key];g+=`<div class="sm-key" data-sk="${key}">${src?`<img src="${src}" alt="">`:""}</div>`}
   $("#smGrid").innerHTML=g;
   $("#smNote").textContent="Tap to press · hold to hold · ◀ ▶ or arrow keys change page here only · Esc to exit";
-  if(show.num&&show.num!==show.es?.__num){mirrorStream(show,show.num,key=>{const t=document.querySelector(`#smGrid [data-sk="${key}"]`);if(!t)return;const src=show.imgs[key];t.innerHTML=src?`<img src="${src}" alt="">`:""});show.es.__num=show.num}
+  if(show.num)mirrorStream(show,show.num,key=>{const t=document.querySelector(`#smGrid [data-sk="${key}"]`);if(!t)return;const src=show.imgs[key];t.innerHTML=src?`<img src="${src}" alt="">`:""});
 }
 async function openShow(){
   const st=liveRT.status?.companion?liveRT.status:await relayStatus()||await wakeRelay();
   if(!st?.companion){toast("Show mode needs the Live helper and Companion running");return}
   if(!show.num){const pg=page();show.num=pg.boot?0:livePageNum(pg)}
-  $("#showMode").hidden=false;renderShow();try{await $("#showMode").requestFullscreen?.()}catch(_){}
+  $("#showMode").hidden=false;renderShow();loadShowNav();try{await $("#showMode").requestFullscreen?.()}catch(_){}
 }
-function closeShow(){$("#showMode").hidden=true;mirrorStop(show);show.es=null;if(document.fullscreenElement)document.exitFullscreen().catch(()=>{})}
-function showPage(step){const nums=showPages();if(!nums.length)return;const i=nums.indexOf(show.num);show.num=nums[(i+step+nums.length)%nums.length];mirrorStop(show);show.es=null;renderShow()}
+function closeShow(){$("#showMode").hidden=true;mirrorStop(show);if(document.fullscreenElement)document.exitFullscreen().catch(()=>{})}
+function showPage(step){const nums=showPages();if(!nums.length)return;const i=nums.indexOf(show.num);show.num=nums[(i+step+nums.length)%nums.length];mirrorStop(show);renderShow()}
 // the DeckWriter key at this spot on the shown Companion page (to spot page up/down keys)
-function showKeyKind(key){const p=livePageAt(show.num);return p?.buttons[key]?.kind}
+function showKeyKind(key){return show.nav[show.num]?.[key]}
 const pressReq=(key,down)=>{const[r,c]=parseKey(key);return fetch(RELAY+"/press",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({page:show.num,row:r,column:c,down})}).catch(()=>{})};
 let showDown=null;
 document.addEventListener("pointerdown",e=>{const t=e.target.closest?.("#smGrid .sm-key");if(!t)return;e.preventDefault();const key=t.dataset.sk,kind=showKeyKind(key);
@@ -2732,7 +2735,7 @@ function liveAutoLink(ids){const done=[],unsure=[];
     else if(cands.length>1)unsure.push(`${mine.label} (Companion has ${cands.map(x=>"“"+x.label+"”").join(" and ")}: pick one with Link in Connections)`)}
   if(done.length){persist();renderRail()}
   return{done,unsure}}
-const BUILD="Oct 7, 2:31 PM";
+const BUILD="Oct 7, 2:34 PM";
 function renderLive(){
   const bs=$("#buildStamp");if(bs)bs.textContent="Build "+BUILD;
   const c=liveCfg(),st=liveRT.status,ok=!!(st&&st.companion),pg=page();
@@ -2783,6 +2786,7 @@ async function livePull(why){
   try{
     const r=await fetch(RELAY+"/pull",{cache:"no-store"}).then(x=>x.json());if(!r.ok)throw new Error(r.error||"no answer");
     let conns=0;for(const[id,x]of Object.entries(r.connections||{}))if(!S.connections.some(k=>k.id===id)){S.connections.push({id,label:x.label,module:x.moduleId,fromCompanion:true});conns++}
+    if(r.allConnections&&!live.list){live.list=r.allConnections} // Live knows Companion's connections even without linking them in Connections
     const cps=(r.pages||[]).filter(p=>!p.boot),boots=S.pages.filter(p=>p.boot),shows=S.pages.filter(p=>!p.boot),next=[],cpAt={};
     cps.forEach((cp,i)=>{const pg=shows[i],pi=pg?S.pages.indexOf(pg):-1,dw=pg?desiredControls(pi):{},buttons=pg?{...pg.buttons}:{},seen=new Set();
       let ch=!pg||pg.name!==cp.name;
@@ -3040,6 +3044,6 @@ refreshAllArt();
 })();
 </script>
 
-<div style="position:fixed;left:12px;bottom:12px;z-index:200;background:#e5484d;color:#fff;font:700 11px/1 system-ui,sans-serif;letter-spacing:.08em;padding:6px 8px;border-radius:6px;pointer-events:none">TEST BUILD · Oct 7, 2:31 PM</div>
+<div style="position:fixed;left:12px;bottom:12px;z-index:200;background:#e5484d;color:#fff;font:700 11px/1 system-ui,sans-serif;letter-spacing:.08em;padding:6px 8px;border-radius:6px;pointer-events:none">TEST BUILD · Oct 7, 2:34 PM</div>
 </body>
 </html>

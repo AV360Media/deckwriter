@@ -32,7 +32,7 @@ if (IDLE_EXIT > 0)
 		process.exit(0)
 	}, 15000)
 const ALLOWED = [/^https:\/\/bryanchorton\.github\.io$/, /^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/, /^null$/]
-const VERSION = '1.7.0'
+const VERSION = '1.7.1'
 
 const log = (...a) => console.log(new Date().toLocaleTimeString(), ...a)
 
@@ -444,6 +444,12 @@ async function readAll() {
 		for (const [id, c] of Object.entries(j.instances || {}))
 			if (c && id !== 'internal') out.connections[id] = { label: c.label || id, moduleId: c.instance_type || c.moduleId || '' }
 	}
+	// every connection Companion has, used on a page or not (so presets for any app link to the real one)
+	try {
+		const all = await fetch(`${COMPANION}/api/connections`).then((r) => r.json())
+		out.allConnections = (Array.isArray(all) ? all : []).map((c) => ({ id: c.id, label: c.label, moduleId: c.moduleId, enabled: c.enabled !== false, status: c.status || null }))
+		for (const c of out.allConnections) out.connections[c.id] ??= { label: c.label, moduleId: c.moduleId }
+	} catch {}
 	return out
 }
 
