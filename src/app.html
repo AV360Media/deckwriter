@@ -1434,37 +1434,24 @@ function toControl(b,dial){
   const steps={};b.steps.forEach((s,i)=>{const sets={down:s.down.map(exportAction),up:s.up.map(exportAction)};if(dial){sets.rotate_left=s.rotL.map(exportAction);sets.rotate_right=s.rotR.map(exportAction)}steps[i]={action_sets:sets,options:{runWhileHeld:[]}}});
   return{type:"button",style,options:{rotaryActions:!!dial,stepAutoProgress:true},feedbacks:b.feedbacks.map(f=>{const st={};if(f.style?.bgcolor)st.bgcolor=hexToInt(f.style.bgcolor);if(f.style?.color)st.color=hexToInt(f.style.color);return{id:uid(16),type:f.type,instance_id:f.connection,options:f.options||{},style:st,isInverted:!!f.inverted}}).concat(bootFeedbacks(b)),steps};
 }
-/* Companion export format 7. Format 6 cannot hold "Logic: If" blocks (Companion's upgrade turns their
-   condition group into actions), so a page that needs them is converted here with the same field mapping
-   Companion's own v6 -> v7 upgrade uses (companion/lib/Data/Upgrades/v6tov7.ts). */
-function toV7Action(a){return{type:"action",id:a.id,definitionId:a.action,connectionId:a.instance,headline:a.headline,options:a.options,disabled:a.disabled,upgradeIndex:a.upgradeIndex,
-  children:a.instance==="internal"&&a.children?Object.fromEntries(Object.entries(a.children).map(([k,v])=>[k,v?.map(toV7Action)])):undefined}}
-function toV7Feedback(f){return{type:"feedback",id:f.id,definitionId:f.type,connectionId:f.instance_id,headline:f.headline,options:f.options,disabled:f.disabled,upgradeIndex:f.upgradeIndex,
-  children:f.instance_id==="internal"&&f.children?{default:f.children.map(toV7Feedback)}:undefined,isInverted:f.isInverted,variableName:undefined,style:f.style}}
-function pageToV7(exp){
-  const out=JSON.parse(JSON.stringify(exp));out.version=7;
-  for(const row of Object.values(out.page.controls))for(const ctl of Object.values(row)){if(ctl.type!=="button")continue;
-    for(const st of Object.values(ctl.steps||{}))for(const[setId,set]of Object.entries(st.action_sets||{}))st.action_sets[setId]=(set||[]).map(toV7Action);
-    ctl.feedbacks=(ctl.feedbacks||[]).map(toV7Feedback)}
-  return out;
-}
-// While the boot title is held (boot_frame = "final"), a key's press only clears it ("releasing") and its own
-// actions don't run; its release then finishes clearing ("done") instead of running release actions.
-// Any other time the key runs its own actions as normal.
-function gateUntilDismissed(controls){
-  const fb=(value)=>({type:"feedback",id:uid(16),definitionId:"variable_value",connectionId:"internal",options:{variable:"internal:custom_"+BOOT_VAR,op:"eq",value},isInverted:false});
-  const set=(value)=>({type:"action",id:uid(16),definitionId:"custom_variable_set_value",connectionId:"internal",options:{name:BOOT_VAR,value}});
-  const gate=(when,then,orig)=>[{type:"action",id:uid(16),definitionId:"logic_if",connectionId:"internal",options:{},children:{condition:[fb(when)],actions:[set(then)],else_actions:orig}}];
-  for(const row of Object.values(controls))for(const ctl of Object.values(row)){if(ctl.type!=="button")continue;
-    for(const st of Object.values(ctl.steps||{})){const sets=st.action_sets||(st.action_sets={});
-      sets.down=gate("final","releasing",sets.down||[]);
-      if((sets.up||[]).length)sets.up=gate("releasing","done",sets.up)}}
+// With a separate boot page, Companion's own page up/down keys cycle onto it during a show. On every other
+// page they export instead as plain "go to page" buttons that cycle through the show pages only.
+// Companion page numbers follow DeckWriter's page order (the boot page is page 1).
+function navSkipBoot(b,pi){
+  if(b.kind!=="pageup"&&b.kind!=="pagedown")return null;
+  if(S.pages[pi]?.boot||!S.pages.some(p=>p.boot))return null;
+  const nums=S.pages.map((p,i)=>p.boot?0:i+1).filter(Boolean),at=nums.indexOf(pi+1);if(at<0)return null;
+  const to=b.kind==="pageup"?nums[(at+1)%nums.length]:nums[(at-1+nums.length)%nums.length];
+  return{type:"button",style:{text:b.kind==="pageup"?"▲\nPAGE UP":"▼\nPAGE DOWN",textExpression:false,size:14,png64:null,alignment:"center:center",pngalignment:"center:center",color:0xffffff,bgcolor:0x1d2226,show_topbar:false},
+    options:{rotaryActions:false,stepAutoProgress:true},feedbacks:[],
+    steps:{0:{action_sets:{down:[{id:uid(16),action:"set_page",instance:"internal",options:{controller:"self",controller_from_variable:false,page:to,page_from_variable:false}}],up:[]},options:{runWhileHeld:[]}}},__to:to};
 }
 function buildExport(pi){
-  const pg=S.pages[pi];const d=dev();const controls={};const used=new Set();const warn=[];
+  const pg=S.pages[pi];const d=dev();const controls={};const used=new Set();const warn=[];const navTargets=[];
   for(const[k,b]of Object.entries(pg.buttons)){const[r,c]=parseKey(k);
     const onDeck=(r<d.rows&&c<d.cols)||(d.dials&&r===d.rows&&c<d.dials);if(!onDeck){warn.push(`Key at row ${r+1}, column ${c+1} is outside the ${d.name} and was left out.`);continue}
-    const ctl=toControl(b,d.dials&&r===d.rows);(controls[r]??={})[c]=ctl;
+    const nav=navSkipBoot(b,pi);if(nav){navTargets.push(`${b.kind==="pageup"?"Page up":"Page down"} → page ${nav.__to}`);delete nav.__to}
+    const ctl=nav||toControl(b,d.dials&&r===d.rows);(controls[r]??={})[c]=ctl;
     for(const s of b.steps)for(const L of[s.down,s.up,s.rotL,s.rotR])for(const a of L){if(a.connection!=="internal")used.add(a.connection);if(!a.action)warn.push(`"${b.text||"A key"}" has an action with no id.`)}
     for(const f of b.feedbacks)if(f.connection!=="internal")used.add(f.connection);}
   const instances={};let i=0;
@@ -1479,15 +1466,14 @@ function buildExport(pi){
     let skipped=0;
     for(const k of bootGeom().keys){const row=(controls[k.r]??={});let ctl=row[k.c];
       if(!ctl)ctl=row[k.c]=blank();if(ctl.type!=="button"){skipped++;continue}
-      ctl.feedbacks=ctl.feedbacks.concat(bootFeedbacksAt(k.r,k.c,S.boot.hold==="press"||+S.boot.hold>0))}
+      ctl.feedbacks=ctl.feedbacks.concat(bootFeedbacksAt(k.r,k.c,+S.boot.hold>0))}
     if(!bootCache||bootCache.sig!==bootSig(S.boot))warn.push("The boot animation is not rendered yet. Open Boot screen and click Use on this page, then export again.");
-    if(S.boot.hold==="press")warn.push("This page uses Companion's newer page format (7) so its keys can hold the title until the first press. Companion 4 or later is needed to import it.");
     warn.push(`The boot animation plays over this page. Import it as Companion page ${S.boot.companionPage||1} (the number set in Boot screen), and import the startup trigger too.`+(skipped?` ${skipped} page up/down key(s) can't show it and stay plain.`:""));
   }
+  if(navTargets.length)warn.push(`Page keys skip the boot page: ${[...new Set(navTargets)].join(", ")}. Import this page as Companion page ${pi+1} so the numbers line up.`);
   if(pg.boot)warn.push("This is your boot screen. Import it as page 1, and also import the startup trigger (Boot screen → Save startup trigger) so the animation plays when Companion starts.");
   const maxRow=d.dials?d.rows:d.rows-1;
   let data={version:6,type:"page",page:{name:pg.name||`Page ${pi+1}`,controls,gridSize:{minColumn:0,maxColumn:d.cols-1,minRow:0,maxRow}},instances,oldPageNumber:pi+1};
-  if(bootOverlayPage()===pg&&S.boot.hold==="press"){data=pageToV7(data);gateUntilDismissed(data.page.controls)}
   return{data,warn:[...new Set(warn)]};
 }
 let downloadsCap=null;(async()=>{try{downloadsCap=await window.claude?.use?.("downloads")}catch(_){}})();
@@ -1863,7 +1849,7 @@ function wipePage(){const n=Object.keys(page().buttons).length;if(!n)return;comm
 const BOOT_GAP=18, BOOT_VAR="boot_frame";
 const BOOT_STYLES=[["ignite","Ignition"],["scan","Scanline"],["ripple","Ripple"],["meter","Meters"],["glitch","Glitch"],["matrix","Matrix"],["warp","Warp"],["tiles","Tiles"],["countdown","Countdown"],["radar","Radar"],["type","Typewriter"]];
 const BOOT_BGS=[["aurora","Aurora"],["circuit","Circuit"],["rays","Rays"],["halftone","Halftone"],["waves","Waves"],["grid","Grid"],["black","Black"]];
-const bootDefaults=()=>({title:"AV360",subtitle:"SYSTEM ONLINE",style:"ignite",c1:"#c6f432",c2:"#ff5ad9",secs:2,fps:12,afterPage:2,titleSize:58,subSize:20,bg:"aurora",tRow:"auto",sRow:"auto",tX:0,tY:0,sX:0,sY:0,tSpace:0,sSpace:0,snap:false,subSnap:false,underline:true,mode:"overlay",overlayPage:null,companionPage:null,hold:"press",deckId:"streamdeck:CL45L2A05421"});
+const bootDefaults=()=>({title:"AV360",subtitle:"SYSTEM ONLINE",style:"ignite",c1:"#c6f432",c2:"#ff5ad9",secs:2,fps:12,afterPage:2,titleSize:58,subSize:20,bg:"aurora",tRow:"auto",sRow:"auto",tX:0,tY:0,sX:0,sY:0,tSpace:0,sSpace:0,snap:false,subSnap:false,underline:true,mode:"page",overlayPage:null,companionPage:null,hold:3,deckId:"streamdeck:CL45L2A05421"});
 let bootCache=null; // {sig, finals:[dataURL per key], frames:[[dataURL per key] per frame]}
 const bootSig=cfg=>JSON.stringify([cfg,S.device]);
 const bootFrameCount=cfg=>Math.max(6,Math.round(cfg.secs*cfg.fps));
@@ -2134,10 +2120,8 @@ function bootTriggerExport(){
   actions.push(act("wait",{time:600})); // let a just-connected deck settle so the first frames are not lost
   for(let f=1;f<=F;f++){actions.push(act("custom_variable_set_value",{name:BOOT_VAR,value:String(f)}));actions.push(act("wait",{time:wait}))}
   // over a page: hold the title screen, then reveal the page's real buttons
-  // "until I press a key" leaves the title up; the page's own keys clear it (see gateUntilDismissed)
-  if(overlay&&cfg.hold==="press")actions.push(act("custom_variable_set_value",{name:BOOT_VAR,value:"final"}));
-  else{if(overlay&&+cfg.hold>0){actions.push(act("custom_variable_set_value",{name:BOOT_VAR,value:"final"}));actions.push(act("wait",{time:Math.round(+cfg.hold*1000)}))}
-    actions.push(act("custom_variable_set_value",{name:BOOT_VAR,value:"done"}))}
+  if(overlay&&+cfg.hold>0){actions.push(act("custom_variable_set_value",{name:BOOT_VAR,value:"final"}));actions.push(act("wait",{time:Math.round(+cfg.hold*1000)}))}
+  actions.push(act("custom_variable_set_value",{name:BOOT_VAR,value:"done"}));
   actions.push(act("custom_variable_set_value",{name:BOOT_BUSY,value:"0"}));
   const notBusy={id:uid(16),type:"variable_value",instance_id:"internal",options:{variable:"internal:custom_"+BOOT_BUSY,op:"ne",value:"1"},style:{},isInverted:false};
   return{version:6,type:"trigger_list",triggers:{[uid()]:{type:"trigger",options:{name:"DeckWriter boot animation",enabled:true,sortOrder:0},action_sets:{0:actions},condition:[notBusy],
@@ -2157,8 +2141,8 @@ function bootForm(){
       <span class="empty-note">${overlay?"Plays over your show page, holds the title, then reveals the page's buttons. There is no boot page to land on while paging.":"A separate page 1 that stays on the title until you press a key."}</span></div>
     ${overlay?`<div class="row2"><div class="field"><span class="label">Play over</span><select class="inp" id="bootOverPage">${showPages.map(p=>`<option value="${esc(p.id)}" ${p.id===c.overlayPage?"selected":""}>${esc(p.name||"Page")}</option>`).join("")}</select></div>
       <div class="field"><span class="label">Its page number in Companion</span><input class="inp" type="number" id="bootCompPage" min="1" max="99" value="${+c.companionPage||1}"></div></div>
-      <div class="field"><span class="label">Hold the title</span><select class="inp" id="bootHold">${[["press","Until I press a key"],["2","2 seconds"],["3","3 seconds"],["5","5 seconds"],["10","10 seconds"],["0","Don't hold"]].map(([v,l])=>`<option value="${v}" ${String(c.hold)===v?"selected":""}>${l}</option>`).join("")}</select>
-        <span class="empty-note">${c.hold==="press"?"The first press only clears the title. Nothing on the page fires until then.":"The page's buttons appear on their own after the hold."}</span></div>`:""}
+      <div class="field"><span class="label">Hold the title</span><select class="inp" id="bootHold">${[["2","2 seconds"],["3","3 seconds"],["5","5 seconds"],["10","10 seconds"],["0","Don't hold"]].map(([v,l])=>`<option value="${v}" ${String(c.hold)===v?"selected":""}>${l}</option>`).join("")}</select>
+        <span class="empty-note">The page's buttons appear on their own after the hold. To keep the title up until you press a key, use "Its own page".</span></div>`:""}
     <div class="field"><span class="label">Title</span><input class="inp" id="bootTitle" value="${esc(c.title)}" maxlength="18"></div>
     <div class="field"><span class="label">Subtitle</span><input class="inp" id="bootSub" value="${esc(c.subtitle)}" maxlength="28"></div>
     <div class="row2"><div class="field"><span class="label">Title size <span class="mono" id="bootTSv">${c.titleSize}</span></span><input type="range" id="bootTS" min="32" max="72" step="2" value="${c.titleSize}"></div>
@@ -2204,7 +2188,7 @@ function bootSlider(id,label,val,min,max,step,unit){const v=+val||0;
 function openBoot(){bootCfg={...bootDefaults(),...(S.boot||{})};bootForm();syncBootApply();$("#bootDlg").showModal();bootPreview()}
 function readBootForm(){const c=bootCfg;c.title=$("#bootTitle").value;c.subtitle=$("#bootSub").value;c.c1=normHex($("#bootC1H").value)||c.c1;c.c2=normHex($("#bootC2H").value)||c.c2;
   c.secs=+$("#bootSecs").value;c.fps=+$("#bootFps").value;c.afterPage=+$("#bootAfter").value;
-  if($("#bootOverPage")){c.overlayPage=$("#bootOverPage").value;c.companionPage=Math.max(1,+$("#bootCompPage").value||1);const hv=$("#bootHold").value;c.hold=hv==="press"?"press":+hv}
+  if($("#bootOverPage")){c.overlayPage=$("#bootOverPage").value;c.companionPage=Math.max(1,+$("#bootCompPage").value||1);c.hold=+$("#bootHold").value}
   c.titleSize=+$("#bootTS").value;c.subSize=+$("#bootSS").value;c.deckId=$("#bootDeck").value.trim();$("#bootTSv").textContent=c.titleSize;$("#bootSSv").textContent=c.subSize;
   const snapWas=c.snap,subSnapWas=c.subSnap;c.snap=$("#bootSnap").checked;c.subSnap=$("#bootSubSnap").checked;c.tRow=$("#bootTRow").value;c.sRow=$("#bootSRow").value;c.underline=$("#bootUnder").checked;
   c.tX=+$("#bootTX").value;c.tY=+$("#bootTY").value;c.sX=+$("#bootSX").value;c.sY=+$("#bootSY").value;c.tSpace=+$("#bootTSp").value;c.sSpace=+$("#bootSSp").value;
@@ -2215,7 +2199,7 @@ function readBootForm(){const c=bootCfg;c.title=$("#bootTitle").value;c.subtitle
 document.addEventListener("input",e=>{if(!e.target.closest("#bootForm"))return;const t=e.target;
   if(t.id==="bootC1C"||t.id==="bootC2C"){$("#"+t.id.slice(0,-1)+"H").value=t.value}
   readBootForm();bootPreview(false)});
-document.addEventListener("change",e=>{if(!e.target.closest("#bootForm"))return;readBootForm();if(e.target.id==="bootOverPage")syncBootApply();if(e.target.id==="bootHold"){bootLayoutOpen=!!document.querySelector(".boot-layout[open]");bootForm()}bootPreview(e.target.id==="bootSecs"||e.target.id==="bootFps")});
+document.addEventListener("change",e=>{if(!e.target.closest("#bootForm"))return;readBootForm();if(e.target.id==="bootOverPage")syncBootApply();bootPreview(e.target.id==="bootSecs"||e.target.id==="bootFps")});
 function syncBootApply(){const b=$("#bootApply");if(!b||!bootCfg)return;const pg=S.pages.find(p=>p.id===bootCfg.overlayPage);b.textContent=bootCfg.mode==="overlay"?`Use on “${pg?.name||"page"}”`:"Put on page 1"}
 async function applyBoot(){
   readBootForm();const btn=$("#bootApply");btn.disabled=true;btn.textContent="Rendering frames…";
@@ -2251,8 +2235,7 @@ async function playBootOnDeck(){
   if(over){
     const imgs=keys.map(k=>{const el=$(`#deck [data-k="${keyId(k.r,k.c)}"]`);if(!el)return null;const im=document.createElement("img");im.className="boot-over";im.alt="";el.appendChild(im);return im});
     for(const fr of cache.frames){imgs.forEach((im,j)=>{if(im)im.src=fr[j]});await new Promise(r=>setTimeout(r,dt))}
-    if(S.boot.hold==="press"){imgs.forEach((im,j)=>{if(im)im.src=cache.finals[j]});toast("Holding the title. Click any key to clear it.");await new Promise(r=>$("#deck").addEventListener("pointerdown",r,{once:true,capture:true}))}
-    else if(+S.boot.hold>0){imgs.forEach((im,j)=>{if(im)im.src=cache.finals[j]});await new Promise(r=>setTimeout(r,Math.min(+S.boot.hold,4)*1000))}
+    if(+S.boot.hold>0){imgs.forEach((im,j)=>{if(im)im.src=cache.finals[j]});await new Promise(r=>setTimeout(r,Math.min(+S.boot.hold,4)*1000))}
     imgs.forEach(im=>im?.remove());return;
   }
   const imgs=keys.map(k=>$(`#deck [data-k="${keyId(k.r,k.c)}"] .art`));

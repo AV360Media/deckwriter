@@ -56,7 +56,8 @@ check('every element the script looks up exists', () => {
 
 // Companion import format: exports must stay on version 6 with the top bar off
 check('pages export as Companion format 6', () => scripts[0].includes('let data={version:6,type:"page"'))
-check('only a boot page held until a press switches to format 7', () => /if\(bootOverlayPage\(\)===pg&&S\.boot\.hold==="press"\)\{data=pageToV7\(data\)/.test(scripts[0]))
+check('no logic blocks in exports', () => !scripts[0].includes('logic_if'))
+check('page keys skip a separate boot page', () => scripts[0].includes('const nav=navSkipBoot(b,pi)'))
 check('buttons export without the top bar', () => scripts[0].includes('show_topbar:false'))
 check('boot trigger is a v6 trigger list', () => scripts[0].includes('version:6,type:"trigger_list"'))
 check('boot trigger cannot overlap itself', () => scripts[0].includes('condition:[notBusy]') && scripts[0].includes('name:BOOT_BUSY,value:"0"}));\n  const notBusy'))
