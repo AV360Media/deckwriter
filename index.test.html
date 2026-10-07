@@ -316,6 +316,21 @@ dialog.drawer .pgrid{grid-template-columns:repeat(auto-fill,minmax(82px,1fr))}
 .pitem{touch-action:none;cursor:grab}
 .preset-dragging,.preset-dragging *{cursor:grabbing!important}
 .preset-dragging #deck .key{transition:box-shadow .08s}
+/* live mirror: Companion's own picture of each key, laid over DeckWriter's */
+.mirror-img{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:3;image-rendering:auto}
+.mirror-chip{display:inline-flex;align-items:center;gap:6px}
+.mirror-chip .live-dot{width:7px;height:7px;border-radius:50%;background:#e5484d;box-shadow:0 0 0 3px rgba(229,72,77,.25)}
+/* show mode: a full-screen deck that presses keys in Companion */
+#showMode{position:fixed;inset:0;z-index:500;background:#050607;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;padding:16px;touch-action:none;user-select:none;-webkit-user-select:none}
+#showMode[hidden]{display:none}
+#showMode .sm-bar{display:flex;align-items:center;gap:12px;color:#cfd3d8;font:600 15px/1 system-ui,sans-serif;width:min(100%,var(--smw))}
+#showMode .sm-bar .grow{flex:1;text-align:center;font-size:17px;color:#fff}
+#showMode .sm-bar button{background:#1b1f24;color:#e8eaed;border:1px solid #2b3036;border-radius:10px;padding:10px 14px;font:600 14px system-ui,sans-serif;cursor:pointer}
+#showMode .sm-grid{display:grid;grid-template-columns:repeat(var(--cols),var(--smk));gap:calc(var(--smk)*.12)}
+#showMode .sm-key{width:var(--smk);height:var(--smk);border-radius:calc(var(--smk)*.12);background:#111;overflow:hidden;position:relative;cursor:pointer;transition:transform .06s}
+#showMode .sm-key img{width:100%;height:100%;display:block;pointer-events:none}
+#showMode .sm-key.down{transform:scale(.93);filter:brightness(1.35)}
+#showMode .sm-note{color:#7d848c;font:13px system-ui,sans-serif}
 .drawer-head{display:flex;align-items:center;gap:10px;cursor:grab;user-select:none;-webkit-user-select:none;margin:-6px -6px 0;padding:6px;border-radius:10px;touch-action:none}
 .drawer-head:active{cursor:grabbing}
 .drawer-head:hover{background:rgba(255,255,255,.03)}
@@ -469,7 +484,7 @@ dialog.live-panel{position:fixed;inset:64px 16px auto auto;margin:0;width:min(42
     </article>
 
     <article class="node deck-node" id="deckNode">
-      <header class="node-h"><span class="dot yellow"></span><span class="grow" id="deckTitle">Stream Deck</span><span class="chip" id="deckPage"></span></header>
+      <header class="node-h"><span class="dot yellow"></span><span class="grow" id="deckTitle">Stream Deck</span><button class="btn ghost sm" id="mirrorBtn" title="Show what's on the Stream Deck right now: Companion's own pictures, with live tally, timers and names">Mirror</button><button class="btn ghost sm" id="showBtn" title="Full-screen deck: tap a key to press it in Companion">Show mode</button><span class="chip" id="deckPage"></span></header>
       <div class="node-b"><div class="deck" id="deck"></div></div>
     </article>
 
@@ -488,6 +503,7 @@ dialog.live-panel{position:fixed;inset:64px 16px auto auto;margin:0;width:min(42
 <nav class="dock" aria-label="Tools">
   <button id="presetsBtn"><span class="ico" data-ico="layout-grid"></span>Presets</button>
   <button id="bootBtn"><span class="ico" data-ico="power"></span>Boot screen</button>
+  <button id="themeBtn" title="Colour keys by the app they control"><span class="ico" data-ico="sliders-horizontal"></span>Colours</button>
   <button id="tallyBtn" title="Add live and preview colours to scene, input and record keys"><span class="ico" data-ico="radio-tower"></span>Tally pack</button>
   <button id="sheetBtn"><span class="ico" data-ico="file-text"></span>Cheat sheet</button>
   <button id="helperBtn"><span class="ico" data-ico="send"></span>Send to Companion</button>
@@ -548,6 +564,14 @@ dialog.live-panel{position:fixed;inset:64px 16px auto auto;margin:0;width:min(42
 </div></dialog>
 <div class="live-ask" id="liveAsk" hidden></div>
 
+<dialog id="themeDlg"><div class="dlg">
+  <h3>Colour by app</h3>
+  <p>Gives every key the colour of the app it controls, so you can find things at a glance. Text turns white; page keys and the boot page are left alone. With Live on, only the background colour changes in Companion.</p>
+  <div id="themeRows" class="field"></div>
+  <div class="field"><span class="label">Apply to</span><div class="seg" id="themeScope"><button data-v="page" aria-pressed="true">This page</button><button data-v="all" aria-pressed="false">All pages</button></div></div>
+  <div class="dlg-foot"><button class="btn ghost" data-close>Cancel</button><button class="btn ghost" id="themeReset">Default colours</button><button class="btn primary" id="themeApply">Colour keys</button></div>
+</div></dialog>
+<div id="showMode" hidden><div class="sm-bar"><button id="smPrev" aria-label="Previous page">◀</button><span class="grow" id="smTitle"></span><button id="smNext" aria-label="Next page">▶</button><button id="smExit">Exit</button></div><div class="sm-grid" id="smGrid"></div><div class="sm-note" id="smNote"></div></div>
 <dialog id="bootDlg" class="wide"><div class="dlg">
   <h3>Boot screen</h3>
   <p>An animation that plays across every key when Companion starts, then settles on your title screen. It lives on page 1.</p>
@@ -809,7 +833,7 @@ function renderDeck(){
   if(d.dials){g+='<div class="dials">';for(let c=0;c<d.dials;c++){const k=keyId(d.rows,c),b=pg.buttons[k];
     g+=`<button class="dial ${isSel(k)?"sel":""}" data-k="${k}" aria-label="Dial ${c+1}"><span>${esc(b?(b.text||"Dial "+(c+1)):"Dial "+(c+1))}</span></button>`}g+="</div>"}
   g+=`<div class="deck-foot"><span>${esc(page().name||"")}</span>${pg.boot||bootOverlayPage()===pg?`<button class="btn ghost sm" id="bootPlayDeck">▶ Play boot animation</button>`:""}<span>${Object.keys(pg.buttons).length} keys</span></div>`;
-  deck.innerHTML=g;scheduleOverlay();
+  deck.innerHTML=g;scheduleOverlay();applyMirror();
 }
 function renderPagebar(){
   const n=S.pages.length;
@@ -2517,6 +2541,142 @@ function liveTarget(pg,num){const c=liveCfg();const was=c.at[pg.id]??(c.map[pg.i
   if(was!==num){c.owned[pg.id]={};delete c.base[pg.id]}c.at[pg.id]=num}
 // stable fingerprint of an exported key: ignore the random entity ids
 const keyHash=ctl=>JSON.stringify(ctl,(k,val)=>k==="id"?undefined:val);
+/* ---------- live mirror & show mode: Companion's own pictures of the keys, streamed by the relay ---------- */
+const mirror={on:false,num:0,es:null,imgs:{}};
+function mirrorStream(state,num,onKey){ // one EventSource per page
+  if(state.es&&state.num===num)return;
+  state.es?.close();state.imgs={};state.num=num;const d=dev();
+  const es=new EventSource(`${RELAY}/live?page=${num}&rows=${d.rows}&cols=${d.cols}`);state.es=es;
+  es.onmessage=ev=>{try{const m=JSON.parse(ev.data);state.imgs[m.k]=m.used?m.img:null;onKey(m.k)}catch(_){}};
+}
+function mirrorStop(state){state.es?.close();state.es=null;state.imgs={};state.num=0}
+function applyMirror(){
+  $("#mirrorBtn")?.classList.toggle("on",mirror.on);
+  const btn=$("#mirrorBtn");if(btn)btn.innerHTML=mirror.on?`<span class="mirror-chip"><span class="live-dot"></span>Mirror</span>`:"Mirror";
+  if(!mirror.on)return;
+  const pg=page();if(pg.boot){mirrorStop(mirror);return}
+  const num=livePageNum(pg);
+  if(mirror.num!==num)mirrorStream(mirror,num,k=>paintMirror(k));
+  for(const k of Object.keys(mirror.imgs))paintMirror(k);
+}
+function paintMirror(k){
+  const el=document.querySelector(`#deck .key[data-k="${k}"]`);if(!el)return;
+  let img=el.querySelector(".mirror-img");const src=mirror.on?mirror.imgs[k]:null;
+  if(!src){img?.remove();return}
+  if(!img){img=document.createElement("img");img.className="mirror-img";img.alt="";el.appendChild(img)}
+  if(img.src!==src)img.src=src;
+}
+async function toggleMirror(){
+  if(!mirror.on){const st=liveRT.status?.companion?liveRT.status:await relayStatus()||await wakeRelay();
+    if(!st?.companion){toast("Mirror needs the Live helper and Companion running");return}
+    mirror.on=true;toast("Mirror on: the deck shows exactly what's on your Stream Deck, live")}
+  else{mirror.on=false;mirrorStop(mirror);document.querySelectorAll("#deck .mirror-img").forEach(e=>e.remove())}
+  applyMirror();
+}
+// Show mode: its own page (it doesn't turn the physical deck), page keys page locally, everything else is pressed in Companion
+const show={num:0,es:null,imgs:{}};
+function showPages(){return(liveRT.status?.pages||[]).filter(p=>!/^boot$/i.test(p.name||"")).map(p=>p.number)}
+function renderShow(){
+  const d=dev(),el=$("#showMode"),nums=showPages();if(!nums.includes(show.num))show.num=nums[0]||0;
+  const cp=liveRT.status?.pages?.find(p=>p.number===show.num);
+  $("#smTitle").textContent=cp?`${cp.name||"Page "+show.num}  ·  page ${show.num}`:"Companion has no pages yet";
+  const k=Math.floor(Math.min((innerWidth-32-(d.cols-1)*8)/d.cols/1.04,(innerHeight-150)/d.rows/1.12));
+  el.style.setProperty("--cols",d.cols);el.style.setProperty("--smk",Math.max(48,k)+"px");el.style.setProperty("--smw",(Math.max(48,k)*d.cols*1.12)+"px");
+  let g="";for(let r=0;r<d.rows;r++)for(let c=0;c<d.cols;c++){const key=keyId(r,c),src=show.imgs[key];g+=`<div class="sm-key" data-sk="${key}">${src?`<img src="${src}" alt="">`:""}</div>`}
+  $("#smGrid").innerHTML=g;
+  $("#smNote").textContent="Tap to press · hold to hold · ◀ ▶ or arrow keys change page here only · Esc to exit";
+  if(show.num&&show.num!==show.es?.__num){mirrorStream(show,show.num,key=>{const t=document.querySelector(`#smGrid [data-sk="${key}"]`);if(!t)return;const src=show.imgs[key];t.innerHTML=src?`<img src="${src}" alt="">`:""});show.es.__num=show.num}
+}
+async function openShow(){
+  const st=liveRT.status?.companion?liveRT.status:await relayStatus()||await wakeRelay();
+  if(!st?.companion){toast("Show mode needs the Live helper and Companion running");return}
+  if(!show.num){const pg=page();show.num=pg.boot?0:livePageNum(pg)}
+  $("#showMode").hidden=false;renderShow();try{await $("#showMode").requestFullscreen?.()}catch(_){}
+}
+function closeShow(){$("#showMode").hidden=true;mirrorStop(show);show.es=null;if(document.fullscreenElement)document.exitFullscreen().catch(()=>{})}
+function showPage(step){const nums=showPages();if(!nums.length)return;const i=nums.indexOf(show.num);show.num=nums[(i+step+nums.length)%nums.length];mirrorStop(show);show.es=null;renderShow()}
+// the DeckWriter key at this spot on the shown Companion page (to spot page up/down keys)
+function showKeyKind(key){const p=livePageAt(show.num);return p?.buttons[key]?.kind}
+const pressReq=(key,down)=>{const[r,c]=parseKey(key);return fetch(RELAY+"/press",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({page:show.num,row:r,column:c,down})}).catch(()=>{})};
+let showDown=null;
+document.addEventListener("pointerdown",e=>{const t=e.target.closest?.("#smGrid .sm-key");if(!t)return;e.preventDefault();const key=t.dataset.sk,kind=showKeyKind(key);
+  t.classList.add("down");
+  if(kind==="pageup"||kind==="pagedown"){showDown={key,t,nav:true};showPage(kind==="pageup"?1:-1);return}
+  showDown={key,t};pressReq(key,true)});
+const showUp=()=>{if(!showDown)return;const{key,t,nav}=showDown;showDown=null;t.classList.remove("down");if(!nav)pressReq(key,false)};
+document.addEventListener("pointerup",showUp);document.addEventListener("pointercancel",showUp);
+addEventListener("resize",()=>{if(!$("#showMode").hidden)renderShow()});
+document.addEventListener("keydown",e=>{if($("#showMode").hidden)return;e.stopPropagation(); // nothing reaches the editor underneath
+  if(e.key==="Escape")closeShow();else if(e.key==="ArrowRight")showPage(1);else if(e.key==="ArrowLeft")showPage(-1)},true);
+document.addEventListener("fullscreenchange",()=>{if(!document.fullscreenElement&&!$("#showMode").hidden)closeShow()});
+document.addEventListener("click",e=>{const t=e.target.closest("button")||e.target;
+  if(t.id==="mirrorBtn"){toggleMirror();return}
+  if(t.id==="showBtn"){openShow();return}
+  if(t.id==="smExit"){closeShow();return}
+  if(t.id==="smPrev"){showPage(-1);return}
+  if(t.id==="smNext"){showPage(1);return}
+});
+
+/* ---------- colour by app ---------- */
+const THEME_DEFAULTS={"bmd-atem":"#b3261e","resolume-arena":"#6b2fb3","studiocoast-vmix":"#1f5fbf","zinc-oscpoint":"#c4501b","imimot-mitti":"#0f8a7e","obs-studio":"#3d4bb8",internal:"#3a3f47"};
+const THEME_SPARE=["#8a6d1a","#1d7a46","#9b2f6e","#2f6f8f","#7a4b2a","#4f5b16"];
+const themeColour=(mod,i)=>S.theme?.[mod]||THEME_DEFAULTS[mod]||THEME_SPARE[i%THEME_SPARE.length];
+// which app a key belongs to: its first action, else its first feedback, else the connection named in its text $(label:var)
+function keyApp(b){
+  if(!b||b.kind!=="button")return null;
+  const mod=id=>id==="internal"?"internal":S.connections.find(c=>c.id===id)?.module||null;
+  for(const st of b.steps||[])for(const L of[st.down,st.up,st.rotL,st.rotR])for(const a of L||[]){const m=mod(a.connection);if(m)return m}
+  for(const f of b.feedbacks||[]){const m=mod(f.connection);if(m)return m}
+  const v=/\$\(([^:()]+):/.exec(b.text||"");if(v){const c=S.connections.find(x=>x.label===v[1]);if(c)return c.module}
+  return null;
+}
+let themeScope="page";
+function themePages(){return(themeScope==="all"?S.pages:[page()]).filter(p=>!p.boot)}
+function renderTheme(){
+  const counts={};for(const p of S.pages.filter(p=>!p.boot))for(const b of Object.values(p.buttons)){const m=keyApp(b);if(m)counts[m]=(counts[m]||0)+1}
+  const mods=Object.keys(counts).sort((a,b)=>a==="internal"?1:b==="internal"?-1:counts[b]-counts[a]);
+  $("#themeRows").innerHTML=mods.length?mods.map((m,i)=>`<label class="opt" style="display:flex;align-items:center;gap:10px"><input type="color" data-theme="${esc(m)}" value="${themeColour(m,i)}"><span style="flex:1">${esc(m==="internal"?"Companion (internal: pages, waits, variables)":libName(m))}</span><span class="mono" style="color:var(--muted,#888)">${counts[m]} key${counts[m]===1?"":"s"}</span></label>`).join(""):`<span class="empty-note">No keys with actions or feedbacks yet.</span>`;
+  document.querySelectorAll("#themeScope button").forEach(b=>b.setAttribute("aria-pressed",String(b.dataset.v===themeScope)));
+}
+async function applyTheme(){
+  const pal={};document.querySelectorAll("[data-theme]").forEach(i=>pal[i.dataset.theme]=i.value);
+  S.theme={...(S.theme||{}),...pal};
+  const changes=[];
+  commit(()=>{for(const p of themePages())for(const[k,b]of Object.entries(p.buttons)){const m=keyApp(b);if(!m||!pal[m])continue;
+    if(b.bg.toLowerCase()===pal[m].toLowerCase()&&b.color.toLowerCase()==="#ffffff")continue;
+    b.bg=pal[m];b.color="#ffffff";changes.push([p.id,k])}});
+  $("#themeDlg").close();
+  if(!changes.length){toast("Those keys already have these colours");return}
+  toast(`Coloured ${changes.length} key${changes.length===1?"":"s"}. ⌘Z to undo.`);
+  if(S.live?.on&&liveRT.pulled)liveTheme(changes);
+}
+// with Live on: change only the background colour in Companion, so nothing else on those keys is rebuilt
+async function liveTheme(changes){
+  const c=S.live;clearTimeout(liveRT.timer);
+  while(liveRT.busy)await new Promise(r=>setTimeout(r,60));liveRT.busy=true;let n=0,skipped=0;
+  try{const st=await relayStatus();if(!st?.companion)throw new Error("the relay or Companion isn't connected");
+    const dwBy={};
+    for(const[pid,k]of changes){const pi=S.pages.findIndex(p=>p.id===pid),p=S.pages[pi];if(!p)continue;const num=livePageNum(p),cp=st.pages.find(x=>x.number===num);
+      if(!cp||liveBlocked(num,cp)){skipped++;continue}
+      const owned=(c.owned[pid]??={}),base=(c.base[pid]??={});
+      if(owned[k]==null&&base[k]==null){skipped++;continue} // not in Companion yet: the normal update sends it whole
+      const[r,col]=parseKey(k);
+      const res=await fetch(RELAY+"/restyle",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({page:num,row:r,column:col,bgcolor:hexToInt(p.buttons[k].bg),color:hexToInt(p.buttons[k].color)})}).then(x=>x.json());
+      if(!res.ok)throw new Error(res.error||"restyle failed");
+      const dw=(dwBy[pid]??=desiredControls(pi));const h=keyHash(dw[k]);
+      if(res.done){owned[k]=h;delete base[k];n++}else skipped++}
+    try{localStorage.setItem("deckwright.test.v1",JSON.stringify(S))}catch(_){}
+    liveRT.lastMsg=`Companion: recoloured ${n} key${n===1?"":"s"}`;if(n)toast(liveRT.lastMsg)}
+  catch(e){liveRT.lastMsg="Live couldn't recolour: "+e.message;toast(liveRT.lastMsg)}
+  finally{liveRT.busy=false;liveRT.dirty=false;scheduleLive()}
+}
+document.addEventListener("click",e=>{const t=e.target.closest("button")||e.target;
+  if(t.id==="themeBtn"){themeScope="page";renderTheme();$("#themeDlg").showModal();return}
+  const sc=t.closest("#themeScope button");if(sc){themeScope=sc.dataset.v;renderTheme();return}
+  if(t.id==="themeReset"){document.querySelectorAll("[data-theme]").forEach((i,n)=>i.value=THEME_DEFAULTS[i.dataset.theme]||THEME_SPARE[n%THEME_SPARE.length]);return}
+  if(t.id==="themeApply"){applyTheme();return}
+});
+
 // The relay only runs on demand: clicking Live opens deckwriter-live://, which the "DeckWriter Live" helper app
 // (installed by tools/live/install.sh) answers by starting it. Must be called from a click (browsers require it).
 async function wakeRelay(){
@@ -2572,7 +2732,7 @@ function liveAutoLink(ids){const done=[],unsure=[];
     else if(cands.length>1)unsure.push(`${mine.label} (Companion has ${cands.map(x=>"“"+x.label+"”").join(" and ")}: pick one with Link in Connections)`)}
   if(done.length){persist();renderRail()}
   return{done,unsure}}
-const BUILD="Oct 7, 1:06 PM";
+const BUILD="Oct 7, 2:31 PM";
 function renderLive(){
   const bs=$("#buildStamp");if(bs)bs.textContent="Build "+BUILD;
   const c=liveCfg(),st=liveRT.status,ok=!!(st&&st.companion),pg=page();
@@ -2790,7 +2950,7 @@ document.addEventListener("change",e=>{
       if(!liveRT.pulled){toast((liveRT.lastMsg||"Couldn't load from Companion.")+" Live won't send anything until it can load Companion: is the relay running?");return}
       if(!done){liveFollow();liveSync()}toast(done?liveRT.lastMsg+". From now on your edits go to Companion.":"Live on: DeckWriter matches Companion, and your edits go straight to it.")});return}
 });
-setInterval(()=>{if(S.live?.on||(!document.hidden&&$("#liveDlg")?.open))relayStatus()},4000); // also keeps the on-demand relay awake
+setInterval(()=>{if(S.live?.on||mirror.on||!$("#showMode").hidden||(!document.hidden&&$("#liveDlg")?.open))relayStatus()},4000); // also keeps the on-demand relay awake
 
 /* ---------- sources card tabs ---------- */
 document.addEventListener("click",e=>{const b=e.target.closest("[data-src]");if(!b)return;
@@ -2880,6 +3040,6 @@ refreshAllArt();
 })();
 </script>
 
-<div style="position:fixed;left:12px;bottom:12px;z-index:200;background:#e5484d;color:#fff;font:700 11px/1 system-ui,sans-serif;letter-spacing:.08em;padding:6px 8px;border-radius:6px;pointer-events:none">TEST BUILD · Oct 7, 1:06 PM</div>
+<div style="position:fixed;left:12px;bottom:12px;z-index:200;background:#e5484d;color:#fff;font:700 11px/1 system-ui,sans-serif;letter-spacing:.08em;padding:6px 8px;border-radius:6px;pointer-events:none">TEST BUILD · Oct 7, 2:31 PM</div>
 </body>
 </html>

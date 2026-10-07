@@ -32,7 +32,7 @@ if (IDLE_EXIT > 0)
 		process.exit(0)
 	}, 15000)
 const ALLOWED = [/^https:\/\/bryanchorton\.github\.io$/, /^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/, /^null$/]
-const VERSION = '1.6.0'
+const VERSION = '1.7.0'
 
 const log = (...a) => console.log(new Date().toLocaleTimeString(), ...a)
 
@@ -56,6 +56,7 @@ function reconnectSoon(sock) {
 	for (const p of pending.values()) p.reject(new Error('Companion connection closed'))
 	pending.clear()
 	subs.clear()
+	for (const end of liveStreams) end() // DeckWriter's EventSource reconnects by itself once Companion is back
 	try {
 		sock.onopen = sock.onclose = sock.onmessage = null
 		sock.close()
@@ -116,6 +117,60 @@ function call(path, input, method = 'mutation') {
 		setTimeout(() => pending.has(id) && (pending.delete(id), reject(new Error(path + ' timed out'))), 10000)
 	})
 }
+// a subscription that can be stopped again (for the live key pictures)
+function subscribeStoppable(path, input, onData) {
+	const id = nextId++
+	subs.set(id, onData)
+	ws.send(JSON.stringify({ id, jsonrpc: '2.0', method: 'subscription', params: { path, input } }))
+	return () => {
+		subs.delete(id)
+		try {
+			ws.send(JSON.stringify({ id, jsonrpc: '2.0', method: 'subscription.stop' }))
+		} catch {}
+	}
+}
+const liveStreams = new Set()
+// Server-sent events with Companion's own rendering of every key on a page, re-sent whenever a key changes
+// (tally, timers, variables...). The same pictures Companion's editor shows.
+function streamPage(req, res, page, rows, cols) {
+	res.writeHead(200, { 'Content-Type': 'text/event-stream', 'Cache-Control': 'no-cache', Connection: 'keep-alive' })
+	res.write(': hello\n\n')
+	const stops = []
+	for (let r = 0; r < rows; r++)
+		for (let c = 0; c < cols; c++)
+			stops.push(
+				subscribeStoppable('preview.graphics.location', { location: { pageNumber: page, row: r, column: c } }, (d) => {
+					if (d && d.image) res.write(`data: ${JSON.stringify({ k: `${r},${c}`, img: d.image, used: !!d.isUsed })}\n\n`)
+				}),
+			)
+	const ping = setInterval(() => res.write(': ping\n\n'), 15000)
+	const end = () => {
+		if (!liveStreams.has(end)) return
+		liveStreams.delete(end)
+		clearInterval(ping)
+		for (const stop of stops) stop()
+		try {
+			res.end()
+		} catch {}
+	}
+	liveStreams.add(end)
+	req.on('close', end)
+}
+// a tap on DeckWriter's show-mode deck: press (down) and release (up), as Companion's own web buttons do
+async function pressKey(page, row, column, down) {
+	if (!pages.order[page - 1]) throw new Error(`Companion has no page ${page}`)
+	await call('controls.hotPressControl', { location: { pageNumber: page, row, column }, direction: !!down, surfaceId: 'deckwriter' })
+}
+// just a key's background colour (colour themes), leaving everything else on the key as it is
+async function restyleKey(page, row, column, bgcolor, color) {
+	guardPage(page)
+	const controlId = controlAt(page, row, column)
+	if (!controlId) return false
+	if (bgcolor != null) await call('controls.styles.updateOption', { controlId, elementId: 'box0', key: 'color', value: v(Number(bgcolor)) })
+	if (color != null) await call('controls.styles.updateOption', { controlId, elementId: 'text0', key: 'color', value: v(Number(color)) })
+	return true
+}
+
 function subscribe(path, input, onData) {
 	const id = nextId++
 	subs.set(id, onData)
@@ -458,6 +513,21 @@ http
 						return { number: i + 1, name: p.name || '', keys }
 					}),
 				})
+			}
+			if (req.method === 'GET' && path === '/live') {
+				if (!connected) throw new Error('Not connected to Companion')
+				const q = new URL(req.url, 'http://x').searchParams
+				return streamPage(req, res, Number(q.get('page')), Math.min(8, Number(q.get('rows')) || 4), Math.min(16, Number(q.get('cols')) || 8))
+			}
+			if (req.method === 'POST' && path === '/press') {
+				const b = await body(req)
+				await pressKey(Number(b.page), Number(b.row), Number(b.column), b.down)
+				return send(res, 200, { ok: true })
+			}
+			if (req.method === 'POST' && path === '/restyle') {
+				const b = await body(req)
+				const done = await serial(() => restyleKey(Number(b.page), Number(b.row), Number(b.column), b.bgcolor, b.color))
+				return send(res, 200, { ok: true, done })
 			}
 			if (req.method === 'GET' && path === '/pull') {
 				if (!connected) throw new Error('Not connected to Companion')
