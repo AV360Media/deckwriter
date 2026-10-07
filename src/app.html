@@ -1816,7 +1816,8 @@ function wipePage(){const n=Object.keys(page().buttons).length;if(!n)return;comm
 // $(internal:custom_boot_frame) equals the frame number. A startup trigger steps that variable 1..N, then "done".
 const BOOT_GAP=18, BOOT_VAR="boot_frame";
 const BOOT_STYLES=[["ignite","Ignition"],["scan","Scanline"],["ripple","Ripple"],["meter","Meters"]];
-const bootDefaults=()=>({title:"AV360",subtitle:"SYSTEM ONLINE",style:"ignite",c1:"#c6f432",c2:"#ff5ad9",secs:2,fps:12,afterPage:2,titleSize:58,subSize:20,deckId:"streamdeck:CL45L2A05421"});
+const BOOT_BGS=[["aurora","Aurora"],["circuit","Circuit"],["rays","Rays"],["halftone","Halftone"],["waves","Waves"],["grid","Grid"],["black","Black"]];
+const bootDefaults=()=>({title:"AV360",subtitle:"SYSTEM ONLINE",style:"ignite",c1:"#c6f432",c2:"#ff5ad9",secs:2,fps:12,afterPage:2,titleSize:58,subSize:20,bg:"aurora",deckId:"streamdeck:CL45L2A05421"});
 let bootCache=null; // {sig, finals:[dataURL per key], frames:[[dataURL per key] per frame]}
 const bootSig=cfg=>JSON.stringify([cfg,S.device]);
 const bootFrameCount=cfg=>Math.max(6,Math.round(cfg.secs*cfg.fps));
@@ -1834,6 +1835,8 @@ function drawTitle(x,cfg,W,H,alpha,scale=1,reveal=1){
   // snap the title to one row of keys and the subtitle to the row below, so neither straddles a gap
   const rows=dev().rows,rowY=r=>r*(72+BOOT_GAP)+36;
   const tRow=sub&&rows>1?Math.max(0,Math.floor((rows-2)/2)):Math.floor((rows-1)/2),sRow=Math.min(rows-1,tRow+1);
+  if(!["black","grid"].includes(cfg.bg||"aurora")){const top=rowY(tRow)-50,bot=rowY(sub&&sRow!==tRow?sRow:tRow)+50;const sg=x.createLinearGradient(0,top,0,bot);
+    sg.addColorStop(0,"rgba(0,0,0,0)");sg.addColorStop(.25,`rgba(0,0,0,${.5*alpha})`);sg.addColorStop(.75,`rgba(0,0,0,${.5*alpha})`);sg.addColorStop(1,"rgba(0,0,0,0)");x.fillStyle=sg;x.fillRect(0,top,W,bot-top)}
   let fs=+cfg.titleSize||58;x.font=`700 ${fs}px Geist, "Helvetica Neue", Arial, sans-serif`;
   const tw=x.measureText(title).width;if(tw>W*.9)fs*=W*.9/tw;
   x.translate(W/2,rowY(tRow));x.scale(scale,scale);
@@ -1846,13 +1849,52 @@ function drawTitle(x,cfg,W,H,alpha,scale=1,reveal=1){
     x.fillStyle=rgba(cfg.c1,.9);const bw=Math.min(W*.5,x.measureText(sub).width);x.fillRect(-bw/2,dy+ss*.75,bw,3)}
   x.restore();
 }
+// The final-screen background. `a` fades it in during the animation. Seeded, so every frame and export matches.
 function drawBackdrop(x,cfg,W,H,a=1){
   x.fillStyle="#050506";x.fillRect(0,0,W,H);
-  const g=x.createRadialGradient(W/2,H*.45,0,W/2,H*.45,Math.max(W,H)*.7);g.addColorStop(0,rgba(cfg.c1,.26*a));g.addColorStop(.6,rgba(cfg.c2,.1*a));g.addColorStop(1,"rgba(0,0,0,0)");
-  x.fillStyle=g;x.fillRect(0,0,W,H);
-  x.strokeStyle=`rgba(255,255,255,${.08*a})`;x.lineWidth=1;
-  for(let gx=0;gx<W;gx+=24){x.beginPath();x.moveTo(gx+.5,0);x.lineTo(gx+.5,H);x.stroke()}
-  for(let gy=0;gy<H;gy+=24){x.beginPath();x.moveTo(0,gy+.5);x.lineTo(W,gy+.5);x.stroke()}
+  if(a<=0)return;
+  const bg=cfg.bg||"aurora",R=rng(4242),c1=cfg.c1,c2=cfg.c2,mid=mixHex(c1,c2,.5);
+  const blob=(cx,cy,r,col,al)=>{const g=x.createRadialGradient(cx,cy,0,cx,cy,r);g.addColorStop(0,rgba(col,al*a));g.addColorStop(1,"rgba(0,0,0,0)");x.fillStyle=g;x.fillRect(0,0,W,H)};
+  x.save();
+  if(bg==="aurora"){
+    blob(W*.12,H*.9,W*.6,c1,.75);blob(W*.88,H*.1,W*.6,c2,.7);blob(W*.55,H*1.05,W*.5,mid,.45);blob(W*.3,H*.05,W*.35,c2,.3);
+    // soft diagonal light bands
+    x.globalCompositeOperation="lighter";
+    for(let i=0;i<3;i++){const g=x.createLinearGradient(0,0,W,H);const o=.25+i*.22;
+      g.addColorStop(Math.max(0,o-.08),"rgba(255,255,255,0)");g.addColorStop(o,`rgba(255,255,255,${.05*a})`);g.addColorStop(Math.min(1,o+.08),"rgba(255,255,255,0)");x.fillStyle=g;x.fillRect(0,0,W,H)}
+  }else if(bg==="circuit"){
+    blob(W/2,H/2,Math.max(W,H)*.75,c1,.12);
+    x.lineCap="round";x.lineJoin="round";
+    for(let i=0;i<34;i++){
+      let px=R()*W,py=R()*H;const col=R()<.7?c1:c2;x.strokeStyle=rgba(col,(.25+R()*.35)*a);x.lineWidth=R()<.3?3:1.6;
+      x.beginPath();x.moveTo(px,py);
+      for(let s2=0;s2<3+Math.floor(R()*3);s2++){const len=30+R()*110;if(R()<.5)px+=R()<.5?len:-len;else py+=R()<.5?len:-len;
+        if(R()<.35){const d=(R()<.5?1:-1)*25;px+=d;py+=d}x.lineTo(px,py)}
+      x.stroke();
+      x.fillStyle=rgba(col,.9*a);x.beginPath();x.arc(px,py,3.5,0,Math.PI*2);x.fill();
+      x.strokeStyle=rgba(col,.5*a);x.lineWidth=1.5;x.beginPath();x.arc(px,py,7,0,Math.PI*2);x.stroke();
+    }
+  }else if(bg==="rays"){
+    const cx=W/2,cy=H*.42,n=28,r=Math.hypot(W,H);
+    for(let i=0;i<n;i++){const a0=i/n*Math.PI*2,a1=(i+.5)/n*Math.PI*2;x.fillStyle=rgba(i%2?c1:c2,(i%2?.16:.1)*a);
+      x.beginPath();x.moveTo(cx,cy);x.arc(cx,cy,r,a0,a1);x.closePath();x.fill()}
+    const v=x.createRadialGradient(cx,cy,0,cx,cy,r*.6);v.addColorStop(0,rgba(c1,.35*a));v.addColorStop(.35,"rgba(0,0,0,0)");v.addColorStop(1,"rgba(0,0,0,.75)");x.fillStyle=v;x.fillRect(0,0,W,H);
+  }else if(bg==="halftone"){
+    const step=12,cx=W/2,cy=H/2,maxD=Math.hypot(cx,cy);
+    for(let yy=step/2;yy<H;yy+=step)for(let xx=step/2;xx<W;xx+=step){const d=Math.hypot(xx-cx,yy-cy)/maxD;const rr=(.6+d*.9)*step*.42;
+      x.fillStyle=rgba(mixHex(c1,c2,xx/W),(.18+d*.5)*a);x.beginPath();x.arc(xx,yy,rr,0,Math.PI*2);x.fill()}
+  }else if(bg==="waves"){
+    blob(W/2,H/2,W*.6,mid,.15);
+    for(let k=0;k<9;k++){const col=k%2?c2:c1,amp=H*(.06+R()*.1),fr=(2+R()*3)*Math.PI*2/W,ph=R()*6,base=H*(.15+k*.09);
+      x.strokeStyle=rgba(col,(.3+R()*.4)*a);x.lineWidth=2+R()*2.5;x.beginPath();
+      for(let xx=0;xx<=W;xx+=6){const yy=base+Math.sin(xx*fr+ph)*amp*Math.sin(xx/W*Math.PI);xx?x.lineTo(xx,yy):x.moveTo(xx,yy)}x.stroke()}
+  }else if(bg==="grid"){
+    blob(W/2,H*.45,Math.max(W,H)*.7,c1,.26);
+    x.strokeStyle=`rgba(255,255,255,${.08*a})`;x.lineWidth=1;
+    for(let gx=0;gx<W;gx+=24){x.beginPath();x.moveTo(gx+.5,0);x.lineTo(gx+.5,H);x.stroke()}
+    for(let gy=0;gy<H;gy+=24){x.beginPath();x.moveTo(0,gy+.5);x.lineTo(W,gy+.5);x.stroke()}
+  }
+  x.restore();
 }
 function drawBoot(x,cfg,t,frame){
   const{W,H,keys}=bootGeom();const R=rng(1234+frame*97);
@@ -1923,6 +1965,7 @@ function bootForm(){
     <div class="row2"><div class="field"><span class="label">Title size <span class="mono" id="bootTSv">${c.titleSize}</span></span><input type="range" id="bootTS" min="32" max="72" step="2" value="${c.titleSize}"></div>
     <div class="field"><span class="label">Subtitle size <span class="mono" id="bootSSv">${c.subSize}</span></span><input type="range" id="bootSS" min="12" max="34" step="1" value="${c.subSize}"></div></div>
     <div class="field"><span class="label">Animation</span><div class="seg" id="bootStyle">${BOOT_STYLES.map(([v,l])=>`<button data-v="${v}" aria-pressed="${c.style===v}">${l}</button>`).join("")}</div></div>
+    <div class="field"><span class="label">Final background</span><div class="seg" id="bootBg">${BOOT_BGS.map(([v,l])=>`<button data-v="${v}" aria-pressed="${(c.bg||"aurora")===v}">${l}</button>`).join("")}</div></div>
     <div class="row2">${colorField("bootC1","Main colour",c.c1)}${colorField("bootC2","Second colour",c.c2)}</div>
     <div class="row2"><div class="field"><span class="label">Length</span><select class="inp" id="bootSecs">${[1.5,2,3,4].map(v=>`<option value="${v}" ${c.secs==v?"selected":""}>${v} seconds</option>`).join("")}</select></div>
     <div class="field"><span class="label">Smoothness</span><select class="inp" id="bootFps">${[[8,"8 fps (lightest)"],[12,"12 fps"],[15,"15 fps (smoothest)"]].map(([v,l])=>`<option value="${v}" ${c.fps==v?"selected":""}>${l}</option>`).join("")}</select></div></div>
@@ -1983,6 +2026,7 @@ document.addEventListener("click",e=>{const t=e.target.closest("button")||e.targ
   if(t.id==="bootBtn"||t.id==="bootEdit"){openBoot();return}
   const bs=t.closest("#bootStyle [data-v]");if(bs){bootCfg.style=bs.dataset.v;[...$("#bootStyle").children].forEach(x=>x.setAttribute("aria-pressed",x===bs));bootPreview(true);return}
   if(t.id==="bootReplay"){bootPreview(true);return}
+  const bb=t.closest("#bootBg [data-v]");if(bb){bootCfg.bg=bb.dataset.v;[...$("#bootBg").children].forEach(x=>x.setAttribute("aria-pressed",x===bb));bootPreview(false);return}
   if(t.id==="bootApply"){applyBoot();return}
   if(t.id==="bootTrigger"||t.id==="bootTrigger2"){saveBootTrigger();return}
   if(t.id==="bootPlayDeck"){playBootOnDeck();return}
