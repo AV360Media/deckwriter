@@ -37,6 +37,10 @@ Design Stream Deck pages for Bitfocus Companion: lay out keys, label and colour 
 
 Files saved from this site are named `*.companionconfig` and import directly. Inside Claude they save as `*.companionconfig.json`; remove the `.json` first.
 
+## Moving between computers
+
+DeckWriter keeps your work in the browser of the computer you're on. To take it to another machine, click **Save project** in the bottom bar. You get one `.json` file with every page, button, image, connection and the boot screen. On the other computer, open DeckWriter and click **Open project** (or drop the file on Import). The file name becomes the project name, so rename it in Finder if you like. Live's record of what's on a Stream Deck stays on each computer.
+
 ## Live: edit buttons on a running show
 
 Live sends each key you add, change, move or delete straight to Companion, one key at a time, without importing.

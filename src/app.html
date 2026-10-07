@@ -484,9 +484,9 @@ dialog.live-panel{position:fixed;inset:64px 16px auto auto;margin:0;width:min(42
   <button id="sheetBtn"><span class="ico" data-ico="file-text"></span>Cheat sheet</button>
   <button id="helperBtn"><span class="ico" data-ico="send"></span>Send to Companion</button>
   <span class="vsep"></span>
-  <button id="saveProject"><span class="ico" data-ico="save"></span>Save</button>
-  <label for="loadProject"><span class="ico" data-ico="folder-open"></span>Open</label>
-  <input type="file" id="loadProject" accept=".json" hidden>
+  <button id="saveProject" title="Save the whole project as one file, to open on another computer"><span class="ico" data-ico="save"></span>Save project</button>
+  <label for="loadProject" title="Open a project file saved from DeckWriter on any computer"><span class="ico" data-ico="folder-open"></span>Open project</label>
+  <input type="file" id="loadProject" accept=".json,application/json" hidden>
   <button id="newProject" class="danger">Start over</button>
   <span class="chip pink" id="selHint"></span>
 </nav>
@@ -516,7 +516,7 @@ dialog.live-panel{position:fixed;inset:64px 16px auto auto;margin:0;width:min(42
 
 <dialog id="importDlg"><div class="dlg">
   <h3>Import from Companion</h3>
-  <p>Drop a Companion export (full config or a single page, <span class="mono">.companionconfig</span> or <span class="mono">.yaml</span>). DeckWriter adds your connections with their real IDs and learns every action and feedback you've already built, so new buttons use the exact names your modules expect.</p>
+  <p>Drop a Companion export (full config or a single page, <span class="mono">.companionconfig</span> or <span class="mono">.yaml</span>). DeckWriter adds your connections with their real IDs and learns every action and feedback you've already built, so new buttons use the exact names your modules expect. A DeckWriter project file (from Save project) dropped here opens as the project.</p>
   <label class="drop-zone" id="dropZone" for="importFile">Drop a file here or <u>browse</u></label>
   <input type="file" id="importFile" hidden>
   <div id="importResult" class="field"></div>
@@ -658,6 +658,14 @@ function sanitizeSvgInner(src){
 }
 
 /* ---------- state ---------- */
+// Every new page starts with the owner's layout: page up, the page's title, page down, stacked in the first column
+// (B1, C1, D1 on an XL). The title key follows the page name when it's renamed.
+function starterKeys(name){const d=dev(),out={},nav={bg:"#1d2226",color:"#ffffff"};
+  const at=d.rows>=3?[keyId(d.rows-3,0),keyId(d.rows-2,0),keyId(d.rows-1,0)]:[keyId(0,0),d.cols>1?keyId(0,1):null,keyId(d.rows-1,0)];
+  out[at[0]]={...newButton(nav),kind:"pageup"};
+  if(at[1])out[at[1]]=newButton({...nav,text:name,size:"auto",pageTitle:true});
+  out[at[2]]={...newButton(nav),kind:"pagedown"};
+  return out}
 function newButton(o={}){return Object.assign({kind:"button",text:"",size:"auto",color:"#ffffff",bg:"#000000",align:"center:center",
   image:{mode:"none",bgStyle:"none",g1:"#1e6cff",g2:"#5b2bd9",icon:null,iconColor:"#ffffff",scale:.55,pos:"center",bake:false,src:null,fit:"cover"},
   png64:null,steps:[{down:[],up:[],rotL:[],rotR:[]}],feedbacks:[]},o)}
@@ -969,7 +977,7 @@ $("#undo").onclick=undo;$("#redo").onclick=redo;
 document.addEventListener("click",e=>{
   const t=e.target.closest("button")||e.target;
   const p=t.closest("[data-p]");if(p){S.pageIdx=+p.dataset.p;selected=null;multi.clear();persist();render();return}
-  if(t.id==="addPage"){commit(()=>{S.pages.push({id:uid(),name:"Page "+(S.pages.length+1),buttons:{}});S.pageIdx=S.pages.length-1;selected=null});return}
+  if(t.id==="addPage"){commit(()=>{const name="Page "+(S.pages.length+1);S.pages.push({id:uid(),name,buttons:starterKeys(name)});S.pageIdx=S.pages.length-1;selected=null});return}
   if(t.id==="delPage"){if(t.dataset.armed){commit(()=>{S.pages.splice(S.pageIdx,1);S.pageIdx=Math.max(0,S.pageIdx-1);selected=null})}else{t.dataset.armed="1";t.classList.add("armed");toast("Click the bin again to delete this page");setTimeout(()=>{if(t.isConnected){delete t.dataset.armed;t.classList.remove("armed")}},2500)}return}
   if(t.id==="wipePage"){if(t.dataset.armed){wipePage()}else{t.dataset.armed="1";t.classList.add("armed");toast("Click the eraser again to wipe every key on this page");setTimeout(()=>{if(t.isConnected){delete t.dataset.armed;t.classList.remove("armed")}},2500)}return}
   if(t.id==="prevPage"||t.id==="nextPage"){const d=t.id==="prevPage"?-1:1;S.pageIdx=Math.max(0,Math.min(S.pages.length-1,S.pageIdx+d));selected=null;multi.clear();persist();render();return}
@@ -1009,14 +1017,14 @@ document.addEventListener("click",e=>{
   if(t.id==="dismissExample"){S.example=false;persist();render();return}
   if(t.id==="clearExample"){commit(()=>{S.pages=[{id:uid(),name:"Page 1",buttons:{}}];S.pageIdx=0;S.example=false;selected=null});return}
 });
-$("#newProject").onclick=e=>{const t=e.currentTarget;if(t.dataset.armed){commit(()=>{S={v:1,device:S.device,pageIdx:0,example:false,pages:[{id:uid(),name:"Page 1",buttons:{}}],connections:[],learned:{}};selected=null});delete t.dataset.armed;t.textContent="Start over"}
+$("#newProject").onclick=e=>{const t=e.currentTarget;if(t.dataset.armed){commit(()=>{S={v:1,device:S.device,pageIdx:0,example:false,pages:[{id:uid(),name:"Page 1",buttons:starterKeys("Page 1")}],connections:[],learned:{}};selected=null});delete t.dataset.armed;t.textContent="Start over"}
   else{t.dataset.armed="1";t.textContent="Click again to wipe";setTimeout(()=>{delete t.dataset.armed;t.textContent="Start over"},2500)}};
 
 /* inspector inputs */
 document.addEventListener("input",e=>{
   const t=e.target;
-  if(t.id==="fText"){setText(t.value);return}
-  if(t.id==="pageName"){page().name=t.value;persist();return}
+  if(t.id==="fText"){const b=sel();if(b?.pageTitle)delete b.pageTitle;setText(t.value);return}
+  if(t.id==="pageName"){page().name=t.value;let tied=false;for(const b of Object.values(page().buttons))if(b.pageTitle){b.text=t.value;tied=true}persist();if(tied){renderDeck();if(selected&&page().buttons[selected]?.pageTitle)renderInspector()}return}
   if(t.id==="iconSearch"){renderIconGrid(t.value);return}
   const pairs={fColorC:["color",false],fBgC:["bg",false],fG1C:["g1",true],fG2C:["g2",true],fIcC:["iconColor",true]};
   if(pairs[t.id]){liveColor(pairs[t.id],t.value);const hx=$("#"+t.id.slice(0,-1)+"H");if(hx)hx.value=t.value;return}
@@ -1039,7 +1047,7 @@ document.addEventListener("change",e=>{
   if(t.id==="iconScale"){renderInspector();return}
   if(t.id==="bake"){mutSel(b=>{b.image.bake=t.checked},true);return}
   if(t.id==="upFile"){const f=t.files[0];if(!f)return;const rd=new FileReader();rd.onload=()=>mutSel(b=>{b.image.src=rd.result},true);rd.readAsDataURL(f);return}
-  if(t.id==="loadProject"){const f=t.files[0];if(!f)return;f.text().then(txt=>{try{const s=JSON.parse(txt);if(!s.pages)throw 0;commit(()=>{S=s;selected=null});refreshAllArt();toast("Project opened")}catch(_){toast("That file isn't a DeckWriter project")}});t.value="";return}
+  if(t.id==="loadProject"){const f=t.files[0];if(!f)return;f.text().then(txt=>{try{openProject(JSON.parse(txt),f.name)}catch(_){toast("That file isn't a DeckWriter project")}});t.value="";return}
   if(t.dataset.okind==="act"||t.dataset.f==="actsel"){const row=t.closest("[data-set]");const set=row.dataset.set,i=+row.dataset.i;
     mutSel(b=>{const a=b.steps[stepIdx][set][i];const L=libOf(a.connection);
       if(t.dataset.f==="actsel"){a.action=t.value;a.options=optDefaults(L?.aById.get(t.value)?.o)}
@@ -1558,7 +1566,24 @@ function fillExport(){
 $("#openExport").onclick=openExport;$("#expPage").onchange=fillExport;
 $("#expCopy").onclick=async()=>{const t=fillExport.cur.full;try{await navigator.clipboard.writeText(t);toast("Copied. Paste into a file named something.companionconfig")}catch(_){const ta=document.createElement("textarea");ta.value=t;document.body.appendChild(ta);ta.select();try{document.execCommand("copy");toast("Copied")}catch(__){toast("Copy blocked. Use Save file instead")}ta.remove()}};
 $("#expSave").onclick=async()=>{try{toast(savedNote(await saveFile(`${fillExport.cur.name}.companionconfig`,fillExport.cur.full)))}catch(e){if(e?.code!=="declined")toast(e?.code==="rate_limited"?"A save prompt is already open":"Couldn't save here. Use Copy JSON instead")}};
-$("#saveProject").onclick=async()=>{try{await saveFile("deckwriter-project.json",JSON.stringify(S));toast("Project saved")}catch(e){if(e?.code!=="declined")toast("Couldn't save the project")}};
+/* ---------- project files: the whole project in one file, to carry between computers ---------- */
+// Live's record of what is on this computer's Stream Deck stays behind: it means nothing on another machine.
+function projectData(){const st=JSON.parse(JSON.stringify(S));delete st.live;return JSON.stringify({deckwriter:"project",version:1,saved:new Date().toISOString(),state:st})}
+const projectName=()=>(S.projectName||"").trim()||"DeckWriter project";
+$("#saveProject").onclick=async()=>{const d=new Date(),p=n=>String(n).padStart(2,"0");
+  const name=`${projectName().replace(/[^\w\- ]+/g,"").trim()||"DeckWriter project"} ${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())} ${p(d.getHours())}${p(d.getMinutes())}.json`;
+  try{const r=await saveFile(name,projectData());toast(`Project saved as “${r==="renamed"?name+".json":name}”. Open it on any computer with Open project.`)}catch(e){if(e?.code!=="declined")toast("Couldn't save the project")}};
+function openProject(o,fileName){
+  const st=o?.deckwriter==="project"?o.state:o; // older saves were the bare project
+  if(!st||!Array.isArray(st.pages)||!st.pages.length||!st.pages.every(p=>p&&typeof p.buttons==="object"))throw new Error("not a project");
+  if(!DEVICES[st.device])st.device=S.device;
+  st.connections??=[];st.learned??={};st.pageIdx=Math.min(Math.max(0,st.pageIdx|0),st.pages.length-1);delete st.live;
+  if(fileName)st.projectName=fileName.replace(/(\.json)+$/i,"").replace(/\s+\d{4}-\d{2}-\d{2}( \d{4})?$/,"").trim();
+  commit(()=>{const live=S.live;S=st;if(live)S.live=live;selected=null;multi.clear()});
+  refreshAllArt();
+  const keys=st.pages.reduce((n,p)=>n+Object.keys(p.buttons).length,0);
+  toast(`Opened “${projectName()}”: ${st.pages.length} page${st.pages.length===1?"":"s"}, ${keys} keys. ⌘Z goes back to what you had.`);
+}
 
 /* ---------- import ---------- */
 function openImport(){$("#importResult").innerHTML="";$("#importDlg").showModal()}
@@ -1582,6 +1607,7 @@ function* walkEntities(list){for(const e of list||[]){if(!e)continue;yield e;if(
 function importFile(file){
   const out=$("#importResult");out.innerHTML=`<span class="empty-note">Reading ${esc(file.name)}…</span>`;
   readConfig(file).then(cfg=>{
+    if(cfg?.deckwriter==="project"){$("#importDlg").close();openProject(cfg,file.name);return}
     if(!cfg||typeof cfg!=="object"||!cfg.version)throw new Error("notcompanion");
     const inst=cfg.instances||{};const modOf={};let addedConn=0;
     undoStack.push(JSON.stringify(S));redoStack.length=0;
