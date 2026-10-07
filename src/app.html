@@ -2472,6 +2472,7 @@ async function relayStatus(){
 }
 // Live always follows the page you're on: DeckWriter's show pages line up with Companion's, in order, after the boot screen.
 const bootOnPage1=()=>!!((S.boot&&S.boot.mode!=="overlay")||S.pages.some(p=>p.boot)||/^boot$/i.test(liveRT.status?.pages?.find(p=>p.number===1)?.name||""));
+function livePageAt(n){const shows=S.pages.filter(p=>!p.boot);return shows[n-1-(bootOnPage1()?1:0)]||null}
 function livePageNum(pg){const shows=S.pages.filter(p=>!p.boot);return Math.max(1,shows.indexOf(pg)+1+(bootOnPage1()?1:0))}
 // never send live buttons onto the boot screen
 function liveBlocked(num,cp){if((bootOnPage1()&&num===1)||(cp&&/^boot$/i.test(cp.name||"")))return`Companion page ${num} is your boot screen, so Live won't touch it.`;return""}
@@ -2492,12 +2493,14 @@ function renderLive(){
     <div class="row"><span class="dot ${ok?"st-good":"st-bad"}"></span>Companion ${ok?`connected · ${st.pages.length} pages`:"not reachable"}</div>${liveRT.error?`<span class="st-msg st-warn">${esc(liveRT.error)}</span>`:""}`;
   $("#liveSetup").innerHTML=st||window.claude?"":`<div class="field live-setup"><span class="label">Start the relay: paste this into Terminal and leave it running</span><pre class="mono" style="background:var(--field);border:1px solid var(--stroke);border-radius:10px;padding:10px;font-size:11.5px;margin:0">${esc(RELAY_CMD)}</pre><div><button class="btn sm" id="liveCopyCmd">Copy command</button></div></div>`;
   const n=livePageNum(pg),cp=st?.pages?.find(p=>p.number===n);
-  $("#liveTargetInfo").textContent=pg.boot?"nothing (the boot page isn't sent live)":`Companion page ${n}${cp?` · “${cp.name}”`:st?" (Companion doesn't have this page yet)":""}`;$("#liveOn").checked=!!c.on;
-  $("#liveLog").textContent=liveRT.lastMsg||(cp?`Companion page ${n} is “${cp.name}” with ${cp.keys.length} key${cp.keys.length===1?"":"s"}.`:st?`Companion has no page ${n}.`:"");
+  $("#liveTargetInfo").textContent=pg.boot?"nothing (the boot page isn't sent live)":`Companion page ${n}${cp?` · “${cp.name}”`:st?" (not in Companion yet: Live adds it)":""}`;$("#liveOn").checked=!!c.on;
+  $("#liveLog").textContent=liveRT.lastMsg||(cp?`Companion page ${n} is “${cp.name}” with ${cp.keys.length} key${cp.keys.length===1?"":"s"}.`:st?`Companion has no page ${n} yet. Live adds it with your next change.`:"");
 }
 // Live also turns the Stream Deck to whichever page is open in DeckWriter
-function liveFollow(){const c=S.live,pg=page();if(!c?.on||!pg||liveRT.shown===pg.id||!liveRT.status?.companion)return;liveRT.shown=pg.id;
-  if(pg.boot)return;const num=livePageNum(pg);if(!liveRT.status.pages.some(p=>p.number===num)||liveBlocked(num,liveRT.status.pages.find(p=>p.number===num)))return;
+function liveFollow(){const c=S.live,pg=page();if(!c?.on||!pg||liveRT.shown===pg.id||!liveRT.status?.companion)return;
+  if(pg.boot){liveRT.shown=pg.id;return}const num=livePageNum(pg);
+  if(!liveRT.status.pages.some(p=>p.number===num)){scheduleLive();return} // the update adds the page, then this runs again
+  liveRT.shown=pg.id;if(liveBlocked(num,liveRT.status.pages.find(p=>p.number===num)))return;
   fetch(RELAY+"/page",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({page:num})}).then(r=>r.json()).then(r=>{if(!r.ok)throw new Error(r.error);if(!r.surfaces)toast("Live: no Stream Deck is connected to Companion")}).catch(e=>toast("Live couldn't change the Stream Deck page: "+e.message));
   scheduleLive()}
 function scheduleLive(){const c=S.live;if(!c?.on)return;clearTimeout(liveRT.timer);liveRT.timer=setTimeout(liveSync,450)}
@@ -2514,8 +2517,20 @@ async function liveSync(force){
   const pg=page(),pi=S.pageIdx;if(pg.boot){liveRT.lastMsg="The boot page isn't sent live.";renderLive();return}
   const st=await relayStatus();if(!st?.companion){renderLive();return} // always fresh: Companion may have changed since the last poll
   if(liveRT.busy){liveRT.pending=true;return} // a move started while we were asking
-  const num=livePageNum(pg),cp=st.pages.find(p=>p.number===num);if(!cp){liveRT.lastMsg=`Companion has no page ${num}.`;renderLive();return}
+  const num=livePageNum(pg);let cp=st.pages.find(p=>p.number===num);
+  if(!cp){ // a page made in DeckWriter: add it (and any before it) at the end of Companion's pages, then carry on
+    liveRT.busy=true;
+    try{const names={};for(let n=st.pages.length+1;n<=num;n++){const p=livePageAt(n);if(p)names[n]=p.name}
+      const r=await fetch(RELAY+"/addpages",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({upTo:num,names})}).then(x=>x.json());
+      if(!r.ok)throw new Error(r.error);toast(`Added page ${num} “${pg.name}” to Companion`)}
+    catch(e){liveRT.lastMsg=`Couldn't add page ${num} to Companion: ${e.message}`;toast(liveRT.lastMsg);renderLive();return}
+    finally{liveRT.busy=false}
+    const st2=await relayStatus();cp=st2?.pages?.find(p=>p.number===num);if(!cp)return;
+    const c0=liveCfg();c0.owned[pg.id]={};c0.base[pg.id]={};liveTarget(pg,num);
+    if(liveRT.busy){liveRT.pending=true;return}
+  }
   {const b=liveBlocked(num,cp);if(b){liveRT.lastMsg=b;toast(b);renderLive();return}}
+  if(pg.name.trim()&&cp.name!==pg.name.trim())fetch(RELAY+"/pagename",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({page:num,name:pg.name.trim()})}).catch(()=>{});
   liveTarget(pg,num);
   if(live.list){const known=new Set(live.list.map(x=>x.id)),ids=new Set();for(const ctl of Object.values(desiredControls(pi)))for(const id of ctlConnections(ctl))if(!known.has(id))ids.add(id);
     if(ids.size){const{done}=liveAutoLink([...ids]);if(done.length)toast("Linked "+done.join(", "))}}
@@ -2523,7 +2538,7 @@ async function liveSync(force){
   try{
     const want=desiredControls(pi),owned=(c.owned[pg.id]??={}),occupied=new Set(cp.keys.map(([r,cc])=>r+","+cc));
     // first time Live sees this page: remember what's already here and send nothing. Only later changes go out.
-    if(!force&&!c.base[pg.id]&&!Object.keys(owned).length){c.base[pg.id]=Object.fromEntries(Object.entries(want).map(([k,ctl])=>[k,keyHash(ctl)]));
+    if(!force&&!c.base[pg.id]&&!Object.keys(owned).length){c.base[pg.id]=Object.fromEntries(Object.entries(want).filter(([k])=>occupied.has(k)).map(([k,ctl])=>[k,keyHash(ctl)])); // keys Companion lacks still get sent
       try{localStorage.setItem("deckwright.v1",JSON.stringify(S))}catch(_){}
       liveRT.lastMsg=`Watching this page. Keys you add or change go to Companion page ${num}.`;return}
     const base=force?{}:(c.base[pg.id]||{});

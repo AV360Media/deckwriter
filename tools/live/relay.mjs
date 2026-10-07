@@ -23,7 +23,7 @@ const arg = (name, def) => {
 const COMPANION = arg('--companion', 'http://127.0.0.1:8000').replace(/\/+$/, '')
 const PORT = Number(arg('--port', 8790))
 const ALLOWED = [/^https:\/\/bryanchorton\.github\.io$/, /^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/, /^null$/]
-const VERSION = '1.2.0'
+const VERSION = '1.3.0'
 
 const log = (...a) => console.log(new Date().toLocaleTimeString(), ...a)
 
@@ -300,6 +300,25 @@ async function clearKey(page, row, column) {
 	return true
 }
 
+// Add pages at the end of Companion's list until it has `upTo` pages (never in the middle, which would renumber
+// the pages after it). Companion fills a new page with its own nav keys; those are cleared so DeckWriter's layout lands.
+async function addPages(upTo, names) {
+	let made = 0
+	for (let n = pages.order.length + 1; n <= upTo; n++) {
+		await call('pages.insert', { asPageNumber: n, pageNames: [String(names?.[n] || `Page ${n}`)] })
+		await waitFor(() => pages.order.length >= n)
+		await waitFor(() => Object.values(pages.byId[pages.order[n - 1]]?.controls || {}).some((r) => Object.keys(r).length), 1500)
+		for (const [r, row] of Object.entries(pages.byId[pages.order[n - 1]]?.controls || {}))
+			for (const c of Object.keys(row)) await call('controls.resetControl', { location: { pageNumber: n, row: Number(r), column: Number(c) } })
+		made++
+	}
+	return made
+}
+async function renamePage(page, name) {
+	guardPage(page)
+	await call('pages.setName', { pageNumber: page, name: String(name) })
+}
+
 // Turn every connected Stream Deck to a page: the same setting as "Current page" in Companion's Surfaces tab.
 async function showPage(page) {
 	const pageId = pages.order[page - 1]
@@ -383,6 +402,18 @@ http
 				const b = await body(req)
 				const done = await serial(() => clearKey(Number(b.page), Number(b.row), Number(b.column)))
 				log(`cleared page ${b.page} row ${b.row} col ${b.column}${done ? '' : ' (already empty)'}`)
+				return send(res, 200, { ok: true })
+			}
+			if (req.method === 'POST' && path === '/addpages') {
+				const b = await body(req)
+				const made = await serial(() => addPages(Number(b.upTo), b.names || {}))
+				if (made) log(`added ${made} page${made === 1 ? '' : 's'}, Companion now has ${pages.order.length}`)
+				return send(res, 200, { ok: true, made })
+			}
+			if (req.method === 'POST' && path === '/pagename') {
+				const b = await body(req)
+				await serial(() => renamePage(Number(b.page), b.name))
+				log(`page ${b.page} renamed "${b.name}"`)
 				return send(res, 200, { ok: true })
 			}
 			if (req.method === 'POST' && path === '/page') {

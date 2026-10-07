@@ -70,9 +70,10 @@ check('live never sends to the boot screen page', () => scripts[0].includes('{co
 check('undo never rolls back what Live sent', () => scripts[0].includes('S=JSON.parse(json);if(live)S.live=live'))
 check('project files leave Live state behind and open old saves', () => scripts[0].includes('delete st.live;return JSON.stringify({deckwriter:"project"') && scripts[0].includes('o?.deckwriter==="project"?o.state:o'))
 check('new pages start with page up, title and page down', () => scripts[0].includes('buttons:starterKeys(name)') && scripts[0].includes('kind:"pageup"};') && scripts[0].includes('pageTitle:true'))
+check('live adds missing pages only at the end of Companion', () => readFileSync(join(root, 'tools/live/relay.mjs'), 'utf8').includes('for (let n = pages.order.length + 1; n <= upTo; n++)'))
 check('live follows the open page with no page picker', () => !scripts[0].includes('livePage"') && !app.includes('id="livePage"'))
 check('live only clears keys DeckWriter sent or had when Live started', () => scripts[0].includes('if(owned[k]==null&&!occupied.has(k)){delete c.base[pg.id]?.[k];continue}'))
-check('relay never edits the boot page', () => { const r = readFileSync(join(root, 'tools/live/relay.mjs'), 'utf8'); return (r.match(/\tguardPage\(page\)/g) || []).length === 3 })
+check('relay never edits the boot page', () => { const r = readFileSync(join(root, 'tools/live/relay.mjs'), 'utf8'); return (r.match(/\tguardPage\(page\)/g) || []).length >= 3 })
 
 const test = build('test')
 check('test build is marked', () => test.includes('TEST BUILD') && test.includes('"deckwright.test.v1"'))
