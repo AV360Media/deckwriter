@@ -23,7 +23,7 @@ const arg = (name, def) => {
 const COMPANION = arg('--companion', 'http://127.0.0.1:8000').replace(/\/+$/, '')
 const PORT = Number(arg('--port', 8790))
 const ALLOWED = [/^https:\/\/bryanchorton\.github\.io$/, /^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/, /^null$/]
-const VERSION = '1.4.0'
+const VERSION = '1.4.1'
 
 const log = (...a) => console.log(new Date().toLocaleTimeString(), ...a)
 
@@ -36,26 +36,51 @@ const subs = new Map()
 // page model: order of page ids and, per page id, { name, controls: { row: { col: controlId } } }
 const pages = { order: [], byId: {} }
 
+// While Companion is starting up, a connection attempt can hang without ever opening or closing, so every
+// attempt gets a deadline, and a connected socket that stops hearing Companion's 30 s "PING" is dropped and redone.
+let lastHeard = 0
+let retry = null
+function reconnectSoon(sock) {
+	if (sock !== ws) return // an old socket: its replacement is already in charge
+	if (connected) log('lost Companion, retrying…')
+	connected = false
+	for (const p of pending.values()) p.reject(new Error('Companion connection closed'))
+	pending.clear()
+	subs.clear()
+	try {
+		sock.onopen = sock.onclose = sock.onmessage = null
+		sock.close()
+	} catch {}
+	clearTimeout(retry)
+	retry = setTimeout(connect, 2000)
+}
+setInterval(() => connected && Date.now() - lastHeard > 75000 && reconnectSoon(ws), 5000)
 function connect() {
 	const url = COMPANION.replace(/^http/, 'ws') + '/trpc'
-	ws = new WebSocket(url) // a local program: no Origin header, which Companion accepts
-	ws.onopen = () => {
+	let sock
+	try {
+		sock = ws = new WebSocket(url) // a local program: no Origin header, which Companion accepts
+	} catch {
+		retry = setTimeout(connect, 2000)
+		return
+	}
+	const deadline = setTimeout(() => !connected && reconnectSoon(sock), 5000)
+	sock.onopen = () => {
+		clearTimeout(deadline)
 		connected = true
+		lastHeard = Date.now()
 		log('connected to Companion at', COMPANION)
 		subscribe('pages.watch', undefined, onPages)
 	}
-	ws.onclose = () => {
-		if (connected) log('lost Companion, retrying…')
-		connected = false
-		for (const p of pending.values()) p.reject(new Error('Companion connection closed'))
-		pending.clear()
-		subs.clear()
-		setTimeout(connect, 2000)
+	sock.onclose = () => {
+		clearTimeout(deadline)
+		reconnectSoon(sock)
 	}
-	ws.onerror = () => {}
-	ws.onmessage = (ev) => {
+	sock.onerror = () => {}
+	sock.onmessage = (ev) => {
+		lastHeard = Date.now()
 		// Companion's tRPC server keeps the socket alive with "PING" and closes it if no "PONG" comes back
-		if (ev.data === 'PING') return ws.send('PONG')
+		if (ev.data === 'PING') return sock.send('PONG')
 		let msg
 		try {
 			msg = JSON.parse(ev.data)
