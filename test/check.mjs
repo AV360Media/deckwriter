@@ -76,6 +76,7 @@ check('deleting or restoring a page mirrors it in Companion', () => scripts[0].i
 check('live loads Companion and reads layered buttons', () => scripts[0].includes('async function livePull(why)') && scripts[0].includes('ctl.type==="button-layered"&&ctl.style?.layers') && readFileSync(join(root, 'tools/live/relay.mjs'), 'utf8').includes('includeSecrets=false'))
 check('page up/down targets are kept up to date on every page', () => scripts[0].includes('async function liveNavSync()') && (scripts[0].match(/liveNavSync\(\)/g)||[]).length>=3)
 check('live starts off and sends nothing before loading Companion', () => scripts[0].includes('if(s.live)s.live.on=false') && scripts[0].includes('if(!liveRT.pulled&&!force)return') && scripts[0].includes('return blankProject()'))
+check('readout presets have no icon and auto-size text', () => scripts[0].includes('if(isReadout(p)){b.png64=null;'))
 check('live follows the open page with no page picker', () => !scripts[0].includes('livePage"') && !app.includes('id="livePage"'))
 check('live only clears keys DeckWriter sent or had when Live started', () => scripts[0].includes('if(owned[k]==null&&!occupied.has(k)){delete c.base[pg.id]?.[k];continue}'))
 check('relay never edits the boot page', () => { const r = readFileSync(join(root, 'tools/live/relay.mjs'), 'utf8'); return (r.match(/\tguardPage\(page\)/g) || []).length >= 3 })

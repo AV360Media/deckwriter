@@ -732,9 +732,9 @@ const sel=()=>selected?page().buttons[selected]:null;
 /* ---------- button art ---------- */
 function loadImg(src){return new Promise((res,rej)=>{const i=new Image();i.onload=()=>res(i);i.onerror=rej;i.src=src})}
 function fitText(text){
-  const t=String(text||"");if(!t.trim())return 14;
+  const t=showVars(String(text||""));if(!t.trim())return 14; // fit what the key shows, not the $(variable) name: Companion sizes to the live value
   const lines=t.split("\n");const longestWord=Math.max(...t.split(/\s+/).map(w=>w.length));
-  for(const fs of [44,30,24,18,14,7]){const cw=fs*.56;const perLine=Math.max(1,Math.floor(68/cw));
+  for(const fs of [44,30,24,18,14,12,10,7]){const cw=fs*.56;const perLine=Math.max(1,Math.floor(68/cw));
     if(longestWord>perLine&&fs>7)continue;
     let n=0;for(const l of lines)n+=Math.max(1,Math.ceil(l.length/perLine));
     if(n*fs*1.12<=68)return fs}
@@ -1747,8 +1747,12 @@ function presetToButton(p,conn){
   b.steps=p.st.map(s=>({down:acts(s.down),up:acts(s.up),rotL:acts(s.rotL),rotR:acts(s.rotR)}));
   b.feedbacks=(p.fb||[]).map(f=>({connection:conn.id,type:f.f,options:fixVars(clone(f.o||{}),conn),style:f.s?{bgcolor:f.s.bg||undefined,color:f.s.fg||undefined}:{},inverted:!!f.inv}));
   if(p.png){b.png64=p.png.startsWith("data:")?p.png:"data:image/png;base64,"+p.png;b.image.mode="upload";b.image.src=b.png64;b.image.fit="contain"}
-  b.fromPreset=p.n;return applyPresetIcon(b,p);
+  b.fromPreset=p.n;
+  // a readout (no action, just live values like a timer, slide count or notes): no icon, text as big as the key allows
+  if(isReadout(p)){b.png64=null;Object.assign(b.image,{mode:"none",icon:null,src:null});b.size="auto";b.align="center:center";return b}
+  return applyPresetIcon(b,p);
 }
+const isReadout=p=>/\$\(/.test(String(p.tx||""))&&(p.st||[]).every(s=>!["down","up","rotL","rotR"].some(k=>(s[k]||[]).length));
 // Variables like $(atem:short_1) show as {short_1} in previews; Companion fills in the real value
 const ATEM_SRC={0:"Blk",1000:"Bars",2001:"Col 1",2002:"Col 2",3010:"MP 1",3011:"MP 1K",3020:"MP 2",3021:"MP 2K",3030:"MP 3",3040:"MP 4",6000:"SSrc",10010:"PGM",10011:"PVW"};
 const varName=n=>{const m=/^(?:short|long)_(\d+)$/.exec(n);if(m){const v=+m[1];return ATEM_SRC[v]||(v>0&&v<1000?"In "+v:String(v))}
@@ -2558,7 +2562,7 @@ function liveAutoLink(ids){const done=[],unsure=[];
     else if(cands.length>1)unsure.push(`${mine.label} (Companion has ${cands.map(x=>"“"+x.label+"”").join(" and ")}: pick one with Link in Connections)`)}
   if(done.length){persist();renderRail()}
   return{done,unsure}}
-const BUILD="Oct 7, 1:41 AM";
+const BUILD="Oct 7, 12:48 PM";
 function renderLive(){
   const bs=$("#buildStamp");if(bs)bs.textContent="Build "+BUILD;
   const c=liveCfg(),st=liveRT.status,ok=!!(st&&st.companion),pg=page();
@@ -2866,6 +2870,6 @@ refreshAllArt();
 })();
 </script>
 
-<div style="position:fixed;left:12px;bottom:12px;z-index:200;background:#e5484d;color:#fff;font:700 11px/1 system-ui,sans-serif;letter-spacing:.08em;padding:6px 8px;border-radius:6px;pointer-events:none">TEST BUILD · Oct 7, 1:41 AM</div>
+<div style="position:fixed;left:12px;bottom:12px;z-index:200;background:#e5484d;color:#fff;font:700 11px/1 system-ui,sans-serif;letter-spacing:.08em;padding:6px 8px;border-radius:6px;pointer-events:none">TEST BUILD · Oct 7, 12:48 PM</div>
 </body>
 </html>
