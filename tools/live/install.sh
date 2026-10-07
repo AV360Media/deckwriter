@@ -64,7 +64,13 @@ cat >"$PLIST" <<EOF
 </plist>
 EOF
 launchctl bootout "$DOMAIN/$LABEL" 2>/dev/null || true
-launchctl bootstrap "$DOMAIN" "$PLIST"
+# a service that was just unloaded can take a moment to go away; until then launchd refuses the new one
+ok=""
+for _ in 1 2 3 4 5 6 7 8 9 10; do
+	if launchctl bootstrap "$DOMAIN" "$PLIST" 2>/dev/null; then ok=1; break; fi
+	sleep 1
+done
+[ -n "$ok" ] || { echo "Couldn't register the DeckWriter Live service with launchd. Log out and back in, then run this again." >&2; exit 1; }
 
 # The helper app: opens for deckwriter-live:// links, starts the service, quits. No Dock icon.
 rm -rf "$APP"
