@@ -341,6 +341,23 @@ dialog.drawer .pgrid{grid-template-columns:repeat(auto-fill,minmax(82px,1fr))}
 .boot-layout[open] summary::before{transform:rotate(90deg)}
 @media (max-width:760px){.boot-grid{grid-template-columns:1fr}}
 
+.live-btn{gap:8px}
+.live-dot{width:8px;height:8px;border-radius:50%;background:var(--dim);flex:none}
+.live-btn.on{border-color:rgba(255,77,79,.6);color:#fff}
+.live-btn.on .live-dot{background:var(--live);box-shadow:0 0 10px rgba(255,77,79,.8);animation:livepulse 1.4s ease-in-out infinite}
+.live-btn.ready .live-dot{background:var(--ok)}
+.live-btn.problem .live-dot{background:var(--yellow)}
+@keyframes livepulse{50%{opacity:.35}}
+dialog.live-panel{position:fixed;inset:64px 16px auto auto;margin:0;width:min(420px,calc(100vw - 32px));z-index:70}
+.live-status{display:flex;flex-direction:column;gap:6px;padding:10px 12px;border-radius:11px;background:var(--field);border:1px solid var(--stroke);font-size:13px}
+.live-status .row{display:flex;gap:8px;align-items:center}
+.live-row{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.live-switch{font-weight:600;font-size:14px}
+.live-rules{margin:0;padding-left:18px;color:var(--muted);font-size:12.5px;display:flex;flex-direction:column;gap:3px}
+.live-setup pre{white-space:pre-wrap;word-break:break-all}
+.live-ask{position:fixed;left:50%;top:calc(70px + env(safe-area-inset-top,0px));transform:translateX(-50%);z-index:120;background:#2a1416;border:1px solid rgba(255,77,79,.5);color:#fff;border-radius:12px;padding:10px 14px;display:flex;gap:10px;align-items:center;flex-wrap:wrap;max-width:calc(100vw - 32px);box-shadow:0 18px 40px -10px rgba(0,0,0,.8);font-size:13.5px}
+@media (prefers-reduced-motion:reduce){.live-btn.on .live-dot{animation:none}}
+
 /* ---------- responsive ---------- */
 /* Desktop: the board fits the window; each column scrolls on its own only if it has to */
 @media (min-width:1001px) and (min-height:620px){
@@ -388,6 +405,7 @@ dialog.drawer .pgrid{grid-template-columns:repeat(auto-fill,minmax(82px,1fr))}
       <span class="vsep"></span>
       <button class="btn ghost sm" id="openImport"><span class="ico" data-ico="download"></span>Import</button>
     </div>
+    <button class="btn live-btn" id="liveBtn" aria-expanded="false"><span class="live-dot" id="liveDot"></span><span id="liveLabel">Live</span></button>
     <button class="btn primary" id="openExport"><span class="ico" data-ico="upload"></span>Export page</button>
   </div>
 </header>
@@ -504,6 +522,22 @@ dialog.drawer .pgrid{grid-template-columns:repeat(auto-fill,minmax(82px,1fr))}
   <div id="importResult" class="field"></div>
   <div class="dlg-foot"><button class="btn ghost" data-close>Close</button></div>
 </div></dialog>
+
+<dialog id="liveDlg" class="live-panel"><div class="dlg">
+  <div class="drawer-head"><h3>Live to Companion</h3><button class="btn ghost sm" id="liveClose">Close</button></div>
+  <p>Changes you make to keys on this page go straight to your Stream Deck, one key at a time, without importing.</p>
+  <div class="live-status" id="liveStatus"></div>
+  <div id="liveSetup"></div>
+  <div class="live-row"><span class="label">This page goes to Companion page</span><input class="inp" type="number" min="1" max="99" id="livePage" style="width:80px"></div>
+  <label class="check live-switch"><input type="checkbox" id="liveOn"> Live updates on</label>
+  <ul class="live-rules">
+    <li>Only keys you add or change are sent.</li>
+    <li>DeckWriter never clears a Companion key it didn't put there, and asks before replacing one that was already in Companion.</li>
+    <li>Keys must use connections that exist in Companion (link them in Connections).</li>
+  </ul>
+  <div class="dlg-foot"><span class="empty-note" id="liveLog" style="margin-right:auto;align-self:center"></span><button class="btn" id="livePushAll">Send whole page now</button></div>
+</div></dialog>
+<div class="live-ask" id="liveAsk" hidden></div>
 
 <dialog id="bootDlg" class="wide"><div class="dlg">
   <h3>Boot screen</h3>
@@ -660,7 +694,7 @@ function sampleProject(){
 
 let S; let selected=null; const multi=new Set(); const undoStack=[]; const redoStack=[]; let clipboard=null; let tab="look"; let stepIdx=0;
 function load(){try{const raw=localStorage.getItem("deckwright.v1");if(raw){const s=JSON.parse(raw);if(s&&s.pages)return s}}catch(e){}return sampleProject()}
-function persist(){clearTimeout(persist.t);persist.t=setTimeout(()=>{try{localStorage.setItem("deckwright.v1",JSON.stringify(S))}catch(e){}},250)}
+function persist(){clearTimeout(persist.t);persist.t=setTimeout(()=>{try{localStorage.setItem("deckwright.v1",JSON.stringify(S))}catch(e){}},250);if(typeof scheduleLive==="function")scheduleLive()}
 function commit(fn,{renderArtFor}={}){undoStack.push(JSON.stringify(S));if(undoStack.length>80)undoStack.shift();redoStack.length=0;fn();persist();
   if(renderArtFor){refreshArt(renderArtFor).then(render)}else render()}
 function undo(){if(!undoStack.length)return;redoStack.push(JSON.stringify(S));S=JSON.parse(undoStack.pop());persist();render()}
@@ -872,7 +906,8 @@ function render(){renderPagebar();renderDeck();renderRail();renderInspector();re
   $("#deckTitle").textContent=dev().name;$("#deckPage").textContent="Page "+(S.pageIdx+1);$("#connCount").textContent=S.connections.length||"";
   $("#device").value=S.device;$("#undo").disabled=!undoStack.length;$("#redo").disabled=!redoStack.length;
   $("#exampleBanner").hidden=!S.example;
-  $("#selHint").textContent=multi.size>1?`${multi.size} selected`:"";}
+  $("#selHint").textContent=multi.size>1?`${multi.size} selected`:"";
+  if(typeof renderLive==="function")renderLive();}
 
 /* ---------- mutations ---------- */
 function mutSel(fn,art=false){if(!selected)return;commit(()=>{fn(page().buttons[selected])},art?{renderArtFor:[selected]}:{})}
@@ -1647,14 +1682,16 @@ const showVars=t=>String(t||"").replace(/\$\(([^:()]+):([^()]+)\)/g,(_,c,n)=>var
 
 /* preset browser */
 let presetMod=null,presetCat="",presetQ="";
-function presetConn(mod){return S.connections.find(c=>c.id===$("#presetConn")?.value&&c.module===mod)||S.connections.find(c=>c.module===mod)}
+// prefer the connection picked in the drawer, then a real connection from a linked Companion, then any of that type
+function presetConn(mod){return S.connections.find(c=>c.id===$("#presetConn")?.value&&c.module===mod)||S.connections.find(c=>c.module===mod&&(typeof liveOf==="function"&&liveOf(c.id)))||S.connections.find(c=>c.module===mod&&c.fromCompanion)||S.connections.find(c=>c.module===mod)}
 function renderPresets(){
   const mods=Object.keys(LIBRARY);if(!presetMod||!LIBRARY[presetMod])presetMod=(S.connections.find(c=>LIBRARY[c.module])||{}).module||mods[0];
   const L=LIBRARY[presetMod];const cats=[...new Set(L.presets.map(p=>p.cat))];
   if(presetCat&&!cats.includes(presetCat))presetCat="";
   const q=presetQ.trim().toLowerCase();
   const list=L.presets.map((p,i)=>[p,i]).filter(([p])=>(!presetCat||p.cat===presetCat)&&(!q||(p.n+" "+p.tx+" "+p.cat).toLowerCase().includes(q)));
-  const conns=S.connections.filter(c=>c.module===presetMod);
+  const real=c=>(typeof liveOf==="function"&&liveOf(c.id))||c.fromCompanion?0:1;
+  const conns=S.connections.filter(c=>c.module===presetMod).sort((a,b)=>real(a)-real(b));
   $("#presetMods").innerHTML=mods.map(m=>`<button data-pmod="${esc(m)}" aria-pressed="${m===presetMod}">${esc(libName(m))}<span class="count">${LIBRARY[m].presets.length}</span></button>`).join("");
   $("#presetBar").innerHTML=`<select class="inp" id="presetCat" aria-label="Category"><option value="">All categories (${L.presets.length})</option>${cats.map(c=>`<option ${c===presetCat?"selected":""}>${esc(c)}</option>`).join("")}</select>
     <input class="inp" id="presetSearch" placeholder="Search presets" value="${esc(presetQ)}" aria-label="Search presets">
@@ -2364,6 +2401,102 @@ document.addEventListener("change",e=>{const m=e.target.closest("[data-matchconn
   commit(()=>{if(!S.connections.some(c=>c.id===x.id))S.connections.push({id:x.id,label:x.label,module:x.moduleId,fromCompanion:true});remapConnection(from.id,x.id)});
   toast(`Keys that used “${from.label}” now use Companion's “${x.label}”`)});
 document.addEventListener("visibilitychange",()=>{if(!document.hidden&&S.companionLinked)pollCompanion()});
+
+/* ---------- Live: push key changes straight to a running Companion ---------- */
+// DeckWriter talks to the local relay (tools/live/relay.mjs), which drives Companion's own editor channel.
+// For each DeckWriter page that is mapped to a Companion page, only keys whose content changed are sent.
+// Keys DeckWriter has sent are remembered (S.live.owned) so it only ever clears keys it put there, and it
+// asks before replacing a key that was already in Companion.
+const RELAY="http://127.0.0.1:8790";
+const RELAY_CMD='curl -fsSL https://raw.githubusercontent.com/bryanchorton/deckwriter/main/tools/live/relay.mjs -o ~/.deckwriter-relay.mjs && "/Applications/Companion.app/Contents/Resources/node-runtimes/node22/bin/node" ~/.deckwriter-relay.mjs';
+const liveRT={status:null,error:"",busy:false,timer:0,pending:false,skip:{},asking:false,lastMsg:""};
+const liveCfg=()=>{const c=(S.live??={on:false,map:{},owned:{}});c.base??={};return c};
+// stable fingerprint of an exported key: ignore the random entity ids
+const keyHash=ctl=>JSON.stringify(ctl,(k,val)=>k==="id"?undefined:val);
+async function relayStatus(){
+  try{const ctl=new AbortController();const t=setTimeout(()=>ctl.abort(),2500);
+    const r=await fetch(RELAY+"/status",{signal:ctl.signal,cache:"no-store"});clearTimeout(t);
+    liveRT.status=await r.json();liveRT.error=liveRT.status.companion?"":"The relay is running but can't reach Companion. Is Companion open?";
+  }catch(_){liveRT.status=null;liveRT.error=window.claude?"Live can't run inside Claude. Open DeckWriter from bryanchorton.github.io/deckwriter.":"The relay isn't running on this Mac."}
+  renderLive();return liveRT.status;
+}
+function livePageNum(pg){const c=liveCfg();return c.map[pg.id]||Math.max(1,S.pages.indexOf(pg)+1)}
+function renderLive(){
+  const c=liveCfg(),st=liveRT.status,ok=!!(st&&st.companion),pg=page();
+  const btn=$("#liveBtn");if(btn){btn.classList.toggle("on",c.on&&ok);btn.classList.toggle("ready",!c.on&&ok);btn.classList.toggle("problem",c.on&&!ok);
+    $("#liveLabel").textContent=c.on?(ok?`Live · page ${livePageNum(pg)}`:"Live · offline"):"Live"}
+  if(!$("#liveDlg").open)return;
+  $("#liveStatus").innerHTML=`<div class="row"><span class="dot ${st?"st-good":"st-bad"}"></span>Relay ${st?`running (v${esc(st.relay)})`:"not running"}</div>
+    <div class="row"><span class="dot ${ok?"st-good":"st-bad"}"></span>Companion ${ok?`connected · ${st.pages.length} pages`:"not reachable"}</div>${liveRT.error?`<span class="st-msg st-warn">${esc(liveRT.error)}</span>`:""}`;
+  $("#liveSetup").innerHTML=st||window.claude?"":`<div class="field live-setup"><span class="label">Start the relay: paste this into Terminal and leave it running</span><pre class="mono" style="background:var(--field);border:1px solid var(--stroke);border-radius:10px;padding:10px;font-size:11.5px;margin:0">${esc(RELAY_CMD)}</pre><div><button class="btn sm" id="liveCopyCmd">Copy command</button></div></div>`;
+  const n=livePageNum(pg),cp=st?.pages?.find(p=>p.number===n);
+  $("#livePage").value=n;$("#liveOn").checked=!!c.on;
+  $("#liveLog").textContent=liveRT.lastMsg||(cp?`Companion page ${n} is “${cp.name}” with ${cp.keys.length} key${cp.keys.length===1?"":"s"}.`:st?`Companion has no page ${n}.`:"");
+}
+function scheduleLive(){const c=S.live;if(!c?.on)return;clearTimeout(liveRT.timer);liveRT.timer=setTimeout(liveSync,450)}
+function desiredControls(pi){
+  const{data}=buildExport(pi);const out={};
+  for(const[r,row]of Object.entries(data.page.controls))for(const[col,ctl]of Object.entries(row)){
+    if(ctl.feedbacks)ctl.feedbacks=ctl.feedbacks.filter(f=>f.options?.variable!=="internal:custom_"+BOOT_VAR); // boot frames are not sent live
+    out[r+","+col]=ctl}
+  return out;
+}
+const ctlConnections=ctl=>{const ids=new Set();for(const st of Object.values(ctl.steps||{}))for(const set of Object.values(st.action_sets||{}))for(const a of set||[])if(a.instance!=="internal")ids.add(a.instance);for(const f of ctl.feedbacks||[])if(f.instance_id!=="internal")ids.add(f.instance_id);return[...ids]};
+async function liveSync(force){
+  const c=liveCfg();if(!c.on&&!force)return;if(liveRT.busy){liveRT.pending=true;return}
+  const pg=page(),pi=S.pageIdx;if(pg.boot){liveRT.lastMsg="The boot page isn't sent live.";renderLive();return}
+  const st=liveRT.status||await relayStatus();if(!st?.companion){renderLive();return}
+  const num=livePageNum(pg),cp=st.pages.find(p=>p.number===num);if(!cp){liveRT.lastMsg=`Companion has no page ${num}.`;renderLive();return}
+  liveRT.busy=true;
+  try{
+    const want=desiredControls(pi),owned=(c.owned[pg.id]??={}),occupied=new Set(cp.keys.map(([r,cc])=>r+","+cc));
+    // first time Live sees this page: remember what's already here and send nothing. Only later changes go out.
+    if(!force&&!c.base[pg.id]&&!Object.keys(owned).length){c.base[pg.id]=Object.fromEntries(Object.entries(want).map(([k,ctl])=>[k,keyHash(ctl)]));
+      try{localStorage.setItem("deckwright.v1",JSON.stringify(S))}catch(_){}
+      liveRT.lastMsg=`Watching this page. Keys you add or change go to Companion page ${num}.`;return}
+    const base=force?{}:(c.base[pg.id]||{});
+    const skip=(liveRT.skip[pg.id]??=new Set()),conflicts=[],problems=[];let sent=0,cleared=0;
+    const knownConns=new Set((live.list||[]).map(x=>x.id));
+    for(const[k,ctl]of Object.entries(want)){
+      const h=keyHash(ctl);if(owned[k]===h||skip.has(k)||(!owned[k]&&base[k]===h))continue;
+      const missing=ctlConnections(ctl).filter(id=>live.list?!knownConns.has(id):!S.connections.some(x=>x.id===id&&x.fromCompanion));
+      if(missing.length){const names=missing.map(id=>S.connections.find(x=>x.id===id)?.label||id);problems.push(`${keyCodeK(k)} uses ${names.join(", ")}, not in Companion`);continue}
+      if(!owned[k]&&occupied.has(k)){conflicts.push(k);continue}
+      const[r,col]=parseKey(k);
+      const res=await fetch(RELAY+"/push",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({page:num,row:r,column:col,control:ctl})}).then(x=>x.json());
+      if(!res.ok)throw new Error(res.error||"push failed");
+      owned[k]=h;sent++;if(res.notes?.length)problems.push(`${keyCodeK(k)}: ${res.notes.join("; ")}`);
+    }
+    for(const k of Object.keys(owned))if(!want[k]){const[r,col]=parseKey(k);
+      const res=await fetch(RELAY+"/clear",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({page:num,row:r,column:col})}).then(x=>x.json());
+      if(!res.ok)throw new Error(res.error||"clear failed");delete owned[k];cleared++}
+    try{localStorage.setItem("deckwright.v1",JSON.stringify(S))}catch(_){}
+    const parts=[];if(sent)parts.push(`sent ${sent} key${sent===1?"":"s"}`);if(cleared)parts.push(`cleared ${cleared}`);
+    liveRT.lastMsg=parts.length?`Companion page ${num}: ${parts.join(", ")}`:"Up to date";
+    if(problems.length)toast(problems[0]+(problems.length>1?` (+${problems.length-1} more)`:""));else if(sent||cleared)toast(liveRT.lastMsg);
+    if(conflicts.length)askReplace(pg,conflicts);
+  }catch(e){liveRT.lastMsg="Live update failed: "+e.message;toast(liveRT.lastMsg);relayStatus()}
+  finally{liveRT.busy=false;renderLive();if(liveRT.pending){liveRT.pending=false;scheduleLive()}}
+}
+function askReplace(pg,keys){
+  const el=$("#liveAsk");el.hidden=false;
+  el.innerHTML=`<span>Companion already has button${keys.length>1?"s":""} at <b>${keys.map(keyCodeK).join(", ")}</b> on page ${livePageNum(pg)}. Replace ${keys.length>1?"them":"it"}?</span><button class="btn sm danger" id="liveAskYes">Replace</button><button class="btn sm" id="liveAskNo">Leave ${keys.length>1?"them":"it"}</button>`;
+  el.dataset.keys=JSON.stringify(keys);el.dataset.page=pg.id;
+}
+document.addEventListener("click",async e=>{const t=e.target.closest("button")||e.target;
+  if(t.id==="liveBtn"){const d=$("#liveDlg");if(d.open){d.close();return}d.show();renderLive();relayStatus();return}
+  if(t.id==="liveClose"){$("#liveDlg").close();return}
+  if(t.id==="liveCopyCmd"){copyText(RELAY_CMD,"Copied. Paste it into Terminal and leave that window open.");return}
+  if(t.id==="livePushAll"){if(!liveRT.status?.companion){toast("Start the relay and open Companion first");return}const c=liveCfg();c.base[page().id]={};liveRT.skip[page().id]=new Set();await liveSync(true);return}
+  if(t.id==="liveAskYes"||t.id==="liveAskNo"){const el=$("#liveAsk"),keys=JSON.parse(el.dataset.keys||"[]"),pid=el.dataset.page;el.hidden=true;
+    if(t.id==="liveAskNo"){const sk=(liveRT.skip[pid]??=new Set());keys.forEach(k=>sk.add(k));toast("Left those keys alone");return}
+    const owned=(liveCfg().owned[pid]??={});keys.forEach(k=>{owned[k]="replace"});liveSync();return}
+});
+document.addEventListener("change",e=>{
+  if(e.target.id==="livePage"){const c=liveCfg();c.map[page().id]=Math.max(1,+e.target.value||1);c.owned[page().id]={};delete c.base[page().id];persist();renderLive();return}
+  if(e.target.id==="liveOn"){const c=liveCfg();c.on=e.target.checked;c.map[page().id]=livePageNum(page());if(c.on){c.base={};c.owned={}}persist();renderLive();if(c.on){toast(`Live on: changes on this page go to Companion page ${livePageNum(page())}`);liveSync()}return}
+});
+setInterval(()=>{if(!document.hidden&&(S.live?.on||$("#liveDlg")?.open))relayStatus()},4000);
 
 /* ---------- sources card tabs ---------- */
 document.addEventListener("click",e=>{const b=e.target.closest("[data-src]");if(!b)return;

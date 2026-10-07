@@ -28,3 +28,9 @@ Inside Claude the page uses `window.claude.use("sample")` (AI build, restyle, ta
 ## Module library (tools/module-library)
 
 `harness.js` stands in for the Companion host: it starts a module (v1 modules directly; v2 modules through Companion's own `ConnectionThread.js` with `MODULE_ENTRYPOINT`), answers `register` with `{connectionId, moduleApiVersion}`, calls `getConfigFields`/`init`, and records `setActionDefinitions`, `setFeedbackDefinitions`, `setPresetDefinitions`. `convert.py` turns that into `library.json`, expanding Companion 5 template presets and replacing `$(local:…)` variables. Running third-party module code needs the owner's OK each time.
+
+## Live mode (tools/live/relay.mjs)
+
+Companion's editor API is a tRPC websocket at `/trpc` that rejects browser connections from other origins (CSWSH guard) but accepts local programs with no Origin header. The relay connects as a local program and exposes `GET /status`, `POST /push {page,row,column,control}` and `POST /clear {page,row,column}` on 127.0.0.1:8790, CORS-limited to DeckWriter's origins. A push rebuilds one key the way Companion's editor would: `controls.resetControl` (newType `button-layered`), then `controls.styles.updateOption` on `canvas`/`box0`/`text0` (+ `addElement` image), `controls.steps.add`, `controls.entities.add`/`setOption`/`setInverted`, and feedback colours by editing the default overrides read back with `controls.watchControl`. Text size n becomes fontsize n / 0.6, matching Companion's legacy conversion. Built and tested against Companion 5.0.7 (procedure names come from that tag). Never use `importExport.importSinglePage` for this: it resets the whole page.
+
+DeckWriter side: `liveSync()` diffs export controls per key (`keyHash` ignores entity ids) against `S.live.owned[pageId]` (keys it sent) and `S.live.base[pageId]` (snapshot taken when Live first sees a page, never sent or cleared). The owner tested it on a "DeckWriter test" page (Companion page 3).

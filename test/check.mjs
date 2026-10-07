@@ -62,6 +62,11 @@ check('buttons export without the top bar', () => scripts[0].includes('show_topb
 check('boot trigger is a v6 trigger list', () => scripts[0].includes('version:6,type:"trigger_list"'))
 check('boot trigger cannot overlap itself', () => scripts[0].includes('condition:[notBusy]') && scripts[0].includes('name:BOOT_BUSY,value:"0"}));\n  const notBusy'))
 
+import { execFileSync } from 'node:child_process'
+check('live relay script parses', () => execFileSync(process.execPath, ['--check', join(root, 'tools/live/relay.mjs')]) !== undefined)
+check('live relay only accepts DeckWriter origins', () => readFileSync(join(root, 'tools/live/relay.mjs'), 'utf8').includes("const ALLOWED = [/^https:\\/\\/bryanchorton\\.github\\.io$/"))
+check('live mode never clears keys it did not send', () => scripts[0].includes('for(const k of Object.keys(owned))if(!want[k])'))
+
 const test = build('test')
 check('test build is marked', () => test.includes('TEST BUILD') && test.includes('"deckwright.test.v1"'))
 check('index.test.html is up to date (run npm run build)', () => readFileSync(join(root, 'index.test.html'), 'utf8') === test)

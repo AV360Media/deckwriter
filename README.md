@@ -37,6 +37,23 @@ Design Stream Deck pages for Bitfocus Companion: lay out keys, label and colour 
 
 Files saved from this site are named `*.companionconfig` and import directly. Inside Claude they save as `*.companionconfig.json`; remove the `.json` first.
 
+## Live: edit buttons on a running show
+
+Live sends each key you add, change, move or delete straight to Companion, one key at a time, without importing.
+
+1. Start the relay on the Companion Mac (uses Companion's own Node, nothing to install) and leave the window open:
+
+   ```bash
+   curl -fsSL https://raw.githubusercontent.com/bryanchorton/deckwriter/main/tools/live/relay.mjs -o ~/.deckwriter-relay.mjs && "/Applications/Companion.app/Contents/Resources/node-runtimes/node22/bin/node" ~/.deckwriter-relay.mjs
+   ```
+
+2. Open DeckWriter from this site in Chrome (Live can't run inside Claude). Link Companion in **Connections**.
+3. Click **Live** in the top bar, set which Companion page this DeckWriter page goes to, and switch **Live updates on**.
+
+When Live switches on it remembers the keys already on the page and sends nothing; only keys you add or change after that go out. It never clears a Companion key it didn't put there, asks before replacing a button that was already in Companion, and refuses keys whose connections aren't real Companion connections. **Send whole page now** pushes every key (still asking before replacing).
+
+The relay (`tools/live/relay.mjs`) listens only on 127.0.0.1:8790 and only answers DeckWriter's own origins. It drives Companion's internal editor API (the one Companion's web UI uses), which is unofficial and was built against Companion 5.0.x: after a Companion update, try Live on a spare page before relying on it.
+
 ## Other tools
 
 - **Connections**: add any of the 857 Companion connection types; for the five apps with a full library, the gear sets the connection up (IP and so on) and that goes into the export.
