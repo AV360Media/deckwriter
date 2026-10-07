@@ -705,8 +705,10 @@ function load(){try{const raw=localStorage.getItem("deckwright.test.v1");if(raw)
 function persist(){clearTimeout(persist.t);persist.t=setTimeout(()=>{try{localStorage.setItem("deckwright.test.v1",JSON.stringify(S))}catch(e){}},250);if(typeof scheduleLive==="function")scheduleLive()}
 function commit(fn,{renderArtFor}={}){undoStack.push(JSON.stringify(S));if(undoStack.length>80)undoStack.shift();redoStack.length=0;fn();persist();
   if(renderArtFor){refreshArt(renderArtFor).then(render)}else render()}
-function undo(){if(!undoStack.length)return;redoStack.push(JSON.stringify(S));S=JSON.parse(undoStack.pop());persist();render()}
-function redo(){if(!redoStack.length)return;undoStack.push(JSON.stringify(S));S=JSON.parse(redoStack.pop());persist();render()}
+// Live's record of what is on the Stream Deck is never rolled back: undo changes DeckWriter and Live sends the difference
+function restore(json){const live=S.live,companionLinked=S.companionLinked;S=JSON.parse(json);if(live)S.live=live;S.companionLinked=companionLinked}
+function undo(){if(!undoStack.length)return;redoStack.push(JSON.stringify(S));restore(undoStack.pop());persist();render()}
+function redo(){if(!redoStack.length)return;undoStack.push(JSON.stringify(S));restore(redoStack.pop());persist();render()}
 const page=()=>S.pages[S.pageIdx];
 const dev=()=>DEVICES[S.device]||DEVICES.mk2;
 const isSel=k=>multi.size>1?multi.has(k):selected===k;
@@ -2492,7 +2494,8 @@ const ctlConnections=ctl=>{const ids=new Set();for(const st of Object.values(ctl
 async function liveSync(force){
   const c=liveCfg();if(!c.on&&!force)return;if(liveRT.busy){liveRT.pending=true;return}
   const pg=page(),pi=S.pageIdx;if(pg.boot){liveRT.lastMsg="The boot page isn't sent live.";renderLive();return}
-  const st=liveRT.status||await relayStatus();if(!st?.companion){renderLive();return}
+  const st=await relayStatus();if(!st?.companion){renderLive();return} // always fresh: Companion may have changed since the last poll
+  if(liveRT.busy){liveRT.pending=true;return} // a move started while we were asking
   const num=livePageNum(pg),cp=st.pages.find(p=>p.number===num);if(!cp){liveRT.lastMsg=`Companion has no page ${num}.`;renderLive();return}
   {const b=liveBlocked(num,cp);if(b){liveRT.lastMsg=b;toast(b);renderLive();return}}
   liveTarget(pg,num);
@@ -2512,7 +2515,7 @@ async function liveSync(force){
       const h=keyHash(ctl);if(owned[k]===h||skip.has(k)||(!owned[k]&&base[k]===h))continue;
       const missing=ctlConnections(ctl).filter(id=>live.list?!knownConns.has(id):!S.connections.some(x=>x.id===id&&x.fromCompanion));
       if(missing.length){const names=missing.map(id=>{const m=S.connections.find(x=>x.id===id),n=(live.list||[]).filter(x=>x.moduleId===m?.module).length;return(m?.label||id)+(n>1?" (Companion has "+n+" of these, pick one with Link in Connections)":n?"":" (add this connection in Companion first)")});problems.push(`${keyCodeK(k)} uses ${names.join(", ")}, not linked to Companion`);continue}
-      if(!owned[k]&&occupied.has(k)){conflicts.push(k);continue}
+      if(!owned[k]&&base[k]==null&&occupied.has(k)){conflicts.push(k);continue}
       const[r,col]=parseKey(k);
       const res=await fetch(RELAY+"/push",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({page:num,row:r,column:col,control:ctl})}).then(x=>x.json());
       if(!res.ok)throw new Error(res.error||"push failed");
@@ -2535,28 +2538,32 @@ async function liveSync(force){
 }
 // A drag in DeckWriter is mirrored in Companion as a swap (a move onto an empty key, a trade onto a full one),
 // or a copy for Option-drag, and the bookkeeping moves with it so the key isn't sent again.
-function liveMoved(pg,from,to,copy){
+async function liveMoved(pg,from,to,copy){
   const c=S.live;if(!c?.on||pg.boot)return;
   const why=m=>{liveRT.lastMsg=m;toast(m);renderLive()};
-  if(!liveRT.status?.companion)return why("Live: move not sent, the relay or Companion isn't connected");
-  const num=livePageNum(pg),cp=liveRT.status.pages.find(p=>p.number===num);if(!cp)return why(`Live: Companion has no page ${num}`);
-  {const b=liveBlocked(num,cp);if(b)return why(b)}
-  liveTarget(pg,num);
-  const occ=new Set(cp.keys.map(([r,cc])=>r+","+cc)),owned=(c.owned[pg.id]??={}),base=(c.base[pg.id]??={});
-  // the dragged key is the same button in both apps; only a Companion button DeckWriter never had at the target stays put
-  const hadTo=copy?false:!!pg.buttons[from];
-  if(occ.has(to)&&!hadTo&&owned[to]==null&&base[to]==null)return why(`Live: ${keyCodeK(to)} has a different button in Companion, so it wasn't moved there`);
-  if(copy&&occ.has(to))return why(`Live: ${keyCodeK(to)} already has a button in Companion, so it wasn't copied`);
-  const swapRec=(m)=>{const a=m[from],b=m[to];if(b!=null)m[from]=b;else delete m[from];if(a!=null)m[to]=a;else delete m[to]};
-  const copyRec=(m)=>{if(m[from]!=null)m[to]=m[from];else delete m[to]};
-  (copy?copyRec:swapRec)(owned);(copy?copyRec:swapRec)(base);
-  try{localStorage.setItem("deckwright.test.v1",JSON.stringify(S))}catch(_){}
-  const[fr,fc]=parseKey(from),[tr,tc]=parseKey(to);
+  while(liveRT.busy)await new Promise(r=>setTimeout(r,60));
   liveRT.busy=true;
-  fetch(RELAY+"/transfer",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({page:num,op:copy?"copy":"swap",from:{row:fr,column:fc},to:{row:tr,column:tc}})})
-    .then(r=>r.json()).then(res=>{if(!res.ok)throw new Error(res.error);liveRT.lastMsg=`Companion page ${num}: ${copy?"copied":"moved"} ${keyCodeK(from)} → ${keyCodeK(to)}`;toast(liveRT.lastMsg)})
-    .catch(e=>{liveRT.lastMsg="Live move failed: "+e.message;toast(liveRT.lastMsg)})
-    .finally(()=>{liveRT.busy=false;relayStatus();scheduleLive()});
+  try{
+    const st=await relayStatus(); // fresh: a key cleared a moment ago must not look occupied
+    if(!st?.companion)return why("Live: move not sent, the relay or Companion isn't connected");
+    const num=livePageNum(pg),cp=st.pages.find(p=>p.number===num);if(!cp)return why(`Live: Companion has no page ${num}`);
+    {const b=liveBlocked(num,cp);if(b)return why(b)}
+    liveTarget(pg,num);
+    const occ=new Set(cp.keys.map(([r,cc])=>r+","+cc)),owned=(c.owned[pg.id]??={}),base=(c.base[pg.id]??={});
+    // the dragged key is the same button in both apps; only a Companion button DeckWriter never had at the target stays put
+    const hadTo=copy?false:!!pg.buttons[from];
+    if(occ.has(to)&&!hadTo&&owned[to]==null&&base[to]==null)return why(`Live: ${keyCodeK(to)} has a different button in Companion, so it wasn't moved there`);
+    if(copy&&occ.has(to))return why(`Live: ${keyCodeK(to)} already has a button in Companion, so it wasn't copied`);
+    const swapRec=(m)=>{const a=m[from],b=m[to];if(b!=null)m[from]=b;else delete m[from];if(a!=null)m[to]=a;else delete m[to]};
+    const copyRec=(m)=>{if(m[from]!=null)m[to]=m[from];else delete m[to]};
+    (copy?copyRec:swapRec)(owned);(copy?copyRec:swapRec)(base);
+    try{localStorage.setItem("deckwright.test.v1",JSON.stringify(S))}catch(_){}
+    const[fr,fc]=parseKey(from),[tr,tc]=parseKey(to);
+    const res=await fetch(RELAY+"/transfer",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({page:num,op:copy?"copy":"swap",from:{row:fr,column:fc},to:{row:tr,column:tc}})}).then(r=>r.json());
+    if(!res.ok)throw new Error(res.error);
+    liveRT.lastMsg=`Companion page ${num}: ${copy?"copied":"moved"} ${keyCodeK(from)} → ${keyCodeK(to)}`;toast(liveRT.lastMsg);
+  }catch(e){liveRT.lastMsg="Live move failed: "+e.message;toast(liveRT.lastMsg)}
+  finally{liveRT.busy=false;scheduleLive()}
 }
 function askReplace(pg,keys){
   const el=$("#liveAsk");el.hidden=false;

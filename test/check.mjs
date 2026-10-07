@@ -67,6 +67,7 @@ check('live relay script parses', () => execFileSync(process.execPath, ['--check
 check('live relay only accepts DeckWriter origins', () => readFileSync(join(root, 'tools/live/relay.mjs'), 'utf8').includes("const ALLOWED = [/^https:\\/\\/bryanchorton\\.github\\.io$/"))
 check('live moves never use the deleting moveControl', () => !readFileSync(join(root, 'tools/live/relay.mjs'), 'utf8').includes("call('controls.moveControl'"))
 check('live never sends to the boot screen page', () => scripts[0].includes('{const b=liveBlocked(num,cp);if(b){liveRT.lastMsg=b') && scripts[0].includes('{const b=liveBlocked(num,cp);if(b)return why(b)}'))
+check('undo never rolls back what Live sent', () => scripts[0].includes('S=JSON.parse(json);if(live)S.live=live'))
 check('live follows the open page with no page picker', () => !scripts[0].includes('livePage"') && !app.includes('id="livePage"'))
 check('live only clears keys DeckWriter sent or had when Live started', () => scripts[0].includes('if(owned[k]==null&&!occupied.has(k)){delete c.base[pg.id]?.[k];continue}'))
 check('relay never edits the boot page', () => { const r = readFileSync(join(root, 'tools/live/relay.mjs'), 'utf8'); return (r.match(/\tguardPage\(page\)/g) || []).length === 3 })
