@@ -1,0 +1,2110 @@
+<title>Deckwright</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500&display=swap">
+<script src="https://unpkg.com/lucide@0.460.0/dist/umd/lucide.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/js-yaml/4.1.0/js-yaml.min.js"></script>
+<style>
+/* Layout: a node canvas. Floating HUD pills on top, a dock at the bottom; three columns of graphite nodes
+   (Prompt + sources | the deck + its automation chain | key inspector) joined by wires drawn on a dotted board.
+   Reference: RonDesignLab "PicGen" workflow dashboard. Committed single dark theme. */
+:root{
+  --canvas:#0b0b0c; --dotc:rgba(255,255,255,.075);
+  --node:#18181b; --node-hi:#1f1f23; --field:#121214; --raise:#26262a;
+  --stroke:rgba(255,255,255,.07); --stroke-2:rgba(255,255,255,.13);
+  --fg:#f1f1f2; --muted:#8d8d95; --dim:#5b5b63;
+  --lime:#c6f432; --pink:#ff5ad9; --yellow:#f4e64a; --blue:#6a95ff; --live:#ff4d4f; --ok:#3ccf74;
+  --wire:rgba(255,255,255,.18);
+  /* aliases used by generated markup */
+  --accent:var(--lime); --accent-ink:#101100; --line:var(--stroke); --line2:var(--stroke-2); --sunk:var(--field); --panel:var(--node); --bg:var(--canvas); --info:var(--blue);
+  --f-ui:"Geist",ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif;
+  --f-mono:"Geist Mono",ui-monospace,Menlo,monospace;
+  --f-display:var(--f-ui); --f-body:var(--f-ui);
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+html,body{min-height:100%}
+body{margin:0;background:radial-gradient(1200px 500px at 50% -10%,rgba(198,244,50,.05),transparent 70%),radial-gradient(circle at 1px 1px,var(--dotc) 1px,transparent 0) 0 0/22px 22px,var(--canvas);color:var(--fg);font:14px/1.45 var(--f-ui);-webkit-font-smoothing:antialiased}
+button,input,select,textarea{font:inherit;color:inherit}
+button{cursor:pointer}
+:focus-visible{outline:2px solid var(--lime);outline-offset:2px}
+.mono{font-family:var(--f-mono)}
+.label{font:500 12px/1.2 var(--f-ui);color:var(--muted)}
+svg.lucide,.ico svg{width:16px;height:16px;flex:none}
+.ico{display:inline-flex}
+
+/* ---------- HUD ---------- */
+.hud{position:sticky;top:env(safe-area-inset-top,0px);z-index:40;display:flex;align-items:center;gap:10px;padding:14px 16px;flex-wrap:wrap;pointer-events:none}
+.hud>*{pointer-events:auto}
+.pill{display:flex;align-items:center;gap:6px;background:rgba(24,24,27,.86);border:1px solid var(--stroke-2);border-radius:14px;padding:5px;backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);box-shadow:0 10px 30px -12px rgba(0,0,0,.7)}
+.brand{padding-left:10px}
+.mark{width:22px;height:22px;display:grid;grid-template-columns:repeat(3,1fr);gap:2px;flex:none}
+.mark i{border-radius:2px;background:#3a3a40}.mark i:nth-child(2){background:var(--lime)}.mark i:nth-child(6){background:var(--pink)}.mark i:nth-child(7){background:var(--yellow)}
+.brand b{font-weight:600;font-size:15px;letter-spacing:-.01em;margin:0 6px 0 4px}
+.vsep{width:1px;height:20px;background:var(--stroke-2);margin:0 2px}
+.pill select{background:transparent;border:0;padding:5px 8px;border-radius:9px;font-size:13px;color:var(--fg);max-width:220px}
+.pill select:hover{background:rgba(255,255,255,.06)}
+.pill select option{background:#18181b}
+.pager{margin:0 auto}
+.pager .pagename{background:transparent;border:1px solid transparent;border-radius:8px;padding:4px 8px;font:500 14px var(--f-ui);width:16ch;text-align:center;min-width:0}
+.pager .pagename:hover{border-color:var(--stroke)}
+.pager .pagename:focus{border-color:var(--lime);outline:none}
+.pager .count{font:500 11px var(--f-mono);color:var(--dim);padding:0 4px}
+.hud-right{display:flex;gap:8px;align-items:center}
+.ic{width:32px;height:32px;display:inline-grid;place-items:center;border-radius:9px;background:transparent;border:0;color:var(--muted);padding:0}
+.ic:hover{background:rgba(255,255,255,.07);color:var(--fg)}
+.ic:disabled{opacity:.35;cursor:default;background:none}
+.ic.armed{color:var(--live);background:rgba(255,77,79,.12)}
+
+/* ---------- buttons, fields ---------- */
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;height:32px;padding:0 12px;border-radius:10px;background:var(--raise);border:1px solid var(--stroke-2);font:500 13px var(--f-ui);white-space:nowrap;color:var(--fg);text-decoration:none}
+.btn:hover{background:#2e2e33}
+.btn.primary{background:#f4f4f5;color:#0b0b0c;border-color:#f4f4f5}
+.btn.primary:hover{background:#fff}
+.btn.lime{background:var(--lime);color:#0f1200;border-color:var(--lime);font-weight:600}
+.btn.lime:hover{filter:brightness(1.06)}
+.btn.ghost{background:transparent;border-color:transparent;color:var(--muted)}.btn.ghost:hover{color:var(--fg);background:rgba(255,255,255,.06)}
+.btn.danger{color:#ff7b7d}
+.btn:disabled{opacity:.4;cursor:not-allowed}
+.btn.sm{height:28px;padding:0 10px;font-size:12.5px;border-radius:8px}
+.btn svg{width:15px;height:15px}
+select.inp,input.inp,textarea.inp{background:var(--field);border:1px solid var(--stroke);border-radius:9px;padding:7px 9px;min-width:0;width:100%;font-size:13px}
+select.inp:focus,input.inp:focus,textarea.inp:focus{border-color:rgba(198,244,50,.6);outline:none}
+textarea.inp{resize:vertical}
+.chip{display:inline-flex;align-items:center;gap:4px;font:500 11px/1 var(--f-mono);padding:4px 7px;border-radius:6px;background:rgba(255,255,255,.06);color:var(--muted);white-space:nowrap}
+.chip.lime{background:var(--lime);color:#0f1200}.chip.pink{background:var(--pink);color:#1a0016}.chip.yellow{background:var(--yellow);color:#1a1800}
+.seg{display:inline-flex;background:var(--field);border:1px solid var(--stroke);border-radius:10px;padding:3px;gap:2px;flex-wrap:wrap}
+.seg button{border:0;background:transparent;padding:5px 10px;border-radius:7px;font-size:12.5px;color:var(--muted)}
+.seg button:hover{color:var(--fg)}
+.seg button[aria-pressed="true"]{background:var(--raise);color:var(--fg);box-shadow:inset 0 0 0 1px var(--stroke-2)}
+
+/* ---------- board & nodes ---------- */
+.board{position:relative;display:grid;grid-template-columns:300px minmax(0,1fr) 360px;gap:28px 64px;align-items:start;padding:12px 24px 120px;max-width:1720px;margin:0 auto}
+.col{display:flex;flex-direction:column;gap:20px;min-width:0;position:relative;z-index:1}
+.col.mid{align-items:center}
+.wires{position:absolute;inset:0;pointer-events:none;z-index:0;overflow:visible}
+.wires path{fill:none;stroke:var(--wire);stroke-width:1.5}
+.wires path.w-sel{stroke:var(--yellow);stroke-opacity:.75}
+.ai-busy .wires path.w-prompt{stroke:var(--lime);stroke-dasharray:6 6;animation:flow 0.8s linear infinite}
+@keyframes flow{to{stroke-dashoffset:-12}}
+.wires circle{fill:var(--canvas);stroke:var(--muted);stroke-width:1.5}
+.wires circle.sel{stroke:var(--yellow);fill:var(--yellow)}
+.tags{position:absolute;inset:0;pointer-events:none;z-index:5}
+.ctag{position:absolute;transform:translate(-4px,-100%);font:600 10.5px/1 var(--f-mono);padding:4px 6px 4px 14px;border-radius:6px;color:#111;white-space:nowrap;box-shadow:0 4px 10px rgba(0,0,0,.4)}
+.ctag::before{content:"";position:absolute;left:4px;top:50%;width:0;height:0;border-left:4px solid transparent;border-right:4px solid transparent;border-top:6px solid rgba(0,0,0,.55);transform:translateY(-50%) rotate(-35deg)}
+.ctag.yellow{background:var(--yellow)}.ctag.pink{background:var(--pink)}.ctag.lime{background:var(--lime)}
+
+.node{background:linear-gradient(180deg,var(--node-hi),var(--node) 60px);border:1px solid var(--stroke-2);border-radius:18px;box-shadow:inset 0 1px 0 rgba(255,255,255,.04),0 24px 48px -24px rgba(0,0,0,.8);position:relative;min-width:0;width:100%}
+.node-h{display:flex;align-items:center;gap:8px;padding:12px 14px;font-weight:500;font-size:13.5px;border-bottom:1px solid var(--stroke)}
+.node-h .grow{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.dot{width:7px;height:7px;border-radius:50%;background:var(--muted);flex:none}
+.dot.lime{background:var(--lime);box-shadow:0 0 10px rgba(198,244,50,.6)}.dot.yellow{background:var(--yellow)}.dot.pink{background:var(--pink)}.dot.blue{background:var(--blue)}
+.node-b{padding:14px;display:flex;flex-direction:column;gap:12px}
+
+/* prompt node */
+.composer textarea{background:var(--field);border:1px solid var(--stroke);border-radius:12px;padding:11px 12px;min-height:96px;resize:vertical;font-size:14px;width:100%;line-height:1.45}
+.composer textarea:focus{border-color:rgba(198,244,50,.6);outline:none}
+.comp-row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.ai-status{font-size:12.5px;color:var(--muted);min-height:1.2em;flex:1;min-width:140px}
+.ai-status.err{color:#ff7b7d}.ai-status.good{color:var(--lime)}
+.ai-notes{font-size:12.5px;background:var(--field);border:1px solid var(--stroke);border-left:2px solid var(--blue);padding:8px 10px;border-radius:8px;white-space:pre-wrap}
+.conn{display:flex;align-items:center;gap:9px;padding:8px 10px;border-radius:11px;background:var(--field);border:1px solid var(--stroke);margin-bottom:6px}
+.conn .dot{width:8px;height:8px}
+.conn .meta{min-width:0;flex:1}
+.conn b{display:block;font-weight:500;font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.conn span{display:block;color:var(--muted);font:11.5px var(--f-mono);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.conn .x{border:0;background:none;color:var(--dim);padding:2px 4px;border-radius:6px}.conn .x:hover{color:var(--live)}
+.empty-note{color:var(--muted);font-size:12.5px;line-height:1.45}
+.addconn{display:grid;grid-template-columns:1fr 1fr auto;gap:6px}
+.chips{display:flex;flex-direction:column;gap:6px}
+.chip-btn{text-align:left;border:1px solid var(--stroke);background:var(--field);border-radius:10px;padding:8px 10px;font-size:12.5px;color:var(--fg);line-height:1.35}
+.chip-btn:hover{border-color:var(--stroke-2);background:#18181b}
+.chip-btn b{color:var(--pink);font-weight:500}
+.learned{font-size:12.5px;color:var(--muted)}.learned b{color:var(--fg);font-weight:500}
+
+/* deck node */
+.deck-node{width:100%}
+.deck-node .node-b{align-items:center;overflow:hidden}
+.deck{--cols:5;--k:clamp(48px,5.6vw,88px);background:radial-gradient(120% 90% at 50% 0%,#1a1a1e,#0f0f11);border:1px solid #2a2a2f;border-radius:22px;padding:calc(var(--k)*.3);box-shadow:inset 0 1px 0 rgba(255,255,255,.05),0 16px 32px -12px rgba(0,0,0,.7);display:flex;flex-direction:column;gap:calc(var(--k)*.2);position:relative}
+.grid{display:grid;grid-template-columns:repeat(var(--cols),var(--k));gap:calc(var(--k)*.17)}
+.key{width:var(--k);aspect-ratio:1;max-width:100%;border-radius:calc(var(--k)*.16);position:relative;overflow:hidden;background:#000;border:0;padding:0;container-type:inline-size;box-shadow:0 0 0 1px #000,0 2px 0 #050506,inset 0 0 0 1px rgba(255,255,255,.05);touch-action:none;user-select:none;-webkit-user-select:none;transition:box-shadow .12s}
+.key .art{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;pointer-events:none}
+.key .txt{position:absolute;inset:3%;display:flex;font-family:Arimo,Arial,Helvetica,sans-serif;white-space:pre-wrap;overflow-wrap:anywhere;line-height:1.08;pointer-events:none}
+.key .txt span{display:block;width:100%}
+.key .badges{position:absolute;right:5%;top:5%;display:flex;gap:2px;pointer-events:none}
+.key .badges i{width:5px;height:5px;border-radius:50%;background:var(--lime);box-shadow:0 0 0 1px #000}
+.key .badges i.fb{background:var(--pink)}
+.key.empty{background:#0c0c0e}
+.key.empty::after{content:"+";position:absolute;inset:0;display:grid;place-items:center;color:#34343a;font-size:28cqw;opacity:0;transition:opacity .12s}
+.key.empty:hover::after{opacity:1}
+.key.sel{box-shadow:0 0 0 2px var(--yellow),0 0 22px rgba(244,230,74,.25)}
+.key.drop{box-shadow:0 0 0 2px var(--blue),0 0 18px rgba(106,149,255,.35)}
+.key.dragging{opacity:.3}
+.drag-ghost{position:fixed;pointer-events:none;z-index:99;opacity:.92;transform:translate(-50%,-50%) scale(1.06);box-shadow:0 16px 36px rgba(0,0,0,.6)!important}
+.dials{display:grid;grid-template-columns:repeat(var(--cols),var(--k));gap:calc(var(--k)*.17);justify-items:center}
+.dial{width:calc(var(--k)*.82);aspect-ratio:1;border-radius:50%;background:radial-gradient(circle at 35% 30%,#3b3b42,#141417 70%);border:1px solid #2a2a2f;position:relative;padding:0;color:#d8d8dc;font:500 10.5px var(--f-ui);overflow:hidden;touch-action:none}
+.dial.sel{box-shadow:0 0 0 2px var(--yellow)}.dial.drop{box-shadow:0 0 0 2px var(--blue)}
+.dial span{position:absolute;inset:18%;display:grid;place-items:center;text-align:center;line-height:1.05;overflow:hidden}
+.deck-foot{display:flex;justify-content:space-between;align-items:center;color:var(--dim);font:500 10px var(--f-mono);letter-spacing:.08em;text-transform:uppercase;padding:0 4px}
+.hints{display:flex;flex-wrap:wrap;gap:4px 14px;justify-content:center;color:var(--dim);font-size:12px}
+kbd{font:500 10.5px var(--f-mono);background:var(--raise);border:1px solid var(--stroke-2);border-bottom-width:2px;border-radius:5px;padding:0 4px;color:var(--muted)}
+.note-node{border-color:rgba(255,90,217,.3)}
+.note-node .node-b{flex-direction:row;flex-wrap:wrap;align-items:center;font-size:12.5px;color:var(--muted)}
+.note-node .node-b span{flex:1 1 260px}
+
+/* automation chain */
+.chain{width:100%}
+.chain .node-b{gap:10px}
+.chain-row{display:flex;align-items:center;overflow-x:auto;padding:2px 2px 6px;scrollbar-width:thin}
+.chain-row .rlabel{font:500 11px var(--f-mono);color:var(--dim);width:64px;flex:none}
+.cnode{display:flex;align-items:center;gap:8px;background:var(--field);border:1px solid var(--stroke-2);border-radius:11px;padding:7px 11px;flex:none;max-width:240px;text-align:left}
+.cnode:hover{border-color:rgba(255,255,255,.25)}
+.cnode .ct{min-width:0;display:flex;flex-direction:column}
+.cnode b{font-weight:500;font-size:12.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.cnode small{font:11px var(--f-mono);color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.cnode.trig{background:#232327}
+.cnode.cempty{border-style:dashed;color:var(--muted);font-size:12.5px}
+.clink{width:22px;height:1.5px;background:var(--wire);flex:none;position:relative}
+.clink::after{content:"";position:absolute;right:-1px;top:-3px;border-left:5px solid var(--wire);border-top:3.5px solid transparent;border-bottom:3.5px solid transparent}
+
+/* inspector */
+.insp{position:sticky;top:76px;max-height:calc(100vh - 96px);display:flex;flex-direction:column;overflow:hidden}
+.insp-head{padding:12px 14px;display:flex;align-items:center;gap:8px;border-bottom:1px solid var(--stroke)}
+.insp-head::before{content:"";width:7px;height:7px;border-radius:50%;background:var(--yellow);flex:none}
+.insp-head .pos{font:500 11px var(--f-mono);color:var(--muted);background:rgba(255,255,255,.06);padding:3px 6px;border-radius:6px}
+.insp-head h2{font:500 14px var(--f-ui);margin:0;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.tabs{display:flex;gap:2px;margin:12px 14px 0;padding:3px;background:var(--field);border:1px solid var(--stroke);border-radius:11px}
+.tab{flex:1;border:0;background:none;padding:6px 4px;border-radius:8px;color:var(--muted);font:500 12.5px var(--f-ui)}
+.tab:hover{color:var(--fg)}
+.tab[aria-selected="true"]{background:var(--raise);color:var(--fg);box-shadow:inset 0 0 0 1px var(--stroke-2)}
+.tab .count{font:500 10.5px var(--f-mono);color:var(--lime);margin-left:4px}
+.panel{padding:14px;display:flex;flex-direction:column;gap:14px;overflow-y:auto;min-height:0}
+.field{display:flex;flex-direction:column;gap:6px;min-width:0}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.swatches{display:grid;grid-template-columns:repeat(10,1fr);gap:4px}
+.sw{aspect-ratio:1;border-radius:6px;border:1px solid rgba(255,255,255,.12);padding:0}
+.sw[aria-pressed="true"]{outline:2px solid var(--fg);outline-offset:1px}
+.colorrow{display:flex;gap:8px;align-items:center}
+.colorrow input[type=color]{width:34px;height:32px;border:1px solid var(--stroke);border-radius:9px;background:var(--field);padding:3px;flex:none}
+.colorrow input.inp{font-family:var(--f-mono);font-size:12.5px}
+.align-grid{display:grid;grid-template-columns:repeat(3,26px);gap:3px}
+.align-grid button{width:26px;height:26px;border:1px solid var(--stroke);background:var(--field);border-radius:6px;padding:0;display:grid;place-items:center}
+.align-grid button::after{content:"";width:6px;height:6px;border-radius:2px;background:var(--dim)}
+.align-grid button[aria-pressed="true"]{border-color:var(--lime)}.align-grid button[aria-pressed="true"]::after{background:var(--lime)}
+.preview-big{display:flex;gap:14px;align-items:center}
+.preview-big .key{--k:104px;flex:none}
+.icon-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(36px,1fr));gap:4px;max-height:196px;overflow-y:auto;padding:2px}
+.icon-grid button{aspect-ratio:1;border:1px solid var(--stroke);background:var(--field);border-radius:8px;display:grid;place-items:center;padding:0;color:var(--fg)}
+.icon-grid button svg{width:19px;height:19px}
+.icon-grid button[aria-pressed="true"]{border-color:var(--lime);color:var(--lime)}
+input[type=range]{width:100%;accent-color:var(--lime)}
+.check{display:flex;gap:8px;align-items:center;font-size:13px}
+.check input{accent-color:var(--lime);width:16px;height:16px}
+.act{background:var(--field);border:1px solid var(--stroke-2);border-radius:12px;padding:8px;display:flex;flex-direction:column;gap:6px}
+.act-top{display:grid;grid-template-columns:minmax(0,.9fr) minmax(0,1.1fr) auto;gap:6px;align-items:center}
+.act .inp{background:#0d0d0f}
+.act textarea{font:12px/1.4 var(--f-mono);min-height:34px}
+.act .tools{display:flex}
+.act .tools button{border:0;background:none;color:var(--dim);padding:2px 5px;font-size:13px;border-radius:6px}.act .tools button:hover{color:var(--fg);background:rgba(255,255,255,.06)}
+.act.bad textarea{border-color:var(--live)}
+.set-h{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.set-h .label{color:var(--fg);font-weight:500}
+.set-list{display:flex;flex-direction:column;gap:6px}
+.wait{display:flex;align-items:center;gap:8px;font-size:12.5px;color:var(--muted);padding:5px 8px;border:1px dashed rgba(244,230,74,.35);border-radius:10px}
+.wait input{width:84px}
+.steps{display:flex;gap:4px;flex-wrap:wrap;align-items:center}
+.nosel{padding:18px 16px;color:var(--muted);font-size:13px;display:flex;flex-direction:column;gap:10px}
+.nosel .label{color:var(--fg)}
+
+/* dock */
+.dock{position:fixed;left:50%;bottom:calc(16px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);z-index:40;display:flex;align-items:center;gap:2px;padding:5px;background:rgba(24,24,27,.9);border:1px solid var(--stroke-2);border-radius:16px;backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);box-shadow:0 18px 40px -12px rgba(0,0,0,.8);max-width:calc(100vw - 32px);overflow-x:auto}
+.dock button,.dock label{display:inline-flex;align-items:center;gap:7px;height:34px;padding:0 12px;border-radius:11px;border:0;background:transparent;color:var(--fg);font:500 13px var(--f-ui);white-space:nowrap;cursor:pointer}
+.dock button:hover,.dock label:hover{background:rgba(255,255,255,.07)}
+.dock .ico{color:var(--muted)}
+.dock .danger{color:#ff7b7d}
+#selHint:empty{display:none}
+
+/* dialogs */
+dialog{background:#18181b;color:var(--fg);border:1px solid var(--stroke-2);border-radius:20px;padding:0;width:min(760px,calc(100vw - 32px));max-height:calc(100vh - 48px);box-shadow:0 40px 80px -20px rgba(0,0,0,.9)}
+dialog.wide{width:min(1000px,calc(100vw - 32px))}
+dialog::backdrop{background:rgba(5,5,6,.7);backdrop-filter:blur(3px)}
+.dlg{padding:20px;display:flex;flex-direction:column;gap:14px}
+.dlg h3{font:600 19px var(--f-ui);letter-spacing:-.01em;margin:0;display:flex;align-items:center;gap:8px}
+.dlg h3::before{content:"";width:8px;height:8px;border-radius:50%;background:var(--lime)}
+.dlg p{margin:0;color:var(--muted);font-size:13.5px;max-width:68ch}
+.dlg pre{background:var(--field);border:1px solid var(--stroke);border-radius:12px;padding:12px;font:11.5px/1.5 var(--f-mono);max-height:300px;overflow:auto;white-space:pre-wrap;word-break:break-all;margin:0}
+.dlg ol{margin:0;padding-left:20px;font-size:13.5px;display:flex;flex-direction:column;gap:4px}
+.dlg-foot{display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap}
+.drop-zone{border:1.5px dashed var(--stroke-2);border-radius:14px;padding:28px;text-align:center;color:var(--muted);cursor:pointer}
+.drop-zone.over{border-color:var(--lime);color:var(--fg);background:rgba(198,244,50,.04)}
+.warn{color:var(--yellow);font-size:12.5px}
+.sheet-scroll{overflow:auto;max-height:56vh;border-radius:12px;border:1px solid var(--stroke)}
+.mod-list{display:flex;flex-direction:column;gap:4px;max-height:52vh;overflow-y:auto;padding-right:2px}
+.mod{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:4px 10px;align-items:center;text-align:left;background:var(--field);border:1px solid var(--stroke);border-radius:11px;padding:9px 12px}
+.mod:hover{border-color:var(--stroke-2);background:#18181b}
+.mod b{font-weight:500;font-size:13.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.mod b span{color:var(--muted);font-weight:400}
+.mod small{grid-column:1;font:11.5px var(--f-mono);color:var(--dim);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.mod .add{grid-row:1/3;grid-column:2;color:var(--lime);font-size:12.5px;display:flex;gap:6px;align-items:center}
+.mod .have{color:var(--muted)}
+.mod-head{font:500 11px var(--f-mono);color:var(--dim);padding:8px 2px 2px;text-transform:uppercase;letter-spacing:.06em}
+.opts{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.opt{display:flex;flex-direction:column;gap:4px;font-size:11.5px;color:var(--muted);min-width:0}
+.opt-check{flex-direction:row-reverse;justify-content:flex-end;align-items:center;gap:8px;color:var(--fg);grid-column:1/-1}
+.opt-check input{accent-color:var(--lime);width:16px;height:16px}
+.opt input[type=color]{width:100%;height:30px;border:1px solid var(--stroke);border-radius:8px;background:var(--field);padding:2px}
+.opt select[multiple]{height:auto}
+.conn-set{background:var(--field);border:1px solid var(--stroke-2);border-radius:11px;padding:10px;margin:-2px 0 8px;display:flex;flex-direction:column;gap:8px}
+.conn .x svg{width:14px;height:14px}
+.seg .count{font:500 10.5px var(--f-mono);color:var(--dim);margin-left:6px}
+.preset-bar{display:grid;grid-template-columns:minmax(0,1.3fr) minmax(0,1fr) minmax(0,1fr);gap:8px;align-items:center}
+.preset-grid{max-height:54vh;overflow-y:auto;display:flex;flex-direction:column;gap:16px;padding-right:4px}
+.pcat-h{display:flex;align-items:center;justify-content:space-between;gap:8px;font-size:12.5px;color:var(--muted);margin-bottom:6px}
+.pgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(86px,1fr));gap:6px}
+.pitem{border:1px solid transparent;background:none;display:flex;flex-direction:column;align-items:center;gap:5px;padding:7px 4px;border-radius:12px;color:var(--fg)}
+.pitem:hover{background:var(--field);border-color:var(--stroke-2)}
+.pitem .key{--k:62px;pointer-events:none}
+.pitem small{font-size:11px;color:var(--muted);text-align:center;line-height:1.25;max-width:84px;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
+@media (max-width:640px){.preset-bar{grid-template-columns:1fr}.opts{grid-template-columns:1fr}}
+.helper-steps{margin:0;padding-left:20px;font-size:13.5px;display:flex;flex-direction:column;gap:4px}
+.toast{position:fixed;left:50%;bottom:calc(76px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:#f4f4f5;color:#0b0b0c;padding:8px 14px;border-radius:10px;font-weight:500;font-size:13px;z-index:100;opacity:0;transition:opacity .2s;pointer-events:none;max-width:calc(100vw - 32px)}
+.toast.on{opacity:1}
+
+.seg-sm button{padding:4px 9px;font-size:12px}
+.sources .node-h{padding:8px 10px}
+.recipe-row{display:flex;gap:8px;align-items:flex-start;padding-top:2px}
+.recipe-row .label{padding-top:5px;flex:none}
+.rchips{display:flex;flex-wrap:wrap;gap:5px}
+.rchip{border:1px solid var(--stroke-2);background:var(--field);color:var(--fg);border-radius:999px;padding:4px 10px;font-size:12px;line-height:1.2}
+.rchip:hover{border-color:var(--lime);color:var(--lime)}
+.rchip.pink:hover{border-color:var(--pink);color:var(--pink)}
+.learned p{margin:0 0 8px}
+
+.ctx{position:fixed;z-index:120;min-width:200px;background:rgba(28,28,31,.97);border:1px solid var(--stroke-2);border-radius:12px;padding:5px;box-shadow:0 20px 40px -10px rgba(0,0,0,.85);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px)}
+.ctx-h{font:500 11px var(--f-mono);color:var(--dim);padding:6px 9px 5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:260px}
+.ctx button{display:flex;align-items:center;justify-content:space-between;gap:16px;width:100%;border:0;background:none;color:var(--fg);font-size:13px;padding:7px 9px;border-radius:8px;text-align:left}
+.ctx button:hover:not([disabled]),.ctx button:focus-visible{background:rgba(255,255,255,.08);outline:none}
+.ctx button[disabled]{color:var(--dim);cursor:default}
+.ctx button.danger{color:#ff7b7d}
+.ctx button.danger[disabled]{color:var(--dim)}
+.ctx-sep{height:1px;background:var(--stroke);margin:4px 2px}
+
+dialog.drawer{position:fixed;inset:70px 16px 84px auto;margin:0;width:min(430px,calc(100vw - 32px));max-height:none;height:auto;z-index:60;display:none;resize:both;overflow:hidden;min-width:320px;min-height:320px}
+dialog.drawer[open]{display:block}
+dialog.drawer .dlg{height:100%;min-height:0;display:flex;flex-direction:column}
+dialog.drawer .preset-grid{flex:1;max-height:none;min-height:0}
+dialog.drawer .pgrid{grid-template-columns:repeat(auto-fill,minmax(82px,1fr))}
+.pitem{touch-action:none;cursor:grab}
+.preset-dragging,.preset-dragging *{cursor:grabbing!important}
+.preset-dragging #deck .key{transition:box-shadow .08s}
+.drawer-head{display:flex;align-items:center;gap:10px;cursor:grab;user-select:none;-webkit-user-select:none;margin:-6px -6px 0;padding:6px;border-radius:10px;touch-action:none}
+.drawer-head:active{cursor:grabbing}
+.drawer-head:hover{background:rgba(255,255,255,.03)}
+.drawer-head h3{flex:1}
+.grip{width:10px;height:16px;flex:none;background-image:radial-gradient(circle,var(--muted) 1.2px,transparent 1.6px);background-size:5px 5px;opacity:.8}
+@media (max-width:1000px){.drawer-head{cursor:default}.grip,#snapDrawer{display:none}dialog.drawer{resize:none}}
+.drawer .preset-bar{grid-template-columns:1fr 1fr}
+.drawer .preset-bar>:last-child{grid-column:1/-1}
+@media (min-width:1600px){dialog.drawer{width:440px}}
+@media (max-width:1000px){dialog.drawer{inset:auto 8px 84px 8px;height:55vh;width:auto}}
+
+#bootDlg{--muted:#b9b9c2;--dim:#8a8a93;--field:#26262b;--stroke:rgba(255,255,255,.12);--stroke-2:rgba(255,255,255,.2);background:#222226;width:min(1120px,calc(100vw - 32px))}
+#bootDlg::backdrop{background:rgba(5,5,6,.45);backdrop-filter:none}
+#bootDlg .label{color:#d4d4da}
+#bootDlg p{color:#c4c4cc}
+#bootDlg .inp{background:#2b2b31;border-color:rgba(255,255,255,.16)}
+#bootDlg .seg{background:#2b2b31}
+#bootDlg .seg button{color:#c4c4cc}
+#bootDlg .seg button[aria-pressed="true"]{background:#3a3a42;color:#fff}
+.boot-grid{display:grid;grid-template-columns:minmax(0,1.6fr) minmax(0,1fr);gap:18px;align-items:start}
+.boot-stage{background:radial-gradient(120% 90% at 50% 0%,#34343b,#1b1b20);border:1px solid rgba(255,255,255,.18);border-radius:18px;padding:18px;display:flex;flex-direction:column;gap:10px;align-items:center;min-width:0;box-shadow:inset 0 1px 0 rgba(255,255,255,.08)}
+#bootInfo{color:#c4c4cc}
+#bootCanvas{width:100%;height:auto;max-width:100%}
+.boot-form{display:flex;flex-direction:column;gap:12px;min-width:0}
+@media (max-width:760px){.boot-grid{grid-template-columns:1fr}}
+
+/* ---------- responsive ---------- */
+/* Desktop: the board fits the window; each column scrolls on its own only if it has to */
+@media (min-width:1001px) and (min-height:620px){
+  html{height:100%}
+  body{height:100%;display:flex;flex-direction:column;overflow:hidden}
+  .hud{flex:none}
+  .board{flex:1 1 auto;min-height:0;width:100%;padding-bottom:78px;align-items:stretch}
+  .col{min-height:0;overflow-y:auto;overflow-x:hidden;scrollbar-width:thin;padding:2px 6px 10px;margin:-2px -6px 0}
+  .col.left .sources{flex:1 1 auto;min-height:200px;display:flex;flex-direction:column}
+  .col.left .sources .node-b{flex:1;min-height:0;overflow-y:auto}
+  .col.right{overflow:hidden}
+  .insp{position:relative;top:0;max-height:100%}
+}
+@media (min-width:1600px){.board{grid-template-columns:340px minmax(0,1fr) 380px}}
+@media (max-width:1180px){
+  .board{grid-template-columns:250px minmax(0,1fr) 300px;gap:20px 30px;padding-inline:16px}
+}
+@media (max-width:1000px){
+  .board{grid-template-columns:minmax(0,1fr) 320px}
+  .col.left{grid-column:1/-1;display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));align-items:start}
+  .wires{display:none}
+}
+@media (max-width:820px){
+  .board{grid-template-columns:minmax(0,1fr);padding:8px 16px 120px}
+  .col.left{grid-template-columns:minmax(0,1fr)}
+  .insp{position:relative;top:0;max-height:none}
+  .pager{margin:0}
+  .hud{padding:10px 16px}
+}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+</style>
+
+<header class="hud">
+  <div class="pill brand">
+    <div class="mark" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+    <b>Deckwright</b>
+    <span class="vsep"></span>
+    <select id="device" aria-label="Device"></select>
+  </div>
+  <div class="pill pager" id="pagebar"></div>
+  <div class="hud-right">
+    <div class="pill">
+      <button class="ic" id="undo" title="Undo (⌘Z)" aria-label="Undo"><span class="ico" data-ico="undo-2"></span></button>
+      <button class="ic" id="redo" title="Redo (⇧⌘Z)" aria-label="Redo"><span class="ico" data-ico="redo-2"></span></button>
+      <span class="vsep"></span>
+      <button class="btn ghost sm" id="openImport"><span class="ico" data-ico="download"></span>Import</button>
+    </div>
+    <button class="btn primary" id="openExport"><span class="ico" data-ico="upload"></span>Export page</button>
+  </div>
+</header>
+
+<main class="board" id="board">
+  <svg class="wires" id="wires" aria-hidden="true"></svg>
+  <div class="tags" id="tags" aria-hidden="true"></div>
+
+  <section class="col left">
+    <article class="node composer" id="nodePrompt">
+      <header class="node-h"><span class="dot lime"></span><span class="grow">Prompt</span><span class="chip lime">AI</span></header>
+      <div class="node-b">
+        <label class="label" for="prompt">Describe an automation</label>
+        <textarea id="prompt" placeholder="e.g. Make a button that switches OBS to the Interview scene, waits 2 seconds, and starts recording. Turn it red when Interview is live."></textarea>
+        <div class="seg" role="group" aria-label="Where to put it" id="aiTarget">
+          <button data-v="key" aria-pressed="true">Selected key</button>
+          <button data-v="fill" aria-pressed="false">Empty keys</button>
+          <button data-v="page" aria-pressed="false">Whole page</button>
+          <button data-v="restyle" aria-pressed="false">Restyle</button>
+        </div>
+        <div class="comp-row">
+          <button class="btn lime" id="aiGo"><span class="ico" data-ico="sparkles"></span>Build it</button>
+          <button class="btn ghost" id="aiStop" hidden>Stop</button>
+          <span class="ai-status" id="aiStatus"></span>
+        </div>
+        <div class="ai-notes" id="aiNotes" hidden></div>
+        <div class="recipe-row"><span class="label">Try</span><div class="rchips" id="recipes"></div></div>
+      </div>
+    </article>
+
+    <article class="node sources">
+      <header class="node-h"><span class="dot blue"></span>
+        <div class="seg seg-sm" role="tablist" id="srcTabs"><button data-src="conns" aria-pressed="true">Connections <span class="count" id="connCount"></span></button><button data-src="know" aria-pressed="false">What the AI knows</button></div>
+      </header>
+      <div class="node-b" id="paneConns">
+        <div id="conns"></div>
+        <button class="btn" id="openModules"><span class="ico" data-ico="plus"></span>Add connection</button>
+        <span class="empty-note" id="catCount"></span>
+      </div>
+      <div class="node-b" id="paneKnow" hidden><div class="learned" id="learned"></div></div>
+    </article>
+  </section>
+
+  <section class="col mid">
+    <article class="node note-node" id="exampleBanner" hidden>
+      <header class="node-h"><span class="dot pink"></span><span class="grow">Example page</span></header>
+      <div class="node-b">
+        <span>The OBS and ATEM action names here are typical. Check them against your modules, or import your Companion config so the AI uses your real ones.</span>
+        <button class="btn sm" id="dismissExample">Got it</button>
+        <button class="btn sm danger" id="clearExample">Clear page</button>
+      </div>
+    </article>
+
+    <article class="node deck-node" id="deckNode">
+      <header class="node-h"><span class="dot yellow"></span><span class="grow" id="deckTitle">Stream Deck</span><span class="chip" id="deckPage"></span></header>
+      <div class="node-b"><div class="deck" id="deck"></div></div>
+    </article>
+
+    <article class="node chain" id="chain" hidden></article>
+
+    <div class="hints">
+      <span>Drag to move</span><span><kbd>⌥</kbd> drag copies</span><span><kbd>⇧</kbd> click selects several</span><span><kbd>⌘C</kbd> <kbd>⌘V</kbd> copy, paste</span><span><kbd>⌫</kbd> clears</span><span><kbd>←↑→↓</kbd> move</span>
+    </div>
+  </section>
+
+  <section class="col right">
+    <aside class="node insp" id="insp"></aside>
+  </section>
+</main>
+
+<nav class="dock" aria-label="Tools">
+  <button id="presetsBtn"><span class="ico" data-ico="layout-grid"></span>Presets</button>
+  <button id="bootBtn"><span class="ico" data-ico="power"></span>Boot screen</button>
+  <button id="tallyBtn" title="Add live and preview colours to scene, input and record keys"><span class="ico" data-ico="radio-tower"></span>Tally pack</button>
+  <button id="sheetBtn"><span class="ico" data-ico="file-text"></span>Cheat sheet</button>
+  <button id="helperBtn"><span class="ico" data-ico="send"></span>Send to Companion</button>
+  <span class="vsep"></span>
+  <button id="saveProject"><span class="ico" data-ico="save"></span>Save</button>
+  <label for="loadProject"><span class="ico" data-ico="folder-open"></span>Open</label>
+  <input type="file" id="loadProject" accept=".json" hidden>
+  <button id="newProject" class="danger">Start over</button>
+  <span class="chip pink" id="selHint"></span>
+</nav>
+
+<dialog id="exportDlg"><div class="dlg">
+  <h3>Export to Companion</h3>
+  <p>This is a page-only Companion file: one page of buttons plus the connections it uses. Companion imports it as a new page (or over a page you pick) without touching anything else.</p>
+  <div class="row2">
+    <div class="field"><span class="label">Page</span><select class="inp" id="expPage"></select></div>
+    <div class="field"><span class="label">Size</span><div id="expSize" class="mono" style="padding-top:6px;color:var(--muted)"></div></div>
+  </div>
+  <div id="expWarn" class="warn"></div>
+  <pre id="expJson"></pre>
+  <ol>
+    <li>Using the <a href="#" id="expHelper" style="color:var(--accent)">Send to Companion app</a>? Save, then click it in your Dock. Otherwise just save it. If the name ends in <span class="mono">.json</span> (that happens inside Claude), remove that ending so it ends in <span class="mono">.companionconfig</span>.</li>
+    <li>In Companion, open <b>Import / Export</b> and choose the file. This file holds one page, so Companion opens its page import screen instead of replacing your whole setup.</li>
+    <li>Under <b>Destination Page</b>, step past your last page until it says the buttons will be imported to a new page, or pick a page to replace.</li>
+    <li>Match each connection to one you already have, or let Companion create it, then click <b>Import</b>. Your other pages and connections stay as they are.</li>
+  </ol>
+  <div class="dlg-foot">
+    <a class="btn" id="openCompanion" href="http://127.0.0.1:8000/import-export" target="_blank" rel="noopener">Open Companion</a>
+    <button class="btn" id="expCopy">Copy JSON</button>
+    <button class="btn primary" id="expSave">Save file</button>
+    <button class="btn ghost" data-close>Close</button>
+  </div>
+</div></dialog>
+
+<dialog id="importDlg"><div class="dlg">
+  <h3>Import from Companion</h3>
+  <p>Drop a Companion export (full config or a single page, <span class="mono">.companionconfig</span> or <span class="mono">.yaml</span>). Deckwright adds your connections with their real IDs and learns every action and feedback you've already built, so new buttons use the exact names your modules expect.</p>
+  <label class="drop-zone" id="dropZone" for="importFile">Drop a file here or <u>browse</u></label>
+  <input type="file" id="importFile" hidden>
+  <div id="importResult" class="field"></div>
+  <div class="dlg-foot"><button class="btn ghost" data-close>Close</button></div>
+</div></dialog>
+
+<dialog id="bootDlg" class="wide"><div class="dlg">
+  <h3>Boot screen</h3>
+  <p>An animation that plays across every key when Companion starts, then settles on your title screen. It lives on page 1.</p>
+  <div class="boot-grid">
+    <div class="boot-stage"><canvas id="bootCanvas" aria-label="Boot animation preview"></canvas><div class="comp-row" style="width:100%"><button class="btn sm" id="bootReplay">▶ Replay</button><span class="empty-note" id="bootInfo"></span></div></div>
+    <div class="boot-form" id="bootForm"></div>
+  </div>
+  <p><b>Companion needs two files.</b> Export page 1 and import it as page 1, then save and import the startup trigger. Without the trigger the keys only show the final screen. Inside Claude, files save with an extra <span class="mono">.json</span> ending: remove it before importing.</p>
+  <div class="dlg-foot"><button class="btn ghost" data-close>Cancel</button><button class="btn" id="bootTrigger">Save startup trigger</button><button class="btn primary" id="bootApply">Put on page 1</button></div>
+</div></dialog>
+
+<dialog id="presetDlg" class="drawer"><div class="dlg">
+  <div class="drawer-head" id="drawerHead" title="Drag to move"><span class="grip" aria-hidden="true"></span><h3>Presets</h3><button class="btn ghost sm" id="snapDrawer" title="Put the panel back beside the deck">Snap next to deck</button></div>
+  <p>Drag a preset onto any key, or click to drop it on the next empty key. This panel stays open so you can keep going.</p>
+  <div class="seg" id="presetMods" role="group" aria-label="Module"></div>
+  <div class="preset-bar" id="presetBar"></div>
+  <div class="preset-grid" id="presetGrid"></div>
+  <div class="dlg-foot"><span class="empty-note" id="presetCount" style="margin-right:auto;align-self:center"></span><button class="btn ghost" id="closePresets">Done</button></div>
+</div></dialog>
+
+<dialog id="modDlg"><div class="dlg">
+  <h3>Add connection</h3>
+  <p>Every connection type in the Companion module store. Pick one to add it here. When you import the page, Companion asks you to match it to an existing connection or creates a new one that you set up there.</p>
+  <input class="inp" id="modSearch" placeholder="Search by maker, product or keyword: atem, vmix, ptz, lighting…" aria-label="Search connection types" autocomplete="off">
+  <div class="mod-list" id="modList"></div>
+  <div class="dlg-foot"><span class="empty-note" id="modCount" style="margin-right:auto;align-self:center"></span><button class="btn ghost" data-close>Close</button></div>
+</div></dialog>
+
+<dialog id="sheetDlg" class="wide"><div class="dlg">
+  <h3>Cheat sheet</h3>
+  <p>A guide for whoever runs the deck: a map of every key and what it does. Save it, open the file in your browser, and print from there. Add your own wording per key in the Look tab under Operator note.</p>
+  <div class="comp-row">
+    <div class="seg" role="group" aria-label="Pages to include" id="sheetScope"><button data-v="page" aria-pressed="true">This page</button><button data-v="all" aria-pressed="false">All pages</button></div>
+    <button class="btn" id="sheetAI">Write descriptions with AI</button>
+    <span class="ai-status" id="sheetStatus"></span>
+  </div>
+  <div class="sheet-scroll"><div class="sheet" id="sheetView"></div></div>
+  <div class="dlg-foot"><button class="btn primary" id="sheetSave">Save cheat sheet</button><button class="btn ghost" data-close>Close</button></div>
+</div></dialog>
+
+<dialog id="helperDlg"><div class="dlg">
+  <h3>Send to Companion app</h3>
+  <p>Deckwright can't reach Companion directly, and Companion only imports files. This small Mac app closes the gap. Click it after you save a page and it:</p>
+  <ol class="helper-steps"><li>Renames every Deckwright export in Downloads to <span class="mono">.companionconfig</span></li><li>Opens Companion's Import / Export page</li><li>Shows the newest file in Finder, ready to pick or drag in</li></ol>
+  <div class="field"><span class="label">Companion address</span><input class="inp mono" id="compUrl" spellcheck="false" style="max-width:320px"></div>
+  <span class="label">Install: paste this into Terminal</span>
+  <pre id="helperScript"></pre>
+  <p>It installs to Applications in your home folder and opens there so you can drag it to your Dock. The first time you click it, macOS asks to let it use your Downloads folder. To remove it, delete the app.</p>
+  <div class="dlg-foot"><button class="btn primary" id="copyHelper">Copy install command</button><button class="btn ghost" data-close>Close</button></div>
+</div></dialog>
+
+<div class="ctx" id="ctx" role="menu" aria-label="Key actions" hidden></div>
+<div class="toast" id="toast" role="status"></div>
+
+<script>
+(() => {
+/* ---------- constants ---------- */
+const DEVICES = {
+  mini:{name:"Stream Deck Mini",cols:3,rows:2},
+  neo:{name:"Stream Deck Neo",cols:4,rows:2},
+  mk2:{name:"Stream Deck MK.2 / Original",cols:5,rows:3},
+  plus:{name:"Stream Deck +",cols:4,rows:2,dials:4},
+  xl:{name:"Stream Deck XL",cols:8,rows:4},
+};
+const SWATCHES=["#000000","#ffffff","#7f7f7f","#c8102e","#ff4d00","#ffb21a","#f2e600","#2fbf4a","#00a3a3","#1e6cff","#5b2bd9","#c22fc2","#ff7aa8","#5a3b1f","#3b4652","#0b2a4a","#08361b","#4a0b0b","#2d1a4a","#9aa3ab"];
+const SIZES=["auto","7","10","12","14","18","24","30","44"];
+const MODULES=["obs-studio","bmd-atem","bmd-videohub","bmd-hyperdeck","studiocoast-vmix","generic-http","generic-osc","generic-tcp-udp","generic-midi","ptzoptics-visca","sony-visca","birddog-visca","panasonic-ptz","resolume-arena","propresenter","renewedvision-propresenter","qlab","spotify-web","casparcg-server","tricaster","newtek-ndistudiomonitor","disguise","zoom-osc-iso","allenheath-sq","behringer-x32","yamaha-qlcl","etc-eos","chamsys-magicq","philips-hue","elgato-keylight","teams-presenter"];
+const ICONS="mic mic-off video video-off camera circle circle-dot square play pause skip-forward skip-back rewind fast-forward volume-2 volume-x monitor tv radio cast layers layout-grid image lightbulb lightbulb-off sun moon power settings timer clock alarm-clock home arrow-up arrow-down arrow-left arrow-right chevron-up chevron-down chevrons-left chevrons-right refresh-cw repeat shuffle zap star heart message-square users user eye eye-off lock unlock music headphones film clapperboard scissors split type send wifi globe bell flag check x plus minus sliders-horizontal gamepad-2 keyboard mouse-pointer-click coffee phone phone-off mail presentation projector speaker airplay app-window panel-top hand thumbs-up thumbs-down megaphone podcast aperture focus scan crosshair move zoom-in zoom-out maximize minimize rotate-cw undo-2 redo-2 save trash-2 download upload log-in log-out hourglass gauge activity bar-chart-3 dollar-sign gift trophy sparkles party-popper bookmark".split(" ");
+const INTERNAL_ACTIONS = {
+  wait:{time:1000}, set_page:{controller:"self",page:1}, inc_page:{controller:"self"}, dec_page:{controller:"self"},
+  custom_variable_set_value:{name:"my_var",value:"1"}, button_pressrelease:{location_target:"text",location_text:"1/0/0"}
+};
+const RECIPES=[
+  {s:"OBS scenes",t:"OBS scene buttons for Camera, Slides and Be Right Back. Each turns red when that scene is live.",m:"fill"},
+  {s:"Record toggle",t:"One key that toggles OBS recording, red while recording, with a record icon.",m:"key"},
+  {s:"ATEM inputs + Cut",t:"ATEM: inputs 1 to 4 as preview buttons on the top row, with Cut and Auto next to them.",m:"page"},
+  {s:"Mic mute",t:"Mute and unmute my microphone in OBS with a mic icon that goes red when muted.",m:"key"},
+  {s:"Lighting cue",t:"Send an HTTP GET to http://192.168.1.50/cue/3 to fire a lighting cue.",m:"key"},
+  {s:"Restyle scenes",t:"Make every scene key a dark blue gradient with white icons, and the transition keys bold red.",m:"restyle"},
+];
+
+/* ---------- Companion module catalog (from the module store list Companion caches) ---------- */
+// [id, manufacturer, product, keywords, deprecated, shortname]
+const CATALOG=/*@data:catalog*/null;
+const CAT=new Map(CATALOG.map(m=>[m[0],m]));
+const POPULAR=["obs-studio","bmd-atem","studiocoast-vmix","generic-http","generic-osc","generic-tcp-udp","bmd-hyperdeck","bmd-videohub","renewedvision-propresenter","figure53-qlab-advance","ptzoptics-visca","birddog-visca","behringer-x32","etc-eos","resolume-arena","spotify-web","zoom-osc-iso","casparcg-server"].filter(id=>CAT.has(id));
+const modTitle=id=>{const m=CAT.get(id);return m?(m[1]?m[1]+" "+m[2]:m[2]):id};
+
+/* ---------- utils ---------- */
+const $=s=>document.querySelector(s);
+const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const uid=(n=12)=>{const a="abcdefghijkmnpqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ23456789";let s="";const r=crypto.getRandomValues(new Uint8Array(n));for(const x of r)s+=a[x%a.length];return s};
+const clone=o=>JSON.parse(JSON.stringify(o));
+const hexToInt=h=>parseInt(String(h||"#000000").replace("#","").slice(0,6).padEnd(6,"0"),16)||0;
+const intToHex=n=>"#"+(Number(n)>>>0&0xffffff).toString(16).padStart(6,"0");
+const normHex=h=>{h=String(h||"").trim();if(/^#?[0-9a-f]{3}$/i.test(h)){h=h.replace("#","");h=h.split("").map(c=>c+c).join("")}h=h.replace("#","");return /^[0-9a-f]{6}$/i.test(h)?"#"+h.toLowerCase():null};
+const pascal=k=>k.split("-").map(p=>p[0].toUpperCase()+p.slice(1)).join("");
+const keyId=(r,c)=>r+","+c;
+const parseKey=k=>k.split(",").map(Number);
+function toast(msg){const t=$("#toast");t.textContent=msg;t.classList.add("on");clearTimeout(toast.t);toast.t=setTimeout(()=>t.classList.remove("on"),2200)}
+function lucideSvg(name,color="currentColor",sw=2){
+  const L=window.lucide;const node=L&&L.icons&&L.icons[pascal(name)];if(!node)return null;
+  const kids=node[0]==="svg"?node[2]:node;
+  const inner=kids.map(([tag,attrs])=>"<"+tag+" "+Object.entries(attrs).map(([k,v])=>k+'="'+esc(v)+'"').join(" ")+"/>").join("");
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="${esc(color)}" stroke-width="${sw}" stroke-linecap="round" stroke-linejoin="round">${inner}</svg>`;
+}
+const iconExists=n=>!!(window.lucide&&window.lucide.icons&&window.lucide.icons[pascal(String(n||"x"))]);
+function sanitizeSvgInner(src){
+  const allowedTags=new Set(["path","circle","rect","line","polyline","polygon","ellipse","g"]);
+  const allowedAttrs=new Set(["d","cx","cy","r","rx","ry","x","y","x1","y1","x2","y2","width","height","points","transform","fill","stroke-width","opacity","fill-opacity","stroke-opacity"]);
+  const doc=new DOMParser().parseFromString(`<svg xmlns="http://www.w3.org/2000/svg">${src}</svg>`,"image/svg+xml");
+  if(doc.querySelector("parsererror"))return null;
+  const walk=el=>[...el.children].map(ch=>{const t=ch.tagName.toLowerCase();if(!allowedTags.has(t))return"";
+    const at=[...ch.attributes].filter(a=>allowedAttrs.has(a.name)&&!/url\(|javascript:/i.test(a.value)).map(a=>`${a.name}="${esc(a.value)}"`).join(" ");
+    return t==="g"?`<g ${at}>${walk(ch)}</g>`:`<${t} ${at}/>`}).join("");
+  const out=walk(doc.documentElement);return out||null;
+}
+
+/* ---------- state ---------- */
+function newButton(o={}){return Object.assign({kind:"button",text:"",size:"auto",color:"#ffffff",bg:"#000000",align:"center:center",
+  image:{mode:"none",bgStyle:"none",g1:"#1e6cff",g2:"#5b2bd9",icon:null,iconColor:"#ffffff",scale:.55,pos:"center",bake:false,src:null,fit:"cover"},
+  png64:null,steps:[{down:[],up:[],rotL:[],rotR:[]}],feedbacks:[]},o)}
+
+function sampleProject(){
+  const obs="obsMain01", atem="atemME01";
+  const b=(o,img)=>{const x=newButton(o);if(img)Object.assign(x.image,{mode:"design"},img);return x};
+  const scene=(name,color,icon)=>b({text:name,bg:"#1b2330",align:"center:bottom",size:"14",
+    steps:[{down:[{connection:obs,action:"set_scene",options:{scene:name}}],up:[],rotL:[],rotR:[]}],
+    feedbacks:[{connection:obs,type:"scene_active",options:{scene:name},style:{bgcolor:"#c8102e",color:"#ffffff"},inverted:false}]},
+    {icon:{type:"lucide",value:icon},pos:"top",iconColor:color});
+  const buttons={};
+  buttons[keyId(0,0)]=scene("Camera","#9cc3ff","video");
+  buttons[keyId(0,1)]=scene("Slides","#9cc3ff","presentation");
+  buttons[keyId(0,2)]=scene("BRB","#9cc3ff","coffee");
+  buttons[keyId(0,4)]=b({text:"REC",bg:"#2a0b0b",align:"center:bottom",size:"14",
+    steps:[{down:[{connection:obs,action:"StartStopRecording",options:{}}],up:[],rotL:[],rotR:[]}],
+    feedbacks:[{connection:obs,type:"recording",options:{},style:{bgcolor:"#c8102e",color:"#ffffff"},inverted:false}]},
+    {icon:{type:"lucide",value:"circle-dot"},pos:"top",iconColor:"#ff5a5f"});
+  buttons[keyId(1,0)]=b({text:"CAM 1",bg:"#08361b",size:"18",steps:[{down:[{connection:atem,action:"preview",options:{mixeffect:0,input:1}}],up:[],rotL:[],rotR:[]}]});
+  buttons[keyId(1,1)]=b({text:"CAM 2",bg:"#08361b",size:"18",steps:[{down:[{connection:atem,action:"preview",options:{mixeffect:0,input:2}}],up:[],rotL:[],rotR:[]}]});
+  buttons[keyId(1,3)]=b({text:"CUT",bg:"#ffffff",color:"#000000",size:"24",steps:[{down:[{connection:atem,action:"cut",options:{mixeffect:0}}],up:[],rotL:[],rotR:[]}]});
+  buttons[keyId(1,4)]=b({text:"AUTO",bg:"#c8102e",size:"24",steps:[{down:[{connection:atem,action:"auto",options:{mixeffect:0}}],up:[],rotL:[],rotR:[]}]});
+  buttons[keyId(2,0)]=b({text:"INTRO",bg:"#000000",align:"center:bottom",size:"14",
+    steps:[{down:[{connection:obs,action:"set_scene",options:{scene:"Camera"}},{connection:"internal",action:"wait",options:{time:2000}},{connection:obs,action:"StartStopStreaming",options:{}}],up:[],rotL:[],rotR:[]}]},
+    {bgStyle:"gradient",g1:"#5b2bd9",g2:"#c22fc2",icon:{type:"lucide",value:"sparkles"},pos:"top",iconColor:"#ffffff"});
+  buttons[keyId(2,3)]={...newButton(),kind:"pagedown"};
+  buttons[keyId(2,4)]={...newButton(),kind:"pageup"};
+  return {v:1,device:"mk2",pageIdx:0,example:true,
+    pages:[{id:uid(),name:"Show control",buttons},{id:uid(),name:"Audio",buttons:{}}],
+    connections:[{id:obs,label:"obs",module:"obs-studio"},{id:atem,label:"atem",module:"bmd-atem"}],
+    learned:{}};
+}
+
+let S; let selected=null; const multi=new Set(); const undoStack=[]; const redoStack=[]; let clipboard=null; let tab="look"; let stepIdx=0;
+function load(){try{const raw=localStorage.getItem("deckwright.v1");if(raw){const s=JSON.parse(raw);if(s&&s.pages)return s}}catch(e){}return sampleProject()}
+function persist(){clearTimeout(persist.t);persist.t=setTimeout(()=>{try{localStorage.setItem("deckwright.v1",JSON.stringify(S))}catch(e){}},250)}
+function commit(fn,{renderArtFor}={}){undoStack.push(JSON.stringify(S));if(undoStack.length>80)undoStack.shift();redoStack.length=0;fn();persist();
+  if(renderArtFor){refreshArt(renderArtFor).then(render)}else render()}
+function undo(){if(!undoStack.length)return;redoStack.push(JSON.stringify(S));S=JSON.parse(undoStack.pop());persist();render()}
+function redo(){if(!redoStack.length)return;undoStack.push(JSON.stringify(S));S=JSON.parse(redoStack.pop());persist();render()}
+const page=()=>S.pages[S.pageIdx];
+const dev=()=>DEVICES[S.device]||DEVICES.mk2;
+const isSel=k=>multi.size>1?multi.has(k):selected===k;
+const isDialKey=k=>{if(!k)return false;const[r]=parseKey(k);return !!dev().dials&&r===dev().rows};
+const sel=()=>selected?page().buttons[selected]:null;
+
+/* ---------- button art ---------- */
+function loadImg(src){return new Promise((res,rej)=>{const i=new Image();i.onload=()=>res(i);i.onerror=rej;i.src=src})}
+function fitText(text){
+  const t=String(text||"");if(!t.trim())return 14;
+  const lines=t.split("\n");const longestWord=Math.max(...t.split(/\s+/).map(w=>w.length));
+  for(const fs of [44,30,24,18,14,7]){const cw=fs*.56;const perLine=Math.max(1,Math.floor(68/cw));
+    if(longestWord>perLine&&fs>7)continue;
+    let n=0;for(const l of lines)n+=Math.max(1,Math.ceil(l.length/perLine));
+    if(n*fs*1.12<=68)return fs}
+  return 7;
+}
+async function renderArt(b){
+  const im=b.image;if(!im||im.mode==="none"||b.kind!=="button")return null;
+  const Sz=72,c=document.createElement("canvas");c.width=c.height=Sz;const x=c.getContext("2d");
+  if(im.mode==="upload"){
+    if(!im.src)return null;
+    try{const img=await loadImg(im.src);const r=im.fit==="contain"?Math.min(Sz/img.width,Sz/img.height):Math.max(Sz/img.width,Sz/img.height);
+      const w=img.width*r,h=img.height*r;x.drawImage(img,(Sz-w)/2,(Sz-h)/2,w,h)}catch(e){return null}
+  }else{
+    if(im.bgStyle==="solid"){x.fillStyle=im.g1;x.fillRect(0,0,Sz,Sz)}
+    else if(im.bgStyle==="gradient"){const g=x.createLinearGradient(0,0,Sz,Sz);g.addColorStop(0,im.g1);g.addColorStop(1,im.g2);x.fillStyle=g;x.fillRect(0,0,Sz,Sz)}
+    const ic=im.icon;
+    if(ic&&ic.value){
+      const hasText=!!(b.text&&b.text.trim());
+      const pos=im.pos||"center";
+      let size=Sz*(im.scale||.55),cx=Sz/2,cy=Sz/2;
+      if(pos==="top"){size=Math.min(size,Sz*.5);cy=Sz*.38}
+      if(pos==="top-sm"){size=Math.min(size,Sz*.3);cy=Sz*.2}
+      if(pos==="box"){const bx=im.box||{s:34,cy:22};size=bx.s;cy=bx.cy;if(!size)return c.toDataURL("image/png")}
+      if(pos==="left"){size=Math.min(size,Sz*.42);cx=Sz*.28}
+      if(ic.type==="emoji"){
+        x.font=`${Math.round(size*.9)}px "Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif`;x.textAlign="center";x.textBaseline="middle";x.fillText(ic.value,cx,cy+size*.04);
+      }else{
+        let svg=ic.type==="svg"?`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="${esc(im.iconColor)}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${ic.value}</svg>`:lucideSvg(ic.value,im.iconColor);
+        if(svg){try{const img=await loadImg("data:image/svg+xml;charset=utf-8,"+encodeURIComponent(svg));x.drawImage(img,cx-size/2,cy-size/2,size,size)}catch(e){}}
+      }
+      void hasText;
+    }
+  }
+  if(im.bake&&b.text){
+    const fs=b.size==="auto"?fitText(b.text):Number(b.size);x.fillStyle=b.color;x.font=`${fs}px Arimo,Arial,Helvetica,sans-serif`;x.textAlign="center";x.textBaseline="alphabetic";
+    const lines=String(b.text).split("\n");const lh=fs*1.08;let y=Sz-4-(lines.length-1)*lh;
+    if(!b.align.endsWith("bottom"))y=Sz/2-(lines.length-1)*lh/2+fs*.35;
+    for(const l of lines){x.fillText(l,Sz/2,y);y+=lh}
+  }
+  return c.toDataURL("image/png");
+}
+async function refreshArt(keys){
+  const pg=page();
+  for(const k of keys){const b=pg.buttons[k];if(b)b.png64=await renderArt(b)}
+  persist();
+}
+async function refreshAllArt(){for(const p of S.pages)for(const k in p.buttons){const b=p.buttons[k];if(b.image&&b.image.mode!=="none"&&!b.png64)b.png64=await renderArt(b)}persist();render()}
+
+/* ---------- deck rendering ---------- */
+function keyHTML(k,b,extraClass=""){
+  if(!b)return `<button class="key empty ${extraClass}" data-k="${k}" aria-label="Empty key ${k}"></button>`;
+  if(b.kind!=="button"){
+    const label={pageup:"▲\nPAGE UP",pagedown:"▼\nPAGE DOWN",pagenum:(S.pageIdx+1)+"\nPAGE"}[b.kind];
+    return `<button class="key special ${extraClass}" data-k="${k}" style="background:#1d2226"><div class="txt" style="align-items:center;justify-content:center;text-align:center;font-size:${100*14/72}cqw"><span>${esc(label)}</span></div></button>`;
+  }
+  const [h,v]=b.align.split(":");
+  const fs=b.size==="auto"?fitText(b.text):Number(b.size);
+  const txt=(b.image&&b.image.bake&&b.image.mode!=="none")?"":showVars(b.text);
+  const acts=b.steps.reduce((n,s)=>n+s.down.length+s.up.length+s.rotL.length+s.rotR.length,0);
+  return `<button class="key ${extraClass}" data-k="${k}" style="background:${esc(b.bg)}" aria-label="${esc(b.text||"Key")} ${k}">
+    ${b.png64?`<img class="art" src="${b.png64}" alt="">`:""}
+    <div class="txt" style="color:${esc(b.color)};font-size:${(100*fs/72).toFixed(2)}cqw;align-items:${v==="top"?"flex-start":v==="bottom"?"flex-end":"center"};text-align:${h}"><span>${esc(txt)}</span></div>
+    <div class="badges">${acts?"<i title='Has actions'></i>":""}${b.feedbacks.length?"<i class='fb' title='Has feedback'></i>":""}</div></button>`;
+}
+function renderDeck(){
+  const d=dev(),pg=page();const deck=$("#deck");
+  deck.style.setProperty("--cols",d.cols);
+  sizeDeck();
+  let g='<div class="grid">';
+  for(let r=0;r<d.rows;r++)for(let c=0;c<d.cols;c++){const k=keyId(r,c);g+=keyHTML(k,pg.buttons[k],isSel(k)?"sel":"")}
+  g+="</div>";
+  if(d.dials){g+='<div class="dials">';for(let c=0;c<d.dials;c++){const k=keyId(d.rows,c),b=pg.buttons[k];
+    g+=`<button class="dial ${isSel(k)?"sel":""}" data-k="${k}" aria-label="Dial ${c+1}"><span>${esc(b?(b.text||"Dial "+(c+1)):"Dial "+(c+1))}</span></button>`}g+="</div>"}
+  g+=`<div class="deck-foot"><span>${esc(page().name||"")}</span>${pg.boot?`<button class="btn ghost sm" id="bootPlayDeck">▶ Play boot animation</button>`:""}<span>${Object.keys(pg.buttons).length} keys</span></div>`;
+  deck.innerHTML=g;scheduleOverlay();
+}
+function renderPagebar(){
+  const n=S.pages.length;
+  $("#pagebar").innerHTML=`<button class="ic" id="prevPage" aria-label="Previous page" ${S.pageIdx===0?"disabled":""}>${ico("chevron-left")}</button>
+   <span class="count">${S.pageIdx+1}/${n}</span><input class="pagename" id="pageName" aria-label="Page name" value="${esc(page().name)}">
+   <button class="ic" id="nextPage" aria-label="Next page" ${S.pageIdx>=n-1?"disabled":""}>${ico("chevron-right")}</button>
+   <span class="vsep"></span><button class="ic" id="addPage" title="New page" aria-label="New page">${ico("plus")}</button>
+   <button class="ic" id="wipePage" title="Wipe this page (clear every key)" aria-label="Wipe this page" ${Object.keys(page().buttons).length?"":"disabled"}>${ico("eraser")}</button>
+   ${n>1?`<button class="ic" id="delPage" title="Delete this page" aria-label="Delete this page">${ico("trash-2")}</button>`:""}`;
+}
+
+/* ---------- connections & learned ---------- */
+const connColor=id=>{let h=0;for(const ch of id)h=(h*31+ch.charCodeAt(0))%360;return`hsl(${h} 70% 60%)`};
+function renderRail(){
+  $("#conns").innerHTML=S.connections.length?S.connections.map(c=>`<div class="conn"><span class="dot" style="background:${connColor(c.id)}"></span><div class="meta"><b>${esc(c.label)}</b><span>${esc(modTitle(c.module))}${c.raw?" · imported":""}</span></div>${LIBRARY[c.module]?`<button class="x" data-presetsfor="${esc(c.module)}" title="Presets">${ico("layout-grid")}</button><button class="x" data-connset="${esc(c.id)}" title="Connection settings" aria-expanded="${openConnSet===c.id}">${ico("settings-2")}</button>`:""}<button class="x" data-delconn="${esc(c.id)}" aria-label="Remove ${esc(c.label)}">✕</button></div>${openConnSet===c.id?connSettingsHTML(c):""}`).join("")
+    :`<p class="empty-note">No connections yet. Add one from the full Companion list, import your Companion config, or just describe what you want and the AI adds what it needs.</p>`;
+  $("#catCount").textContent=`${CATALOG.length} connection types available, the same list as the Companion module store.`;
+  const mods=Object.keys(S.learned||{});
+  const nA=mods.reduce((n,m)=>n+Object.keys(S.learned[m].actions||{}).length,0),nF=mods.reduce((n,m)=>n+Object.keys(S.learned[m].feedbacks||{}).length,0);
+  $("#learned").innerHTML=`<p style="margin:0 0 8px">Full libraries, taken from the modules themselves: ${Object.keys(LIBRARY).map(m=>`<b>${esc(libName(m))}</b>`).join(", ")}. Every action, feedback, preset and connection setting.</p>`+(nA+nF?`Learned <b>${nA}</b> actions and <b>${nF}</b> feedbacks from your config across ${mods.map(m=>`<span class="mono">${esc(m)}</span>`).join(", ")}. New buttons will use these exact names.`
+    :`Only general module knowledge so far. <a href="#" id="learnLink" style="color:var(--accent)">Import your Companion config</a> to teach it your exact action names and scene names.`);
+  $("#recipes").innerHTML=RECIPES.map((r,i)=>`<button class="rchip ${r.m==="restyle"?"pink":""}" data-recipe="${i}" title="${esc(r.t)}">${esc(r.s)}</button>`).join("");
+}
+
+/* ---------- inspector ---------- */
+function colorField(id,label,val){return `<div class="field"><span class="label">${label}</span><div class="colorrow"><input type="color" id="${id}C" value="${esc(val)}" aria-label="${label} picker"><input class="inp" id="${id}H" value="${esc(val)}" aria-label="${label} hex"></div></div>`}
+function connOptions(v){return `<option value="internal" ${v==="internal"?"selected":""}>internal</option>`+S.connections.map(c=>`<option value="${esc(c.id)}" ${v===c.id?"selected":""}>${esc(c.label)}</option>`).join("")+(v&&v!=="internal"&&!S.connections.find(c=>c.id===v)?`<option value="${esc(v)}" selected>missing: ${esc(v)}</option>`:"")}
+function actionsDatalist(){
+  const opts=new Set(Object.keys(INTERNAL_ACTIONS));
+  for(const m in S.learned||{})for(const a in S.learned[m].actions||{})opts.add(a);
+  return `<datalist id="actList">${[...opts].map(a=>`<option value="${esc(a)}">`).join("")}</datalist>`;
+}
+function actRow(set,i,a){
+  if(a.connection==="internal"&&a.action==="wait")return `<div class="wait" data-set="${set}" data-i="${i}">Wait <input class="inp mono" type="number" min="0" step="100" data-f="wait" value="${Number(a.options?.time)||0}"> ms <span style="flex:1"></span><span class="tools">${rowTools()}</span></div>`;
+  const L=libOf(a.connection);
+  if(L){const d=L.aById.get(a.action);
+    return `<div class="act" data-set="${set}" data-i="${i}"><div class="act-top"><select class="inp" data-f="conn" aria-label="Connection">${connOptions(a.connection)}</select><select class="inp" data-f="actsel" aria-label="Action"><option value="">Choose an action…</option>${!d&&a.action?`<option selected value="${esc(a.action)}">${esc(a.action)} (not in library)</option>`:""}${L.actions.map(x=>`<option value="${esc(x.id)}" ${x.id===a.action?"selected":""}>${esc(x.n)}</option>`).join("")}</select><span class="tools">${rowTools()}</span></div>
+    ${d?(d.desc?`<span class="empty-note">${esc(d.desc)}</span>`:"")+optFields(d.o,a.options,"act"):a.action?`<textarea class="inp" data-f="opts" rows="1" spellcheck="false" aria-label="Options JSON">${esc(JSON.stringify(a.options||{}))}</textarea>`:""}</div>`}
+  return `<div class="act" data-set="${set}" data-i="${i}"><div class="act-top"><select class="inp" data-f="conn" aria-label="Connection">${connOptions(a.connection)}</select><input class="inp mono" data-f="action" list="actList" value="${esc(a.action)}" placeholder="action id" aria-label="Action id"><span class="tools">${rowTools()}</span></div>
+    <textarea class="inp" data-f="opts" rows="1" spellcheck="false" aria-label="Options JSON">${esc(JSON.stringify(a.options||{}))}</textarea></div>`;
+}
+const rowTools=()=>`<button data-t="up" title="Move up">↑</button><button data-t="down" title="Move down">↓</button><button data-t="del" title="Remove">✕</button>`;
+function setBlock(set,title,list){
+  return `<div class="field"><div class="set-h"><span class="label">${title}</span><span><button class="btn ghost sm" data-add="${set}">+ Action</button><button class="btn ghost sm" data-addwait="${set}">+ Wait</button></span></div>
+   <div class="set-list">${list.length?list.map((a,i)=>actRow(set,i,a)).join(""):`<div class="empty-note">Nothing on ${title.toLowerCase()}.</div>`}</div></div>`;
+}
+function renderInspector(){
+  if(document.getElementById("chain"))queueMicrotask(renderChain);
+  if(multi.size>1){renderBulk();return}
+  if(sel()?.boot){$("#insp").innerHTML=`<div class="insp-head"><h2>Boot screen key</h2><span class="pos">${keyCodeK(selected)}</span></div><div class="panel"><p class="empty-note">This key shows its slice of the boot animation. Change the title, colours or animation for the whole screen in the Boot screen studio.</p><div style="display:flex;gap:6px;flex-wrap:wrap"><button class="btn primary" id="bootEdit">Edit boot screen</button><button class="btn" id="bootPlayDeck">Play it</button><button class="btn" id="bootTrigger2">Save startup trigger</button></div></div>`;return}
+  const el=$("#insp");const b=sel();
+  if(!selected){el.innerHTML=`<div class="nosel"><span class="label">Inspector</span><p>Select a key to edit its label, colours, image and actions. Or describe a whole page above and let the AI lay it out.</p></div>`;return}
+  const dial=isDialKey(selected);const [r,c]=parseKey(selected);
+  const posLabel=dial?`Dial ${c+1}`:`Row ${r+1}, column ${c+1}`;
+  if(!b){el.innerHTML=`<div class="insp-head"><h2>Empty ${dial?"dial":"key"}</h2><span class="pos">${posLabel}</span></div><div class="panel">
+    <p class="empty-note">Describe what this ${dial?"dial":"key"} should do in the box above, or start it by hand.</p>
+    <div style="display:flex;gap:6px;flex-wrap:wrap"><button class="btn primary" id="mkBtn">New ${dial?"dial":"button"}</button>${dial?"":`<button class="btn" id="presetsHere">${ico("layout-grid")}Browse presets</button>`}${dial?"":`<button class="btn" data-mk="pageup">Page up</button><button class="btn" data-mk="pagedown">Page down</button><button class="btn" data-mk="pagenum">Page number</button>`}${clipboard?`<button class="btn" id="pasteHere">Paste</button>`:""}</div></div>`;return}
+  const nActs=b.steps.reduce((n,s)=>n+s.down.length+s.up.length+s.rotL.length+s.rotR.length,0);
+  let h=`<div class="insp-head"><h2>${esc(b.kind!=="button"?{pageup:"Page up",pagedown:"Page down",pagenum:"Page number"}[b.kind]:(showVars(b.text).replace(/\n/g," ")||"Untitled"))}</h2><span class="pos">${posLabel}</span></div>`;
+  if(b.kind!=="button"){el.innerHTML=h+`<div class="panel"><p class="empty-note">Companion draws this navigation key itself. It switches pages on the surface it's pressed on.</p><div><button class="btn danger" id="clearKey">Clear key</button></div></div>`;return}
+  h+=`<div class="tabs" role="tablist">${[["look","Look"],["image","Image"],["actions","Actions",nActs],["feedback","Feedback",b.feedbacks.length]].map(([id,l,n])=>`<button class="tab" role="tab" data-tab="${id}" aria-selected="${tab===id}">${l}${n?`<span class="count">${n}</span>`:""}</button>`).join("")}</div><div class="panel">`;
+  if(tab==="look"){
+    h+=`<div class="preview-big">${keyHTML(selected,b)}<div class="field" style="flex:1"><span class="label">Label</span><textarea class="inp" id="fText" rows="2" placeholder="Button text">${esc(b.text)}</textarea><span class="empty-note">Enter for a new line. Companion variables like <span class="mono">$(internal:time_hms)</span> work.</span></div></div>
+    <div class="row2"><div class="field"><span class="label">Text size</span><select class="inp" id="fSize">${SIZES.map(s=>`<option ${String(b.size)===s?"selected":""} value="${s}">${s==="auto"?"Auto":s+" pt"}</option>`).join("")}</select></div>
+    <div class="field"><span class="label">Text position</span><div class="align-grid">${["top","center","bottom"].map(v=>["left","center","right"].map(hz=>`<button data-align="${hz}:${v}" aria-pressed="${b.align===hz+":"+v}" aria-label="${hz} ${v}"></button>`).join("")).join("")}</div></div></div>
+    ${colorField("fColor","Text colour",b.color)}
+    <div class="field"><span class="label">Background</span><div class="swatches">${SWATCHES.map(s=>`<button class="sw" style="background:${s}" data-bg="${s}" aria-pressed="${b.bg===s}" aria-label="Background ${s}"></button>`).join("")}</div></div>
+    ${colorField("fBg","Custom background",b.bg)}
+    <div class="field"><span class="label">Operator note</span><input class="inp" id="fNote" value="${esc(b.note||"")}" placeholder="Shown on the cheat sheet, e.g. Cuts to the wide shot"></div>
+    <div style="display:flex;gap:6px;flex-wrap:wrap"><button class="btn sm" id="dupKey">Duplicate</button><button class="btn sm" id="copyKey">Copy</button><button class="btn sm danger" id="clearKey">Clear key</button></div>`;
+  }else if(tab==="image"){
+    const im=b.image;
+    h+=`<div class="preview-big">${keyHTML(selected,b)}<div class="field" style="flex:1"><span class="label">Image</span><div class="seg" id="imgMode">${[["none","None"],["design","Design"],["upload","Upload"]].map(([v,l])=>`<button data-v="${v}" aria-pressed="${im.mode===v}">${l}</button>`).join("")}</div><span class="empty-note">Images are 72×72 PNGs, embedded in the export.</span></div></div>`;
+    if(im.mode==="design"){
+      h+=`<div class="field"><span class="label">Fill</span><div class="seg" id="bgStyle">${[["none","Key colour"],["solid","Solid"],["gradient","Gradient"]].map(([v,l])=>`<button data-v="${v}" aria-pressed="${im.bgStyle===v}">${l}</button>`).join("")}</div></div>`;
+      if(im.bgStyle!=="none")h+=`<div class="row2">${colorField("fG1",im.bgStyle==="gradient"?"From":"Colour",im.g1)}${im.bgStyle==="gradient"?colorField("fG2","To",im.g2):""}</div>`;
+      h+=`<div class="field"><span class="label">Icon</span><input class="inp" id="iconSearch" placeholder="Search icons: mic, scene, light…" aria-label="Search icons">
+        <div class="icon-grid" id="iconGrid"></div></div>
+        <div class="row2"><div class="field"><span class="label">Or an emoji</span><input class="inp" id="emoji" placeholder="🎬" value="${im.icon?.type==="emoji"?esc(im.icon.value):""}" maxlength="8"></div>
+        <div class="field"><span class="label">Or ask AI to draw one</span><div style="display:flex;gap:4px"><input class="inp" id="aiIconPrompt" placeholder="drone with camera"><button class="btn sm" id="aiIconGo">Draw</button></div></div></div>
+        ${im.icon?`<div class="row2">${im.icon.type!=="emoji"?colorField("fIc","Icon colour",im.iconColor):"<div></div>"}<div class="field"><span class="label">Icon position</span><select class="inp" id="iconPos">${[["box","Auto, fitted above the label"],["center","Centre"],["top","Above label"],["top-sm","Small, above a long label"],["left","Left of label"]].map(([v,l])=>`<option value="${v}" ${im.pos===v?"selected":""}>${l}</option>`).join("")}</select></div></div>
+        <div class="field"><span class="label">Icon size</span><input type="range" id="iconScale" min="0.25" max="0.95" step="0.05" value="${im.scale}"></div>
+        <div><button class="btn sm ghost danger" id="rmIcon">Remove icon</button></div>`:""}`;
+    }
+    if(im.mode==="upload"){
+      h+=`<div class="field"><span class="label">Picture</span><input type="file" id="upFile" accept="image/*" class="inp"></div>
+        <div class="field"><span class="label">Fit</span><div class="seg" id="fitMode">${[["cover","Fill key"],["contain","Fit inside"]].map(([v,l])=>`<button data-v="${v}" aria-pressed="${im.fit===v}">${l}</button>`).join("")}</div></div>`;
+    }
+    if(im.mode!=="none")h+=`<label class="check"><input type="checkbox" id="bake" ${im.bake?"checked":""}> Burn the label into the image</label><span class="empty-note" style="margin-top:-10px">Leave this off to keep the label editable in Companion.</span>`;
+  }else if(tab==="actions"){
+    const st=b.steps[stepIdx]||b.steps[0];
+    h+=actionsDatalist()+`<div class="field"><div class="set-h"><span class="label">Steps</span><button class="btn ghost sm" id="addStep">+ Step</button></div>
+      <div class="steps">${b.steps.map((s,i)=>`<button class="btn sm ${i===stepIdx?"primary":""}" data-step="${i}">Step ${i+1}</button>`).join("")}${b.steps.length>1?`<button class="btn ghost sm danger" id="delStep">Remove step ${stepIdx+1}</button>`:""}</div>
+      <span class="empty-note">${b.steps.length>1?"Each press runs the current step, then moves to the next. Good for toggles like start/stop.":"Add a second step to make a toggle: press once for step 1, again for step 2."}</span></div>`;
+    h+=setBlock("down",dial?"Push":"Press",st.down)+setBlock("up","Release",st.up);
+    if(dial)h+=setBlock("rotL","Turn left",st.rotL)+setBlock("rotR","Turn right",st.rotR);
+    h+=`<span class="empty-note">Options are JSON, e.g. <span class="mono">{"scene":"Camera"}</span>. Option names must match the module.</span>`;
+  }else if(tab==="feedback"){
+    h+=actionsDatalist()+`<span class="empty-note">Feedbacks change how the key looks based on what's happening, like turning red when a scene is live.</span>`;
+    b.feedbacks.forEach((f,i)=>{h+=fbHead(f,i)+`<div class="row2"><div class="colorrow"><input type="color" data-f="fbbg" value="${esc(f.style?.bgcolor||"#c8102e")}" aria-label="Active background"><span class="empty-note">Background</span></div><div class="colorrow"><input type="color" data-f="fbfg" value="${esc(f.style?.color||"#ffffff")}" aria-label="Active text colour"><span class="empty-note">Text</span></div></div>
+      <label class="check"><input type="checkbox" data-f="inv" ${f.inverted?"checked":""}> Invert (apply when NOT true)</label></div>`});
+    h+=`<div><button class="btn sm" id="addFb">+ Feedback</button></div>`;
+  }
+  el.innerHTML=h+"</div>";
+  if(tab==="image"&&b.image.mode==="design")renderIconGrid("");
+}
+function renderIconGrid(q){
+  const g=$("#iconGrid");if(!g)return;const b=sel();q=q.trim().toLowerCase();
+  const all=window.lucide?Object.keys(window.lucide.icons):[];
+  let names=q?all.map(n=>n.replace(/([a-z0-9])([A-Z])/g,"$1-$2").replace(/([A-Za-z])([0-9])/g,"$1-$2").toLowerCase()).filter(n=>n.includes(q)).slice(0,120):ICONS;
+  names=names.filter(iconExists);
+  g.innerHTML=names.length?names.map(n=>`<button data-icon="${n}" title="${n}" aria-label="${n}" aria-pressed="${b.image.icon?.type==="lucide"&&b.image.icon.value===n}">${lucideSvg(n)}</button>`).join(""):`<span class="empty-note">No icons match.</span>`;
+}
+function render(){renderPagebar();renderDeck();renderRail();renderInspector();renderChain();
+  $("#deckTitle").textContent=dev().name;$("#deckPage").textContent="Page "+(S.pageIdx+1);$("#connCount").textContent=S.connections.length||"";
+  $("#device").value=S.device;$("#undo").disabled=!undoStack.length;$("#redo").disabled=!redoStack.length;
+  $("#exampleBanner").hidden=!S.example;
+  $("#selHint").textContent=multi.size>1?`${multi.size} selected`:"";}
+
+/* ---------- mutations ---------- */
+function mutSel(fn,art=false){if(!selected)return;commit(()=>{fn(page().buttons[selected])},art?{renderArtFor:[selected]}:{})}
+function setText(v){const b=sel();if(!b)return;
+  // typing: coalesce into one undo step per focus
+  if(!setText.armed){undoStack.push(JSON.stringify(S));redoStack.length=0;setText.armed=true}
+  b.text=v;persist();
+  if(b.image.pos==="box"&&b.image.icon){layoutLabel(b);refreshArt([selected]).then(()=>{renderDeck();updatePreview()});return}
+  if(b.image.bake&&b.image.mode!=="none"){refreshArt([selected]).then(()=>{renderDeck();updatePreview()})}else{renderDeck();updatePreview()}
+}
+function updatePreview(){const pv=$(".preview-big .key");if(pv&&sel()){pv.outerHTML=keyHTML(selected,sel())}const h2=$(".insp-head h2");if(h2&&sel())h2.textContent=showVars(sel().text).replace(/\n/g," ")||"Untitled"}
+function moveKey(from,to,copy){
+  const pg=page();if(from===to)return;
+  commit(()=>{const a=pg.buttons[from],b=pg.buttons[to];
+    if(copy){if(a)pg.buttons[to]=clone(a)}else{if(b)pg.buttons[from]=b;else delete pg.buttons[from];if(a)pg.buttons[to]=a;else delete pg.buttons[to]}
+    selected=to;});
+}
+function allKeys(){const d=dev(),out=[];for(let r=0;r<d.rows;r++)for(let c=0;c<d.cols;c++)out.push(keyId(r,c));if(d.dials)for(let c=0;c<d.dials;c++)out.push(keyId(d.rows,c));return out}
+
+/* ---------- events: deck drag & select ---------- */
+let drag=null;
+$("#deck").addEventListener("pointerdown",e=>{
+  const k=e.target.closest("[data-k]");if(!k||e.button!==0)return;
+  drag={k:k.dataset.k,x:e.clientX,y:e.clientY,el:k,active:false,ghost:null,over:null};
+  k.setPointerCapture(e.pointerId);
+});
+$("#deck").addEventListener("pointermove",e=>{
+  if(!drag)return;
+  if(!drag.active){if(Math.hypot(e.clientX-drag.x,e.clientY-drag.y)<6)return;
+    if(!page().buttons[drag.k]){return}
+    drag.active=true;drag.ghost=drag.el.cloneNode(true);drag.ghost.classList.add("drag-ghost");drag.ghost.classList.remove("sel");
+    const r=drag.el.getBoundingClientRect();drag.ghost.style.width=r.width+"px";drag.ghost.style.height=r.height+"px";document.body.appendChild(drag.ghost);drag.el.classList.add("dragging")}
+  drag.ghost.style.left=e.clientX+"px";drag.ghost.style.top=e.clientY+"px";
+  const t=document.elementFromPoint(e.clientX,e.clientY)?.closest("#deck [data-k]");
+  if(drag.over&&drag.over!==t)drag.over.classList.remove("drop");
+  if(t&&t!==drag.el){t.classList.add("drop");drag.over=t}else drag.over=null;
+});
+function endDrag(e,cancel){
+  if(!drag)return;const d=drag;drag=null;
+  if(d.ghost)d.ghost.remove();d.el.classList.remove("dragging");if(d.over)d.over.classList.remove("drop");
+  if(cancel)return;
+  if(d.active){if(d.over){const to=d.over.dataset.k;if(isDialKey(to)!==isDialKey(d.k)){toast("Keys and dials can't swap");return}moveKey(d.k,to,e.altKey)}}
+  else if(e.shiftKey||e.metaKey||e.ctrlKey){if(selected&&!multi.size)multi.add(selected);multi.has(d.k)?multi.delete(d.k):multi.add(d.k);
+    if(multi.size===1){selected=[...multi][0];multi.clear()}else if(!multi.size)selected=null;else selected=d.k;render()}
+  else{multi.clear();selected=d.k;stepIdx=0;if(tab==="feedback"&&isDialKey(selected))tab="actions";render()}
+}
+$("#deck").addEventListener("pointerup",e=>endDrag(e,false));
+$("#deck").addEventListener("pointercancel",e=>endDrag(e,true));
+
+/* ---------- events: top & rail ---------- */
+$("#device").innerHTML=Object.entries(DEVICES).map(([k,d])=>`<option value="${k}">${esc(d.name)}</option>`).join("");
+$("#device").addEventListener("change",e=>{const v=e.target.value;commit(()=>{S.device=v});
+  const d=dev();const outside=S.pages.some(p=>Object.keys(p.buttons).some(k=>{const[r,c]=parseKey(k);return r>d.rows||(r===d.rows&&(!d.dials||c>=d.dials))||c>=d.cols}));
+  if(outside)toast("Some keys sit outside this deck. They're kept and come back if you switch back.");});
+$("#undo").onclick=undo;$("#redo").onclick=redo;
+document.addEventListener("click",e=>{
+  const t=e.target.closest("button")||e.target;
+  const p=t.closest("[data-p]");if(p){S.pageIdx=+p.dataset.p;selected=null;multi.clear();persist();render();return}
+  if(t.id==="addPage"){commit(()=>{S.pages.push({id:uid(),name:"Page "+(S.pages.length+1),buttons:{}});S.pageIdx=S.pages.length-1;selected=null});return}
+  if(t.id==="delPage"){if(t.dataset.armed){commit(()=>{S.pages.splice(S.pageIdx,1);S.pageIdx=Math.max(0,S.pageIdx-1);selected=null})}else{t.dataset.armed="1";t.classList.add("armed");toast("Click the bin again to delete this page");setTimeout(()=>{if(t.isConnected){delete t.dataset.armed;t.classList.remove("armed")}},2500)}return}
+  if(t.id==="wipePage"){if(t.dataset.armed){wipePage()}else{t.dataset.armed="1";t.classList.add("armed");toast("Click the eraser again to wipe every key on this page");setTimeout(()=>{if(t.isConnected){delete t.dataset.armed;t.classList.remove("armed")}},2500)}return}
+  if(t.id==="prevPage"||t.id==="nextPage"){const d=t.id==="prevPage"?-1:1;S.pageIdx=Math.max(0,Math.min(S.pages.length-1,S.pageIdx+d));selected=null;multi.clear();persist();render();return}
+  const gt=t.closest("[data-goto]");if(gt){tab=gt.dataset.goto;renderInspector();return}
+  const dc=t.closest("[data-delconn]");if(dc){const id=dc.dataset.delconn;commit(()=>{S.connections=S.connections.filter(c=>c.id!==id)});toast("Connection removed. Keys that used it show it as missing.");return}
+  const rc=t.closest("[data-recipe]");if(rc){const r=RECIPES[+rc.dataset.recipe];$("#prompt").value=r.t;setAiMode(r.m);$("#prompt").focus();return}
+  if(t.id==="learnLink"){e.preventDefault();openImport();return}
+  if(t.closest("[data-close]")){t.closest("dialog").close();return}
+  // inspector
+  if(t.id==="mkBtn"){const k=selected;commit(()=>{page().buttons[k]=newButton()});tab="look";render();$("#fText")?.focus();return}
+  const mk=t.closest("[data-mk]");if(mk){const k=selected;commit(()=>{page().buttons[k]={...newButton(),kind:mk.dataset.mk}});return}
+  if(t.id==="pasteHere"){paste();return}
+  const tb=t.closest("[data-tab]");if(tb){tab=tb.dataset.tab;renderInspector();return}
+  if(t.id==="clearKey"){const k=selected;commit(()=>{delete page().buttons[k]});return}
+  if(t.id==="dupKey"){duplicate();return}
+  if(t.id==="copyKey"){copy();return}
+  const al=t.closest("[data-align]");if(al){mutSel(b=>{b.align=al.dataset.align},!!sel()?.image?.bake);return}
+  const sw=t.closest("[data-bg]");if(sw){mutSel(b=>{b.bg=sw.dataset.bg});return}
+  const im=t.closest("#imgMode [data-v]");if(im){mutSel(b=>{b.image.mode=im.dataset.v;if(im.dataset.v==="none")b.png64=null},true);return}
+  const bs=t.closest("#bgStyle [data-v]");if(bs){mutSel(b=>{b.image.bgStyle=bs.dataset.v},true);return}
+  const fm=t.closest("#fitMode [data-v]");if(fm){mutSel(b=>{b.image.fit=fm.dataset.v},true);return}
+  const ic=t.closest("[data-icon]");if(ic){mutSel(b=>{const first=!b.image.icon;b.image.icon={type:"lucide",value:ic.dataset.icon};if(first&&b.image.mode!=="upload")b.image.mode="design";if(b.text.trim()&&(first||b.image.pos==="box"))layoutLabel(b)},true);return}
+  if(t.id==="rmIcon"){mutSel(b=>{b.image.icon=null},true);return}
+  if(t.id==="aiIconGo"){aiIcon();return}
+  const st=t.closest("[data-step]");if(st){stepIdx=+st.dataset.step;renderInspector();return}
+  if(t.id==="addStep"){mutSel(b=>{b.steps.push({down:[],up:[],rotL:[],rotR:[]});stepIdx=b.steps.length-1});return}
+  if(t.id==="delStep"){mutSel(b=>{b.steps.splice(stepIdx,1);stepIdx=0});return}
+  const add=t.closest("[data-add]");if(add){const conn=S.connections[0]?.id||"internal";mutSel(b=>{b.steps[stepIdx][add.dataset.add].push({connection:conn,action:"",options:{}})});return}
+  const aw=t.closest("[data-addwait]");if(aw){mutSel(b=>{b.steps[stepIdx][aw.dataset.addwait].push({connection:"internal",action:"wait",options:{time:1000}})});return}
+  const tool=t.closest(".tools [data-t]");if(tool){
+    const row=tool.closest("[data-set],[data-fb]");
+    if(row.dataset.fb!==undefined){const i=+row.dataset.fb;mutSel(b=>{b.feedbacks.splice(i,1)});return}
+    const set=row.dataset.set,i=+row.dataset.i;
+    mutSel(b=>{const L=b.steps[stepIdx][set];const op=tool.dataset.t;
+      if(op==="del")L.splice(i,1);else{const j=op==="up"?i-1:i+1;if(j>=0&&j<L.length)[L[i],L[j]]=[L[j],L[i]]}});return}
+  if(t.id==="addFb"){mutSel(b=>{b.feedbacks.push({connection:S.connections[0]?.id||"internal",type:"",options:{},style:{bgcolor:"#c8102e",color:"#ffffff"},inverted:false})});return}
+  if(t.id==="dismissExample"){S.example=false;persist();render();return}
+  if(t.id==="clearExample"){commit(()=>{S.pages=[{id:uid(),name:"Page 1",buttons:{}}];S.pageIdx=0;S.example=false;selected=null});return}
+});
+$("#newProject").onclick=e=>{const t=e.currentTarget;if(t.dataset.armed){commit(()=>{S={v:1,device:S.device,pageIdx:0,example:false,pages:[{id:uid(),name:"Page 1",buttons:{}}],connections:[],learned:{}};selected=null});delete t.dataset.armed;t.textContent="Start over"}
+  else{t.dataset.armed="1";t.textContent="Click again to wipe";setTimeout(()=>{delete t.dataset.armed;t.textContent="Start over"},2500)}};
+
+/* inspector inputs */
+document.addEventListener("input",e=>{
+  const t=e.target;
+  if(t.id==="fText"){setText(t.value);return}
+  if(t.id==="pageName"){page().name=t.value;persist();return}
+  if(t.id==="iconSearch"){renderIconGrid(t.value);return}
+  const pairs={fColorC:["color",false],fBgC:["bg",false],fG1C:["g1",true],fG2C:["g2",true],fIcC:["iconColor",true]};
+  if(pairs[t.id]){liveColor(pairs[t.id],t.value);const hx=$("#"+t.id.slice(0,-1)+"H");if(hx)hx.value=t.value;return}
+  if(t.id==="iconScale"){const b=sel();if(!b)return;b.image.scale=+t.value;persist();refreshArt([selected]).then(()=>{renderDeck();updatePreview()});return}
+  if(t.dataset.f==="wait"){const row=t.closest("[data-set]");const b=sel();b.steps[stepIdx][row.dataset.set][+row.dataset.i].options={time:Math.max(0,+t.value||0)};persist();return}
+});
+function liveColor([field,isImg],v){const b=sel();if(!b)return;if(!liveColor.armed){undoStack.push(JSON.stringify(S));redoStack.length=0;liveColor.armed=true;setTimeout(()=>liveColor.armed=false,800)}
+  if(isImg)b.image[field]=v;else b[field]=v;persist();
+  if(isImg||(b.image.bake&&field==="color"))refreshArt([selected]).then(()=>{renderDeck();updatePreview()});else{renderDeck();updatePreview()}}
+document.addEventListener("change",e=>{
+  const t=e.target;
+  if(t.id==="fText"){setText.armed=false;renderInspector();return}
+  if(t.id==="fNote"){mutSel(b=>{b.note=t.value.trim();b.noteAI=false});return}
+  if(t.id==="fSize"){mutSel(b=>{b.size=t.value},!!sel()?.image?.bake);return}
+  const hexIds={fColorH:["color",false],fBgH:["bg",false],fG1H:["g1",true],fG2H:["g2",true],fIcH:["iconColor",true]};
+  if(hexIds[t.id]){const v=normHex(t.value);if(!v){toast("Use a hex colour like #ff8800");return}const[f,img]=hexIds[t.id];mutSel(b=>{if(img)b.image[f]=v;else b[f]=v},img||f==="color");return}
+  if(/C$/.test(t.id)&&t.type==="color"){renderInspector();return}
+  if(t.id==="emoji"){const v=t.value.trim();mutSel(b=>{b.image.icon=v?{type:"emoji",value:v}:null;if(v&&b.text.trim()&&b.image.pos==="center"){b.image.pos="top";if(b.align==="center:center")b.align="center:bottom"}},true);return}
+  if(t.id==="iconPos"){mutSel(b=>{b.image.pos=t.value;if(t.value==="top"&&b.align==="center:center")b.align="center:bottom";if(t.value==="left"&&b.align==="center:center")b.align="right:center"},true);return}
+  if(t.id==="iconScale"){renderInspector();return}
+  if(t.id==="bake"){mutSel(b=>{b.image.bake=t.checked},true);return}
+  if(t.id==="upFile"){const f=t.files[0];if(!f)return;const rd=new FileReader();rd.onload=()=>mutSel(b=>{b.image.src=rd.result},true);rd.readAsDataURL(f);return}
+  if(t.id==="loadProject"){const f=t.files[0];if(!f)return;f.text().then(txt=>{try{const s=JSON.parse(txt);if(!s.pages)throw 0;commit(()=>{S=s;selected=null});refreshAllArt();toast("Project opened")}catch(_){toast("That file isn't a Deckwright project")}});t.value="";return}
+  if(t.dataset.okind==="act"||t.dataset.f==="actsel"){const row=t.closest("[data-set]");const set=row.dataset.set,i=+row.dataset.i;
+    mutSel(b=>{const a=b.steps[stepIdx][set][i];const L=libOf(a.connection);
+      if(t.dataset.f==="actsel"){a.action=t.value;a.options=optDefaults(L?.aById.get(t.value)?.o)}
+      else{a.options=a.options||{};a.options[t.dataset.opt]=readOpt(t,L?.aById.get(a.action)?.o)}});return}
+  if(t.dataset.okind==="fb"||t.dataset.f==="fbsel"){const row=t.closest("[data-fb]");const i=+row.dataset.fb;
+    mutSel(b=>{const f=b.feedbacks[i];const L=libOf(f.connection);
+      if(t.dataset.f==="fbsel"){f.type=t.value;const d=L?.fById.get(t.value);f.options=optDefaults(d?.o);if(d?.ft==="advanced")f.style={};else if(d?.ds)f.style={bgcolor:d.ds.bg,color:d.ds.fg}}
+      else{f.options=f.options||{};f.options[t.dataset.opt]=readOpt(t,L?.fById.get(f.type)?.o)}});return}
+  const row=t.closest("[data-set]");
+  if(row&&t.dataset.f&&t.dataset.f!=="wait"){const set=row.dataset.set,i=+row.dataset.i;
+    if(t.dataset.f==="opts"){let v;try{v=JSON.parse(t.value||"{}");row.classList.remove("bad")}catch(_){row.classList.add("bad");toast("Options must be valid JSON");return}mutSel(b=>{b.steps[stepIdx][set][i].options=v});return}
+    mutSel(b=>{const a=b.steps[stepIdx][set][i];if(t.dataset.f==="conn")a.connection=t.value;if(t.dataset.f==="action"){a.action=t.value.trim();if(!Object.keys(a.options||{}).length){const ex=exampleOptions(a.connection,a.action);if(ex)a.options=ex}}});return}
+  if(t.dataset.f==="wait"){renderInspector();return}
+  const fb=t.closest("[data-fb]");
+  if(fb){const i=+fb.dataset.fb;
+    if(t.dataset.f==="opts"){let v;try{v=JSON.parse(t.value||"{}");fb.classList.remove("bad")}catch(_){fb.classList.add("bad");toast("Options must be valid JSON");return}mutSel(b=>{b.feedbacks[i].options=v});return}
+    mutSel(b=>{const f=b.feedbacks[i];f.style=f.style||{};const k=t.dataset.f;if(k==="conn")f.connection=t.value;if(k==="type")f.type=t.value.trim();if(k==="fbbg")f.style.bgcolor=t.value;if(k==="fbfg")f.style.color=t.value;if(k==="inv")f.inverted=t.checked});}
+});
+function fbHead(f,i){const L=libOf(f.connection);const d=L?.fById.get(f.type);
+  if(!L)return `<div class="act" data-fb="${i}"><div class="act-top"><select class="inp" data-f="conn">${connOptions(f.connection)}</select><input class="inp mono" data-f="type" value="${esc(f.type)}" placeholder="feedback id"><span class="tools"><button data-t="del" title="Remove">✕</button></span></div>
+      <textarea class="inp" data-f="opts" rows="1" spellcheck="false">${esc(JSON.stringify(f.options||{}))}</textarea>`;
+  return `<div class="act" data-fb="${i}"><div class="act-top"><select class="inp" data-f="conn">${connOptions(f.connection)}</select><select class="inp" data-f="fbsel" aria-label="Feedback"><option value="">Choose a feedback…</option>${!d&&f.type?`<option selected value="${esc(f.type)}">${esc(f.type)} (not in library)</option>`:""}${L.feedbacks.map(x=>`<option value="${esc(x.id)}" ${x.id===f.type?"selected":""}>${esc(x.n)}</option>`).join("")}</select><span class="tools"><button data-t="del" title="Remove">✕</button></span></div>${d?(d.ft==="advanced"?`<span class="empty-note">This feedback sets its own look, so the colours below are ignored.</span>`:"")+optFields(d.o,f.options,"fb"):""}`}
+function exampleOptions(connId,action){if(connId==="internal")return INTERNAL_ACTIONS[action]?clone(INTERNAL_ACTIONS[action]):null;
+  const c=S.connections.find(x=>x.id===connId);const L=c&&S.learned?.[c.module]?.actions?.[action];return L?clone(L):null}
+
+/* keyboard */
+function copy(){if(!sel())return;clipboard=clone(sel());toast("Key copied")}
+function paste(){if(!clipboard||!selected)return;const k=selected;commit(()=>{page().buttons[k]=clone(clipboard)});toast("Pasted")}
+function duplicate(){const b=sel();if(!b)return;const free=allKeys().find(k=>!page().buttons[k]&&isDialKey(k)===isDialKey(selected));if(!free){toast("No empty keys on this page");return}commit(()=>{page().buttons[free]=clone(b);selected=free})}
+document.addEventListener("keydown",e=>{
+  const typing=e.target.closest("input,textarea,select,[contenteditable]");
+  const mod=e.metaKey||e.ctrlKey;
+  if(mod&&e.key.toLowerCase()==="z"&&!typing){e.preventDefault();e.shiftKey?redo():undo();return}
+  if(typing||document.querySelector("dialog[open]"))return;
+  if(mod&&e.key==="c"){copy();return}
+  if(mod&&e.key==="v"){paste();return}
+  if(mod&&e.key==="d"){e.preventDefault();duplicate();return}
+  if(e.key==="Escape"&&(multi.size||selected)){multi.clear();selected=null;render();return}
+  if(mod&&e.key==="a"){e.preventDefault();multi.clear();Object.keys(page().buttons).forEach(k=>multi.add(k));if(multi.size===1){selected=[...multi][0];multi.clear()}render();return}
+  if((e.key==="Backspace"||e.key==="Delete")&&multi.size>1){const ks=[...multi];commit(()=>{ks.forEach(k=>delete page().buttons[k]);multi.clear();selected=null});return}
+  if((e.key==="Backspace"||e.key==="Delete")&&sel()){const k=selected;commit(()=>{delete page().buttons[k]});return}
+  const dirs={ArrowLeft:[0,-1],ArrowRight:[0,1],ArrowUp:[-1,0],ArrowDown:[1,0]};
+  if(dirs[e.key]){e.preventDefault();const d=dev();let[r,c]=selected?parseKey(selected):[0,-1];r+=dirs[e.key][0];c+=dirs[e.key][1];
+    const maxR=d.dials?d.rows:d.rows-1;r=Math.max(0,Math.min(maxR,r));const maxC=(d.dials&&r===d.rows?d.dials:d.cols)-1;c=Math.max(0,Math.min(maxC,c));
+    if(e.shiftKey&&selected){moveKey(selected,keyId(r,c),false)}else{selected=keyId(r,c);stepIdx=0;render()}}
+});
+
+/* ---------- AI ---------- */
+let sampleFn=null,aiCtl=null,aiMode="key",aiBlocked=false;
+(async()=>{try{sampleFn=await window.claude?.use?.("sample")}catch(_){}
+  if(!sampleFn){$("#aiStatus").textContent="AI building works when this page is opened in Claude. Everything else works here.";$("#aiGo").disabled=true;}})();
+function setAiMode(v){aiMode=v;[...$("#aiTarget").children].forEach(x=>x.setAttribute("aria-pressed",x.dataset.v===v));$("#aiGo").innerHTML=ico(v==="restyle"?"palette":"sparkles")+(v==="restyle"?"Restyle":"Build it");
+  $("#prompt").placeholder=v==="restyle"?"e.g. Make every audio key teal with white text, and put a mic icon on each.":"e.g. Make a button that switches OBS to the Interview scene, waits 2 seconds, and starts recording. Turn it red when Interview is live."}
+$("#aiTarget").addEventListener("click",e=>{const b=e.target.closest("[data-v]");if(b)setAiMode(b.dataset.v)});
+$("#prompt").addEventListener("keydown",e=>{if(e.key==="Enter"&&(e.metaKey||e.ctrlKey)){e.preventDefault();aiBuild()}});
+$("#aiGo").onclick=aiBuild;$("#aiStop").onclick=()=>aiCtl?.abort();
+const AI_ERR={not_granted:"Claude access was declined for this page.",rate_limited:"Too many requests right now. Try again in a minute.",session_expired:"Sign in to Claude again, then retry.",refused:"Claude couldn't help with that request. Try rewording it.",invalid_json:"The answer came back garbled. Try again, or ask for fewer buttons at once.",empty_completion:"No answer came back. Try a simpler request.",prompt_too_large:"Your imported config is too big to send. Remove some connections and retry.",sampling_disabled:"Claude isn't available for this account."};
+
+function learnedForPrompt(){
+  const out={};let size=0;
+  for(const m in S.learned||{}){const L=S.learned[m];out[m]={actions:{},feedbacks:{}};
+    for(const[a,o]of Object.entries(L.actions||{})){const s=JSON.stringify(o);if(size+s.length>60000)break;out[m].actions[a]=o;size+=s.length+a.length}
+    for(const[a,o]of Object.entries(L.feedbacks||{})){const s=JSON.stringify(o);if(size+s.length>80000)break;out[m].feedbacks[a]=o;size+=s.length+a.length}}
+  return out;
+}
+function pageSummary(){
+  const pg=page();return Object.entries(pg.buttons).map(([k,b])=>{const[r,c]=parseKey(k);return{position:[r,c],kind:b.kind,text:b.text,actions:b.steps.map(s=>s.down.map(a=>(S.connections.find(x=>x.id===a.connection)?.label||a.connection)+":"+a.action))}});
+}
+function buildPrompt(req){
+  const d=dev();
+  const target=aiMode==="key"?`Build exactly ONE button for the selected position ${selected?JSON.stringify(parseKey(selected)):"[0,0]"}${isDialKey(selected)?" — this is a rotary DIAL on a Stream Deck +, so fill push (steps[].down), rotateLeft and rotateRight":""}. If the request clearly describes several buttons, build all of them; they will be placed in following empty keys.`
+    :aiMode==="fill"?`Build as many buttons as the request needs. They'll be placed into empty keys in reading order.`
+    :`Design the WHOLE page. Give every button a "position":[row,col] (0-based, rows 0-${d.rows-1}, cols 0-${d.cols-1}${d.dials?`; dials are row ${d.rows}, cols 0-${d.dials-1}`:""}). Group related controls in rows. Existing buttons may be replaced; set "clearOthers": true if the page should only contain your buttons.`;
+  return `You are an expert Bitfocus Companion and Elgato Stream Deck programmer. Turn the user's request into Companion button definitions.
+
+DEVICE: ${d.name}, ${d.cols} columns x ${d.rows} rows${d.dials?` plus ${d.dials} rotary dials`:""}.
+TARGET: ${target}
+
+EXISTING CONNECTIONS (use their "id" in actions):
+${JSON.stringify(S.connections.map(c=>({id:c.id,label:c.label,module:c.module})))}
+
+ACTIONS AND FEEDBACKS ALREADY USED IN THE USER'S REAL COMPANION CONFIG (module -> id -> example options). These names are CORRECT for the user's module versions; prefer them and copy their option keys exactly. Option values show real scene/input names the user has:
+${JSON.stringify(learnedForPrompt())}
+
+FULL ACTION AND FEEDBACK LIBRARY FOR THE USER'S CONNECTED MODULES (extracted from the modules themselves; these ids and option keys are authoritative, use them exactly; "id — name (optionId:type[choice ids])"):
+${libraryForPrompt()}
+
+Modules with a full library available: ${Object.keys(LIBRARY).join(", ")}. Prefer them when the request fits.
+
+CURRENT PAGE "${page().name}":
+${JSON.stringify(pageSummary())}
+
+RULES
+- Companion export format v6 (Companion 3.x action ids). Action = {"connection": <connection id | "internal" | "new:<label>">, "action": <action id>, "options": {...}}.
+- If no existing connection fits, add one to "newConnections" as {"label","module"} and reference it as "new:<label>". "module" MUST be one of these Companion module ids: ${CATALOG.filter(m=>!m[4]).map(m=>m[0]).join(" ")}
+- Internal actions: wait {"time": ms}; set_page {"controller":"self","page":N}; inc_page {"controller":"self"}; dec_page {"controller":"self"}; custom_variable_set_value {"name","value"}.
+- For delays between actions insert an internal wait action.
+- For toggles (start/stop, mute/unmute) prefer a single module toggle action if the module has one; otherwise use 2 steps (each press advances to the next step).
+- Feedback = {"connection","type": <feedback id>,"options":{},"style":{"bgcolor":"#rrggbb","color":"#rrggbb"},"inverted":false}. Add feedbacks when the user would want a tally/state (live scene red, recording red, muted red).
+- Text: short, uppercase-friendly, max ~3 short lines, "\\n" for line breaks. size is "auto" or one of "7","14","18","24","30","44".
+- Colours: hex. Pick a coherent, readable palette: dark keys with bright icons, or bright keys with dark text. Related buttons share a colour.
+- icon: a Lucide icon name (kebab-case, e.g. ${ICONS.slice(0,40).join(", ")}) or a single emoji, or null. iconColor hex. When there is an icon AND text, the icon goes above the text automatically.
+- Page navigation keys can be {"kind":"pageup"} / {"kind":"pagedown"} / {"kind":"pagenum"} with nothing else.
+- If unsure about an action id or option name for a module you have no examples for, use your best knowledge and say so in "notes" so the user can verify it in Companion.
+
+Reply with ONLY JSON of this shape:
+{"buttons":[{"position":[r,c] (whole-page mode only),"kind":"button","text":"","size":"auto","color":"#ffffff","bg":"#000000","icon":"mic","iconColor":"#ffffff","steps":[{"down":[...],"up":[...]}],"rotateLeft":[],"rotateRight":[],"feedbacks":[]}],"newConnections":[{"label":"obs","module":"obs-studio"}],"clearOthers":false,"notes":"1-3 short sentences: what you built and anything the user must check."}
+
+USER REQUEST:
+${req}`;
+}
+async function runAI(prompt,apply,opts={}){
+  const st=opts.status||$("#aiStatus");
+  if(!sampleFn||aiBlocked){toast("AI features work when this page is opened in Claude");return null}
+  if(aiCtl){toast("Claude is still working on the last request");return null}
+  aiCtl=new AbortController();document.body.classList.add("ai-busy");st.className="ai-status";st.textContent=opts.busy||"Thinking…";
+  $("#aiGo").disabled=true;$("#aiStop").hidden=false;if(!opts.status)$("#aiNotes").hidden=true;
+  try{
+    const res=await sampleFn.json(prompt,{signal:aiCtl.signal,onText:()=>{st.textContent=opts.writing||"Writing the config…"}});
+    const msg=await apply(res);st.className="ai-status good";st.textContent=msg;
+    if(!opts.status&&res&&res.notes){$("#aiNotes").textContent=res.notes;$("#aiNotes").hidden=false}
+    return res;
+  }catch(e){
+    if(e&&e.code==="cancelled")st.textContent="Stopped.";
+    else{st.className="ai-status err";st.textContent=AI_ERR[e?.code]||"Something went wrong reaching Claude. Try again.";if(e?.code==="not_granted"||e?.code==="sampling_disabled")aiBlocked=true}
+    return null;
+  }finally{document.body.classList.remove("ai-busy");$("#aiGo").disabled=!sampleFn||aiBlocked;$("#aiStop").hidden=true;aiCtl=null}
+}
+async function aiBuild(){
+  const req=$("#prompt").value.trim();if(!req){$("#prompt").focus();return}
+  if(aiMode==="restyle")return runAI(buildRestylePrompt(req),applyRestyle,{busy:"Thinking about the new look…",writing:"Restyling…"});
+  if(aiMode==="key"&&!selected){const free=allKeys().find(k=>!page().buttons[k]&&!isDialKey(k));selected=free||keyId(0,0);render()}
+  return runAI(buildPrompt(req),async res=>{const n=await applyAI(res);return n?`Built ${n} ${n===1?"key":"keys"}. Check the Actions tab, then export.`:"Nothing to build from that. Try describing what the key should do."},{busy:"Thinking… Claude is working out the actions."});
+}
+
+/* ---------- icons & restyle ---------- */
+function setIcon(b,icon,iconColor){
+  const v=icon==null?"":String(icon).trim();
+  if(!v){b.image.icon=null;return}
+  const isL=iconExists(v),isE=!isL&&/[^\x00-\x7f]/.test(v);if(!isL&&!isE)return;
+  if(b.image.mode!=="upload")b.image.mode="design";
+  b.image.icon={type:isL?"lucide":"emoji",value:v};
+  if(iconColor&&normHex(iconColor))b.image.iconColor=normHex(iconColor);
+  if(b.text.trim())layoutLabel(b);
+}
+function styleSummary(k,b){const[r,c]=parseKey(k);const im=b.image;
+  return{position:[r,c],text:b.text,does:describeKey(b,true),bg:b.bg,color:b.color,size:b.size,align:b.align,
+    icon:im.icon?(im.icon.type==="svg"?"(custom drawing)":im.icon.value):null,iconColor:im.iconColor,
+    fill:im.mode==="design"?{style:im.bgStyle,from:im.g1,to:im.g2}:im.mode==="upload"?"(photo)":null}}
+function buildRestylePrompt(req){
+  const pg=page(),d=dev();const keys=Object.entries(pg.buttons).filter(([,b])=>b.kind==="button");
+  const scope=multi.size>1?[...multi].map(parseKey):null;
+  return `You restyle Stream Deck keys for Bitfocus Companion. Change appearance only, never actions.
+
+KEYS ON PAGE "${pg.name}" (${d.name}, ${d.cols} columns x ${d.rows} rows):
+${JSON.stringify(keys.map(([k,b])=>styleSummary(k,b)))}
+
+${scope?`SCOPE: change ONLY these positions: ${JSON.stringify(scope)}`:`SCOPE: any key the request applies to. Use each key's label and "does" to decide which keys match (e.g. "audio keys" = keys that control audio or mics).`}
+
+Fields you may set per key:
+- bg, color (text colour): hex
+- size: "auto","7","14","18","24","30","44"
+- align: "<left|center|right>:<top|center|bottom>"
+- text: only if the user asks to rename or relabel ("\\n" for line breaks)
+- icon: a Lucide icon name in kebab-case (e.g. ${ICONS.slice(0,30).join(", ")}), a single emoji, or null to remove
+- iconColor: hex
+- fill: {"style":"none"|"solid"|"gradient","from":"#hex","to":"#hex"}. "none" shows the key's bg colour.
+Keep text readable against its background. Keep related keys consistent.
+
+Reply with ONLY JSON: {"changes":[{"position":[r,c], ...only the fields that change}],"notes":"one short sentence"}
+
+REQUEST: ${req}`;
+}
+async function applyRestyle(res){
+  const ch=Array.isArray(res?.changes)?res.changes:[];const pg=page();const keys=[];
+  undoStack.push(JSON.stringify(S));redoStack.length=0;
+  for(const c of ch){if(!c||!Array.isArray(c.position))continue;const k=keyId(+c.position[0],+c.position[1]);const b=pg.buttons[k];
+    if(!b||b.kind!=="button"||(multi.size>1&&!multi.has(k)))continue;
+    if(normHex(c.bg))b.bg=normHex(c.bg);
+    if(normHex(c.color))b.color=normHex(c.color);
+    if(c.size!=null&&SIZES.includes(String(c.size)))b.size=String(c.size);
+    if(typeof c.align==="string"&&/^(left|center|right):(top|center|bottom)$/.test(c.align))b.align=c.align;
+    if(typeof c.text==="string")b.text=c.text.replace(/\\n/g,"\n");
+    if("icon"in c)setIcon(b,c.icon,c.iconColor);else if(normHex(c.iconColor))b.image.iconColor=normHex(c.iconColor);
+    if(c.fill&&typeof c.fill==="object"&&b.image.mode!=="upload"){b.image.mode="design";b.image.bgStyle=["none","solid","gradient"].includes(c.fill.style)?c.fill.style:"none";
+      if(normHex(c.fill.from))b.image.g1=normHex(c.fill.from);if(normHex(c.fill.to))b.image.g2=normHex(c.fill.to)}
+    keys.push(k)}
+  if(!keys.length){undoStack.pop();return "No keys matched that. Try naming them, or ⇧-click to select them first."}
+  await refreshArt(keys);persist();render();
+  return `Restyled ${keys.length} ${keys.length===1?"key":"keys"}. Undo reverts it.`;
+}
+
+/* ---------- bulk editing ---------- */
+const bulkKeys=()=>[...multi].filter(k=>page().buttons[k]?.kind==="button");
+function renderBulk(){
+  const n=multi.size,nb=bulkKeys().length;
+  const sw=f=>`<div class="swatches">${SWATCHES.map(s=>`<button class="sw" style="background:${s}" data-bulk="${f}" data-val="${s}" aria-label="${f} ${s}"></button>`).join("")}</div>`;
+  $("#insp").innerHTML=`<div class="insp-head"><h2>${n} keys selected</h2><button class="btn ghost sm" id="bulkClear">Deselect</button></div><div class="panel">
+    <span class="empty-note">Changes apply to all ${nb} selected buttons. To describe a change in words, use Restyle above.</span>
+    <div class="field"><span class="label">Background</span>${sw("bg")}</div>
+    <div class="field"><span class="label">Text colour</span>${sw("color")}</div>
+    <div class="field"><span class="label">Icon colour</span>${sw("iconColor")}</div>
+    <div class="row2"><div class="field"><span class="label">Text size</span><select class="inp" id="bulkSize"><option value="">Mixed</option>${SIZES.map(s=>`<option value="${s}">${s==="auto"?"Auto":s+" pt"}</option>`).join("")}</select></div>
+    <div class="field"><span class="label">Text position</span><div class="align-grid">${["top","center","bottom"].map(v=>["left","center","right"].map(hz=>`<button data-bulkalign="${hz}:${v}" aria-label="${hz} ${v}"></button>`).join("")).join("")}</div></div></div>
+    <div style="display:flex;gap:6px;flex-wrap:wrap"><button class="btn sm" id="bulkTally">Add tally to these</button><button class="btn sm danger" id="bulkDelete">Clear ${n} keys</button></div></div>`;
+}
+function commitBulk(fn){const ks=bulkKeys();if(!ks.length)return;commit(()=>ks.forEach(k=>fn(page().buttons[k])),{renderArtFor:ks})}
+document.addEventListener("click",e=>{const t=e.target.closest("button")||e.target;
+  const bk=t.closest("[data-bulk]");if(bk){const f=bk.dataset.bulk,v=bk.dataset.val;commitBulk(b=>{if(f==="iconColor")b.image.iconColor=v;else b[f]=v});return}
+  const ba=t.closest("[data-bulkalign]");if(ba){commitBulk(b=>{b.align=ba.dataset.bulkalign});return}
+  if(t.id==="bulkClear"){multi.clear();selected=null;render();return}
+  if(t.id==="bulkDelete"){const ks=[...multi];commit(()=>{ks.forEach(k=>delete page().buttons[k]);multi.clear();selected=null});return}
+  if(t.id==="bulkTally"||t.id==="tallyBtn"){tallyPack();return}
+  if(t.id==="sheetBtn"){openSheet();return}
+  if(t.id==="helperBtn"){openHelper();return}
+  if(t.id==="expHelper"){e.preventDefault();$("#exportDlg").close();openHelper();return}
+  const sc=t.closest("#sheetScope [data-v]");if(sc){sheetScope=sc.dataset.v;[...$("#sheetScope").children].forEach(x=>x.setAttribute("aria-pressed",x===sc));renderSheet();return}
+  if(t.id==="sheetAI"){aiDescribe();return}
+  if(t.id==="sheetSave"){saveSheet();return}
+  if(t.id==="copyHelper"){copyText(helperScript(),"Copied. Paste it into Terminal and press Return.");return}
+});
+document.addEventListener("change",e=>{if(e.target.id==="bulkSize"&&e.target.value){const v=e.target.value;commitBulk(b=>{b.size=v})}});
+async function copyText(t,msg){try{await navigator.clipboard.writeText(t);toast(msg)}catch(_){const ta=document.createElement("textarea");ta.value=t;document.body.appendChild(ta);ta.select();try{document.execCommand("copy");toast(msg)}catch(__){toast("Copy was blocked. Select the text and copy it by hand.")}ta.remove()}}
+
+/* ---------- tally pack ---------- */
+const TALLY={program:"#c8102e",preview:"#1f9d4a"};
+function tallyRulesFor(b){
+  const out=[];const a=b.steps[0]?.down?.find(x=>x.connection!=="internal");if(!a)return out;
+  const c=S.connections.find(x=>x.id===a.connection);if(!c)return out;const m=c.module,o=a.options||{};
+  const fb=(type,options,bg)=>({connection:c.id,type,options,style:{bgcolor:bg,color:"#ffffff"},inverted:false});
+  if(m==="obs-studio"){
+    if(/^(set_scene|scene_select|setScene)$/i.test(a.action)&&o.scene)out.push(fb("scene_active",{scene:o.scene},TALLY.program));
+    else if(/record/i.test(a.action))out.push(fb("recording",{},TALLY.program));
+    else if(/stream/i.test(a.action))out.push(fb("streaming",{},TALLY.program));
+  }
+  if(m==="bmd-atem"&&/^(program|preview)$/.test(a.action)&&o.input!=null){const me=o.mixeffect??0;
+    out.push(fb("preview_bg",{input:o.input,mixeffect:me},TALLY.preview),fb("program_bg",{input:o.input,mixeffect:me},TALLY.program))}
+  if(m==="studiocoast-vmix"&&/input|cut|preview/i.test(a.action)&&o.input!=null){
+    out.push(fb("inputPreview",{input:String(o.input)},TALLY.preview),fb("inputLive",{input:String(o.input)},TALLY.program))}
+  return out;
+}
+function mergeFeedbacks(b,list){let n=0;for(const f of list){if(!f||!f.type)continue;
+  if(b.feedbacks.some(x=>x.type===f.type&&x.connection===f.connection&&JSON.stringify(x.options)===JSON.stringify(f.options)))continue;b.feedbacks.push(f);n++}return n}
+function tallyTargets(){const pg=page();return(multi.size>1?[...multi]:Object.keys(pg.buttons)).filter(k=>pg.buttons[k]?.kind==="button")}
+async function tallyPack(){
+  const keys=tallyTargets();const pg=page();
+  if(!keys.length){toast("No buttons on this page to add tally to");return}
+  if(!sampleFn||aiBlocked){
+    undoStack.push(JSON.stringify(S));redoStack.length=0;let nk=0;
+    for(const k of keys)if(mergeFeedbacks(pg.buttons[k],tallyRulesFor(pg.buttons[k])))nk++;
+    if(!nk){undoStack.pop();toast("No OBS, ATEM or vMix scene or input keys found to add tally to");return}
+    persist();render();toast(`Added tally to ${nk} ${nk===1?"key":"keys"}. Undo reverts it.`);return}
+  const items=keys.map(k=>{const b=pg.buttons[k];const[r,c]=parseKey(k);return{position:[r,c],text:b.text,
+    actions:b.steps.flatMap(s=>s.down).filter(a=>a.connection!=="internal").map(a=>({connection:a.connection,module:S.connections.find(x=>x.id===a.connection)?.module,action:a.action,options:a.options})),
+    existingFeedbacks:b.feedbacks.map(f=>f.type),ruleGuess:tallyRulesFor(b)}});
+  const learnedF={};for(const m in S.learned||{})if(Object.keys(S.learned[m].feedbacks||{}).length)learnedF[m]=S.learned[m].feedbacks;
+  const prompt=`Add tally feedbacks to Stream Deck keys in Bitfocus Companion (export v6). Feedback = {"connection": <connection id>, "type": <feedback id>, "options": {...}, "style": {"bgcolor":"#hex","color":"#hex"}, "inverted": false}.
+Colours: on program, live or active = bgcolor ${TALLY.program}; on preview = bgcolor ${TALLY.preview}; text colour #ffffff.
+
+CONNECTIONS: ${JSON.stringify(S.connections.map(c=>({id:c.id,label:c.label,module:c.module})))}
+
+FEEDBACKS THE USER ALREADY USES (module -> feedback id -> example options; these ids are correct for their module versions, prefer them):
+${JSON.stringify(learnedF).slice(0,60000)}
+
+KEYS: ${JSON.stringify(items)}
+
+For each key that selects a scene, source, input or camera, or toggles a state (recording, streaming, mute), add feedbacks that show its state. Companion applies feedbacks in order and later ones win, so put preview before program. "ruleGuess" is a built-in guess you may keep, fix or replace. Skip one-shot macros and keys with no meaningful state. Don't repeat feedbacks listed in existingFeedbacks.
+
+Reply with ONLY JSON: {"keys":[{"position":[r,c],"feedbacks":[...]}],"notes":"one or two short sentences, naming any feedback ids the user should double-check"}`;
+  await runAI(prompt,async res=>{
+    const list=Array.isArray(res?.keys)?res.keys:[];undoStack.push(JSON.stringify(S));redoStack.length=0;let nk=0;
+    for(const it of list){if(!it||!Array.isArray(it.position))continue;const k=keyId(+it.position[0],+it.position[1]);if(!keys.includes(k)||!pg.buttons[k])continue;
+      const fbs=(it.feedbacks||[]).filter(f=>f&&f.type).map(f=>{const a=toAction({...f,action:f.type},{});return{connection:a.connection,type:String(f.type),options:a.options,
+        style:{bgcolor:normHex(f.style?.bgcolor)||TALLY.program,color:normHex(f.style?.color)||"#ffffff"},inverted:!!f.inverted}});
+      if(mergeFeedbacks(pg.buttons[k],fbs))nk++}
+    if(!nk){undoStack.pop();return "None of these keys needed tally."}
+    persist();render();return `Added tally to ${nk} ${nk===1?"key":"keys"}. Check the Feedback tab. Undo reverts it.`;
+  },{busy:"Working out which keys show a source…",writing:"Adding tally…"});
+}
+
+/* ---------- cheat sheet ---------- */
+let sheetScope="page";
+const humanize=id=>String(id||"").replace(/([a-z0-9])([A-Z])/g,"$1 $2").replace(/[_-]+/g," ").trim().toLowerCase();
+const keyCode=(r,c)=>r>=dev().rows&&dev().dials?`D${c+1}`:String.fromCharCode(65+r)+(c+1);
+function describeAction(a){
+  const o=a.options||{};
+  if(a.connection==="internal"){
+    if(a.action==="wait")return `wait ${((+o.time||0)/1000).toString()} s`;
+    if(a.action==="set_page")return `go to page ${o.page}`;
+    if(a.action==="inc_page")return "next page";if(a.action==="dec_page")return "previous page";
+  }
+  const c=S.connections.find(x=>x.id===a.connection);
+  const vals=Object.entries(o).filter(([k,v])=>v!==""&&v!=null&&typeof v!=="object"&&!/mixeffect|^me$/i.test(k)).map(([,v])=>String(v)).slice(0,3);
+  return `${c?c.label:a.connection}: ${humanize(a.action)||"(no action)"}${vals.length?` (${vals.join(", ")})`:""}`;
+}
+function describeKey(b,ignoreNote){
+  if(b.kind!=="button")return{pageup:"Goes to the next page",pagedown:"Goes to the previous page",pagenum:"Shows the page number"}[b.kind];
+  if(b.note&&!ignoreNote)return b.note;
+  const parts=b.steps.map((s,i)=>{const seq=s.down.map(describeAction).join(" → ")||"nothing";return b.steps.length>1?`Press ${i+1}: ${seq}`:seq});
+  const s0=b.steps[0];if(s0.rotL.length)parts.push("Turn left: "+s0.rotL.map(describeAction).join(" → "));if(s0.rotR.length)parts.push("Turn right: "+s0.rotR.map(describeAction).join(" → "));
+  if(s0.up.length&&b.steps.length===1)parts.push("On release: "+s0.up.map(describeAction).join(" → "));
+  if(b.feedbacks.length)parts.push("Lights up for: "+b.feedbacks.map(f=>{const v=Object.entries(f.options||{}).filter(([k,x])=>x!==""&&x!=null&&typeof x!=="object"&&!/mixeffect|^me$/i.test(k)).map(([,x])=>String(x)).slice(0,2);return humanize(f.type)+(v.length?` (${v.join(", ")})`:"")}).join(", "));
+  return parts.join(". ");
+}
+function sheetKey(b,scale){
+  if(!b)return `<div class="sk empty"></div>`;
+  if(b.kind!=="button")return `<div class="sk" style="background:#1d2226"><span style="color:#fff;font-size:${10*scale}px;align-items:center;justify-content:center;text-align:center">${{pageup:"▲\nPAGE UP",pagedown:"▼\nPAGE DOWN",pagenum:"PAGE #"}[b.kind]}</span></div>`;
+  const[hz,v]=b.align.split(":");const fs=(b.size==="auto"?fitText(b.text):+b.size)*scale;const txt=b.image?.bake&&b.image.mode!=="none"?"":b.text;
+  return `<div class="sk" style="background:${esc(b.bg)}">${b.png64?`<img src="${b.png64}" alt="">`:""}<span style="color:${esc(b.color)};font-size:${fs.toFixed(1)}px;align-items:${v==="top"?"flex-start":v==="bottom"?"flex-end":"center"};justify-content:${hz==="left"?"flex-start":hz==="right"?"flex-end":"center"};text-align:${hz}">${esc(txt)}</span></div>`;
+}
+function sheetBody(){
+  const d=dev();const pages=sheetScope==="all"?S.pages.map((p,i)=>[p,i]):[[page(),S.pageIdx]];
+  let h=`<header class="sh-head"><h1>${esc(pages.length>1?"Stream Deck cheat sheet":pages[0][0].name||"Stream Deck cheat sheet")}</h1><p>${esc(d.name)} · ${esc(new Date().toLocaleDateString(undefined,{year:"numeric",month:"long",day:"numeric"}))}</p></header>`;
+  for(const[p,i]of pages){
+    h+=`<section class="sh-page"><h2><span>Page ${i+1}</span>${esc(p.name||"")}</h2><div class="sh-map" style="grid-template-columns:repeat(${d.cols},var(--kk))">`;
+    for(let r=0;r<d.rows;r++)for(let c=0;c<d.cols;c++)h+=`<figure>${sheetKey(p.buttons[keyId(r,c)],.75)}<figcaption>${keyCode(r,c)}</figcaption></figure>`;
+    if(d.dials)for(let c=0;c<d.dials;c++){const b=p.buttons[keyId(d.rows,c)];h+=`<figure><div class="sh-dial">${esc(b?.text||"")}</div><figcaption>D${c+1}</figcaption></figure>`}
+    h+="</div>";
+    const rows=allKeys().filter(k=>p.buttons[k]).map(k=>{const b=p.buttons[k];const[r,c]=parseKey(k);
+      const label=b.kind!=="button"?{pageup:"Page up",pagedown:"Page down",pagenum:"Page number"}[b.kind]:(b.text.replace(/\n/g," ").trim()||"(no label)");
+      return `<tr><td class="code">${keyCode(r,c)}</td><td class="th">${isDialKey(k)?"":sheetKey(b,.5)}</td><td class="lbl">${esc(label)}</td><td>${esc(describeKey(b))}</td></tr>`});
+    h+=rows.length?`<table><thead><tr><th>Key</th><th></th><th>Label</th><th>What it does</th></tr></thead><tbody>${rows.join("")}</tbody></table>`:`<p class="sh-empty">No keys on this page yet.</p>`;
+    h+="</section>";
+  }
+  return h+`<p class="sh-foot">Keys are named by row (A is the top row) and column. Made with Deckwright.</p>`;
+}
+function renderSheet(){$("#sheetView").innerHTML=sheetBody()}
+function openSheet(){$("#sheetStatus").textContent="";$("#sheetAI").disabled=!sampleFn||aiBlocked;renderSheet();$("#sheetDlg").showModal()}
+async function saveSheet(){
+  const title=sheetScope==="all"?"Stream Deck cheat sheet":`${page().name||"Page"} cheat sheet`;
+  const doc=`<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${esc(title)}</title><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Semi+Condensed:wght@600;700&family=Barlow:wght@400;600&family=JetBrains+Mono:wght@500;600&display=swap"><style>body{margin:0;background:#fff}${SHEET_CSS}@page{margin:14mm}@media print{.sheet{padding:0}}</style></head><body><div class="sheet">${sheetBody()}</div></body></html>`;
+  try{await saveFile(title.replace(/[^\w\- ]+/g,"").trim()+".html",doc);toast("Saved. Open it in your browser and print from there")}
+  catch(e){if(e?.code!=="declined")toast("Couldn't save the cheat sheet here")}
+}
+async function aiDescribe(){
+  const pages=sheetScope==="all"?S.pages.map((p,i)=>[p,i]):[[page(),S.pageIdx]];const items=[];
+  for(const[p,i]of pages)for(const[k,b]of Object.entries(p.buttons)){if(b.kind!=="button"||(b.note&&!b.noteAI))continue;const[r,c]=parseKey(k);items.push({page:i,position:[r,c],label:b.text,does:describeKey(b,true)})}
+  if(!items.length){$("#sheetStatus").textContent="Every key already has your own note.";return}
+  const prompt=`Write operator notes for a Stream Deck cheat sheet. For each key, write one short plain-English phrase (max 12 words) saying what pressing it does, for a volunteer operator who doesn't know Companion. No technical ids; say "Switches the stream to the slides", not "set_scene Slides". Mention toggles ("Starts or stops recording") and lights ("Turns red while live").
+KEYS: ${JSON.stringify(items).slice(0,120000)}
+Reply with ONLY JSON: {"keys":[{"page":0,"position":[r,c],"note":"..."}]}`;
+  await runAI(prompt,async res=>{
+    const list=Array.isArray(res?.keys)?res.keys:[];undoStack.push(JSON.stringify(S));redoStack.length=0;let n=0;
+    for(const it of list){const p=S.pages[+it?.page];if(!p||!Array.isArray(it.position)||typeof it.note!=="string")continue;const b=p.buttons[keyId(+it.position[0],+it.position[1])];
+      if(!b||b.kind!=="button"||(b.note&&!b.noteAI))continue;b.note=it.note.trim();b.noteAI=true;n++}
+    if(!n){undoStack.pop();return "No descriptions came back. Try again."}
+    persist();render();renderSheet();return `Wrote ${n} descriptions. Edit any of them in the Look tab.`;
+  },{status:$("#sheetStatus"),busy:"Writing descriptions…",writing:"Writing descriptions…"});
+}
+
+/* ---------- Send to Companion app ---------- */
+function companionUrl(){const v=String(S.companionUrl||"http://127.0.0.1:8000").trim().replace(/\/+$/,"");return /^https?:\/\/[\w.\-]+(:\d+)?$/.test(v)?v:"http://127.0.0.1:8000"}
+function helperScript(){
+  const url=companionUrl()+"/import-export";
+  return `mkdir -p "$HOME/Applications" && cd "$(mktemp -d)" && cat > send.applescript <<'EOF'
+-- Send to Companion: renames Deckwright exports in Downloads, opens Companion's import page, and shows the newest file in Finder.
+on run
+	set f to do shell script "cd ~/Downloads && for f in *.companionconfig.json; do [ -e \\"$f\\" ] || continue; d=\\"\${f%.json}\\"; [ -e \\"$d\\" ] && d=\\"\${f%.companionconfig.json} $(date +%H%M%S).companionconfig\\"; mv \\"$f\\" \\"$d\\"; done; n=$(ls -t -- *.companionconfig 2>/dev/null | head -n 1); [ -n \\"$n\\" ] && echo \\"$HOME/Downloads/$n\\"; exit 0"
+	if f is "" then
+		display dialog "No Deckwright exports in your Downloads folder yet. Save a page from Deckwright first." buttons {"OK"} default button 1 with title "Send to Companion"
+		return
+	end if
+	open location "${url}"
+	tell application "Finder"
+		reveal (POSIX file f as alias)
+		activate
+	end tell
+end run
+EOF
+osacompile -o "$HOME/Applications/Send to Companion.app" send.applescript && open -R "$HOME/Applications/Send to Companion.app" && echo "Installed. Drag Send to Companion to your Dock."`;
+}
+function openHelper(){$("#compUrl").value=companionUrl();$("#helperScript").textContent=helperScript();$("#helperDlg").showModal()}
+document.addEventListener("input",e=>{if(e.target.id==="compUrl"){S.companionUrl=e.target.value;persist();$("#helperScript").textContent=helperScript();syncCompanionLink()}});
+function syncCompanionLink(){const a=$("#openCompanion");if(a)a.href=companionUrl()+"/import-export"}
+function toAction(a,connMap){
+  if(!a||typeof a!=="object")return null;
+  let c=String(a.connection??a.instance??a.connectionId??"internal");
+  if(connMap[c])c=connMap[c];
+  else if(c!=="internal"&&!S.connections.find(x=>x.id===c)){const byL=S.connections.find(x=>x.label.toLowerCase()===c.replace(/^new:/,"").toLowerCase()||x.module===c);if(byL)c=byL.id}
+  return{connection:c,action:String(a.action??a.definitionId??""),options:(a.options&&typeof a.options==="object")?a.options:{}};
+}
+async function applyAI(res){
+  if(!res||!Array.isArray(res.buttons))return 0;
+  const list=res.buttons.filter(Boolean);if(!list.length)return 0;
+  let count=0;const touched=[];
+  undoStack.push(JSON.stringify(S));redoStack.length=0;
+  const connMap={};
+  for(const nc of res.newConnections||[]){if(!nc||!nc.module)continue;const label=String(nc.label||nc.module);let mod=String(nc.module);
+    if(!CAT.has(mod)){const g=CATALOG.find(m=>m[0].endsWith("-"+mod)||m[5].toLowerCase()===mod.toLowerCase());if(g)mod=g[0]}
+    let ex=S.connections.find(c=>c.module===mod)||S.connections.find(c=>c.label.toLowerCase()===label.toLowerCase());
+    if(!ex)ex=addConnection(mod,label);
+    connMap["new:"+label]=ex.id;connMap[label]=ex.id;}
+  const pg=page();const d=dev();
+  if(aiMode==="page"&&res.clearOthers)pg.buttons={};
+  const order=allKeys();
+  const startIdx=selected?Math.max(0,order.indexOf(selected)):0;
+  const taken=new Set();
+  const nextFree=wantDial=>{for(let i=0;i<order.length;i++){const k=order[(startIdx+i)%order.length];if(isDialKey(k)!==wantDial)continue;if(!pg.buttons[k]&&!taken.has(k))return k}return null};
+  list.forEach((it,idx)=>{
+    let k=null;
+    if(aiMode==="page"&&Array.isArray(it.position)){const[r,c]=it.position.map(Number);const valid=(r>=0&&r<d.rows&&c>=0&&c<d.cols)||(d.dials&&r===d.rows&&c>=0&&c<d.dials);if(valid)k=keyId(r,c)}
+    if(!k&&aiMode==="key"&&idx===0)k=selected;
+    const wantDial=!!(it.rotateLeft?.length||it.rotateRight?.length)&&!!d.dials;
+    if(!k)k=nextFree(wantDial)||nextFree(!wantDial);
+    if(!k)return;taken.add(k);
+    let b;
+    if(["pageup","pagedown","pagenum"].includes(it.kind)){b={...newButton(),kind:it.kind}}
+    else{
+      b=newButton({text:String(it.text??"").replace(/\\n/g,"\n"),size:SIZES.includes(String(it.size))?String(it.size):"auto",color:normHex(it.color)||"#ffffff",bg:normHex(it.bg)||"#000000"});
+      const steps=Array.isArray(it.steps)&&it.steps.length?it.steps:[{down:it.down||it.actions||[],up:it.up||[]}];
+      b.steps=steps.map(s=>({down:(s.down||[]).map(a=>toAction(a,connMap)).filter(Boolean),up:(s.up||[]).map(a=>toAction(a,connMap)).filter(Boolean),rotL:[],rotR:[]}));
+      b.steps[0].rotL=(it.rotateLeft||[]).map(a=>toAction(a,connMap)).filter(Boolean);
+      b.steps[0].rotR=(it.rotateRight||[]).map(a=>toAction(a,connMap)).filter(Boolean);
+      b.feedbacks=(it.feedbacks||[]).filter(f=>f&&f.type).map(f=>{const a=toAction({...f,action:f.type},connMap);return{connection:a.connection,type:String(f.type),options:a.options,style:{bgcolor:normHex(f.style?.bgcolor)||"#c8102e",color:normHex(f.style?.color)||"#ffffff"},inverted:!!f.inverted}});
+      const icon=it.icon?String(it.icon).trim():"";
+      if(icon){const isL=iconExists(icon);const isEmoji=!isL&&/[^\x00-\x7f]/.test(icon);
+        if(isL||isEmoji){b.image.mode="design";b.image.icon={type:isL?"lucide":"emoji",value:icon};b.image.iconColor=normHex(it.iconColor)||b.color;
+          if(b.text.trim())layoutLabel(b)}}
+    }
+    pg.buttons[k]=b;touched.push(k);count++;
+  });
+  if(touched.length){selected=touched[0];stepIdx=0;tab="actions";markAI(touched)}
+  S.example=false;
+  await refreshArt(touched);persist();render();
+  return count;
+}
+async function aiIcon(){
+  const p=$("#aiIconPrompt").value.trim();if(!p){$("#aiIconPrompt").focus();return}
+  if(!sampleFn){toast("Drawing icons with AI works when this page is opened in Claude");return}
+  const btn=$("#aiIconGo");btn.disabled=true;btn.textContent="Drawing…";
+  try{
+    const r=await sampleFn.json(`Draw a simple, bold line icon of: "${p}". It will be shown at 30-50px on a Stream Deck key, so use few strokes, no tiny details, no text. Style: Lucide/Feather — 24x24 viewBox, stroke-based (stroke is applied by the container: stroke-width 2, round caps), fill="none" unless a small solid detail is essential. Use only <path>, <circle>, <rect>, <line>, <polyline>, <polygon>, <ellipse>, <g> elements with geometry attributes. Keep everything inside 2..22. Reply with only JSON: {"svg":"<path d=\\"...\\"/>..."} where svg is the INNER markup only (no <svg> wrapper).`,{modelTier:"default"});
+    const inner=sanitizeSvgInner(String(r?.svg||""));if(!inner)throw{code:"invalid_json"};
+    mutSel(b=>{b.image.icon={type:"svg",value:inner};if(b.text.trim())layoutLabel(b)},true);
+  }catch(e){if(e?.code!=="cancelled")toast(AI_ERR[e?.code]||"Couldn't draw that icon. Try a simpler description.")}
+  finally{const b2=$("#aiIconGo");if(b2){b2.disabled=false;b2.textContent="Draw"}}
+}
+
+/* ---------- export ---------- */
+function exportAction(a){return{id:uid(16),action:a.action,instance:a.connection,options:a.options||{}}}
+function toControl(b,dial){
+  if(b.kind!=="button")return{type:b.kind};
+  const baked=b.image.bake&&b.image.mode!=="none"&&b.png64;
+  const style={text:baked?"":b.text,textExpression:false,size:b.size==="auto"?"auto":Number(b.size),png64:b.png64||null,alignment:b.align,pngalignment:"center:center",color:hexToInt(b.color),bgcolor:hexToInt(b.bg),show_topbar:false};
+  const steps={};b.steps.forEach((s,i)=>{const sets={down:s.down.map(exportAction),up:s.up.map(exportAction)};if(dial){sets.rotate_left=s.rotL.map(exportAction);sets.rotate_right=s.rotR.map(exportAction)}steps[i]={action_sets:sets,options:{runWhileHeld:[]}}});
+  return{type:"button",style,options:{rotaryActions:!!dial,stepAutoProgress:true},feedbacks:b.feedbacks.map(f=>{const st={};if(f.style?.bgcolor)st.bgcolor=hexToInt(f.style.bgcolor);if(f.style?.color)st.color=hexToInt(f.style.color);return{id:uid(16),type:f.type,instance_id:f.connection,options:f.options||{},style:st,isInverted:!!f.inverted}}).concat(bootFeedbacks(b)),steps};
+}
+function buildExport(pi){
+  const pg=S.pages[pi];const d=dev();const controls={};const used=new Set();const warn=[];
+  for(const[k,b]of Object.entries(pg.buttons)){const[r,c]=parseKey(k);
+    const onDeck=(r<d.rows&&c<d.cols)||(d.dials&&r===d.rows&&c<d.dials);if(!onDeck){warn.push(`Key at row ${r+1}, column ${c+1} is outside the ${d.name} and was left out.`);continue}
+    const ctl=toControl(b,d.dials&&r===d.rows);(controls[r]??={})[c]=ctl;
+    for(const s of b.steps)for(const L of[s.down,s.up,s.rotL,s.rotR])for(const a of L){if(a.connection!=="internal")used.add(a.connection);if(!a.action)warn.push(`"${b.text||"A key"}" has an action with no id.`)}
+    for(const f of b.feedbacks)if(f.connection!=="internal")used.add(f.connection);}
+  const instances={};let i=0;
+  for(const id of used){const c=S.connections.find(x=>x.id===id);if(!c){warn.push(`A key uses a connection that was removed (${id}). Re-pick it in that key's Actions tab.`);continue}
+    const cfg={...(LIBRARY[c.module]?optDefaults(LIBRARY[c.module].config):{}),...(c.raw?.config||{}),...(c.config||{})};
+    if(c.raw){const r=clone(c.raw);r.instance_type=r.instance_type||r.moduleId||c.module;delete r.moduleId;r.label=c.label;r.config=cfg;instances[id]=r}
+    else instances[id]={instance_type:c.module,label:c.label,config:cfg,isFirstInit:false,lastUpgradeIndex:-1,enabled:true,sortOrder:i};
+    i++;}
+  if(pg.boot)warn.push("This is your boot screen. Import it as page 1, and also import the startup trigger (Boot screen → Save startup trigger) so the animation plays when Companion starts.");
+  const maxRow=d.dials?d.rows:d.rows-1;
+  return{data:{version:6,type:"page",page:{name:pg.name||`Page ${pi+1}`,controls,gridSize:{minColumn:0,maxColumn:d.cols-1,minRow:0,maxRow}},instances,oldPageNumber:pi+1},warn:[...new Set(warn)]};
+}
+let downloadsCap=null;(async()=>{try{downloadsCap=await window.claude?.use?.("downloads")}catch(_){}})();
+// Inside Claude, files go through the downloads capability, which only allows some extensions, so a
+// .companionconfig gets an extra .json ending there. Anywhere else (GitHub Pages, the file opened locally)
+// the browser saves the real name. Resolves "renamed" when the .json ending was added.
+const SAVE_OK=/\.(json|html|txt|csv|md|zip|png|svg|pdf)$/i;
+async function saveFile(name,data){
+  if(downloadsCap){const fn=SAVE_OK.test(name)?name:name+".json";await downloadsCap.save({filename:fn,data});return fn===name?"saved":"renamed"}
+  const url=URL.createObjectURL(new Blob([data],{type:"application/octet-stream"}));
+  const a=document.createElement("a");a.href=url;a.download=name;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),4000);
+  return "saved";
+}
+const savedNote=r=>r==="renamed"?"Saved. Remove the .json ending before importing it in Companion":"Saved. Import it in Companion";
+async function openExport(){
+  if(S.boot&&S.pages.some(p=>p.boot)){try{await buildBootCache(S.boot)}catch(_){}}
+  $("#expPage").innerHTML=S.pages.map((p,i)=>`<option value="${i}" ${i===S.pageIdx?"selected":""}>${i+1}. ${esc(p.name)}</option>`).join("");
+  fillExport();$("#exportDlg").showModal();
+}
+function fillExport(){
+  const pi=+$("#expPage").value;const{data,warn}=buildExport(pi);
+  const full=JSON.stringify(data,null,2);fillExport.cur={full,name:(data.page.name||"page").replace(/[^\w\- ]+/g,"").trim()||"page"};
+  const shown=full.replace(/"data:image\/png;base64,[^"]{40,}"/g,m=>m.slice(0,48)+`…(${Math.round(m.length/1024)} KB image)"`);
+  $("#expJson").textContent=shown;$("#expSize").textContent=`${Object.values(data.page.controls).reduce((n,r)=>n+Object.keys(r).length,0)} keys · ${Object.keys(data.instances).length} connections · ${(full.length/1024).toFixed(1)} KB`;
+  $("#expWarn").innerHTML=warn.map(esc).join("<br>");
+  $("#expSave").hidden=false;
+}
+$("#openExport").onclick=openExport;$("#expPage").onchange=fillExport;
+$("#expCopy").onclick=async()=>{const t=fillExport.cur.full;try{await navigator.clipboard.writeText(t);toast("Copied. Paste into a file named something.companionconfig")}catch(_){const ta=document.createElement("textarea");ta.value=t;document.body.appendChild(ta);ta.select();try{document.execCommand("copy");toast("Copied")}catch(__){toast("Copy blocked. Use Save file instead")}ta.remove()}};
+$("#expSave").onclick=async()=>{try{toast(savedNote(await saveFile(`${fillExport.cur.name}.companionconfig`,fillExport.cur.full)))}catch(e){if(e?.code!=="declined")toast(e?.code==="rate_limited"?"A save prompt is already open":"Couldn't save here. Use Copy JSON instead")}};
+$("#saveProject").onclick=async()=>{try{await saveFile("deckwright-project.json",JSON.stringify(S));toast("Project saved")}catch(e){if(e?.code!=="declined")toast("Couldn't save the project")}};
+
+/* ---------- import ---------- */
+function openImport(){$("#importResult").innerHTML="";$("#importDlg").showModal()}
+$("#openImport").onclick=openImport;
+const dz=$("#dropZone");
+dz.addEventListener("dragover",e=>{e.preventDefault();dz.classList.add("over")});
+dz.addEventListener("dragleave",()=>dz.classList.remove("over"));
+dz.addEventListener("drop",e=>{e.preventDefault();dz.classList.remove("over");const f=e.dataTransfer.files[0];if(f)importFile(f)});
+$("#importFile").addEventListener("change",e=>{const f=e.target.files[0];if(f)importFile(f);e.target.value=""});
+async function readConfig(file){
+  const buf=new Uint8Array(await file.arrayBuffer());let txt;
+  if(buf[0]===0x1f&&buf[1]===0x8b){const ds=new DecompressionStream("gzip");txt=await new Response(new Blob([buf]).stream().pipeThrough(ds)).text()}
+  else txt=new TextDecoder().decode(buf);
+  txt=txt.trim();
+  if(txt.startsWith("{"))return JSON.parse(txt);
+  if(window.jsyaml)return window.jsyaml.load(txt);
+  throw new Error("format");
+}
+const unwrap=o=>{if(!o||typeof o!=="object"||Array.isArray(o))return o;const out={};for(const[k,v]of Object.entries(o)){out[k]=(v&&typeof v==="object"&&!Array.isArray(v)&&"isExpression"in v&&"value"in v)?v.value:v}return out};
+function* walkEntities(list){for(const e of list||[]){if(!e)continue;yield e;if(e.children)for(const ch of Object.values(e.children))yield*walkEntities(ch)}}
+function importFile(file){
+  const out=$("#importResult");out.innerHTML=`<span class="empty-note">Reading ${esc(file.name)}…</span>`;
+  readConfig(file).then(cfg=>{
+    if(!cfg||typeof cfg!=="object"||!cfg.version)throw new Error("notcompanion");
+    const inst=cfg.instances||{};const modOf={};let addedConn=0;
+    undoStack.push(JSON.stringify(S));redoStack.length=0;
+    for(const[id,v]of Object.entries(inst)){if(!v||id==="internal"||id==="bitfocus-companion")continue;const module=v.instance_type||v.moduleId;if(!module)continue;modOf[id]=module;
+      const ex=S.connections.find(c=>c.id===id);
+      if(ex){ex.raw=v;ex.module=module;ex.label=v.label||ex.label}else{S.connections.push({id,label:v.label||module,module,raw:v});addedConn++}}
+    const pages=cfg.type==="page"?{[cfg.oldPageNumber||1]:cfg.page}:(cfg.pages||{});
+    S.learned=S.learned||{};let nA=0,nF=0;
+    const learnA=(e)=>{const conn=e.instance??e.connectionId;const id=e.action??e.definitionId;if(!conn||!id)return;const m=conn==="internal"?"internal":modOf[conn];if(!m)return;
+      const L=(S.learned[m]??={actions:{},feedbacks:{}});if(!L.actions[id])nA++;L.actions[id]=unwrap(e.options||{})};
+    const learnF=(e)=>{const conn=e.instance_id??e.connectionId;const id=e.definitionId??(typeof e.type==="string"&&e.type!=="feedback"?e.type:null);if(!conn||!id)return;const m=conn==="internal"?"internal":modOf[conn];if(!m)return;
+      const L=(S.learned[m]??={actions:{},feedbacks:{}});if(!L.feedbacks[id])nF++;L.feedbacks[id]=unwrap(e.options||{})};
+    const pageList=[];
+    for(const[num,p]of Object.entries(pages)){if(!p)continue;let n=0;
+      for(const row of Object.values(p.controls||{}))for(const ctl of Object.values(row||{})){if(!ctl)continue;n++;
+        for(const st of Object.values(ctl.steps||{}))for(const set of Object.values(st.action_sets||{}))for(const e of walkEntities(Array.isArray(set)?set:[]))learnA(e);
+        for(const e of walkEntities(ctl.feedbacks))learnF(e)}
+      pageList.push({num,name:p.name||"Page "+num,n,p})}
+    for(const t of Object.values(cfg.triggers||{})){for(const e of walkEntities(t.actions||[].concat(...Object.values(t.action_sets||{}))))learnA(e)}
+    delete S.learned.internal;
+    persist();render();
+    importFile.pages=pageList;
+    out.innerHTML=`<p style="color:var(--fg)">Added <b>${addedConn}</b> connections (${Object.keys(modOf).length} found) and learned <b>${nA}</b> actions and <b>${nF}</b> feedbacks.</p>`+
+      (pageList.filter(p=>p.n).length?`<span class="label" style="margin-top:6px">Open a page in the editor</span><div style="display:flex;flex-wrap:wrap;gap:6px">${pageList.filter(p=>p.n).map((p,i)=>`<button class="btn sm" data-loadpage="${pageList.indexOf(p)}">${esc(p.num)}. ${esc(p.name)} <span class="mono" style="color:var(--muted)">${p.n}</span></button>`).join("")}</div><span class="empty-note">Opens as a new page here. Layered or unusual button types are skipped.</span>`:"");
+  }).catch(e=>{out.innerHTML=`<p class="warn">${e.message==="notcompanion"?"That doesn't look like a Companion export. Export from Companion's Import / Export tab and try again.":"Couldn't read that file. Use a .companionconfig (JSON or gzipped) or .yaml export from Companion."}</p>`});
+}
+document.addEventListener("click",e=>{const lp=e.target.closest("[data-loadpage]");if(!lp)return;const P=importFile.pages[+lp.dataset.loadpage];if(!P)return;
+  const buttons={};let skipped=0;
+  for(const[r,row]of Object.entries(P.p.controls||{}))for(const[c,ctl]of Object.entries(row||{})){if(!ctl)continue;
+    if(["pageup","pagedown","pagenum"].includes(ctl.type)){buttons[keyId(+r,+c)]={...newButton(),kind:ctl.type};continue}
+    if(ctl.type!=="button"||!ctl.style){skipped++;continue}
+    const s=ctl.style;const b=newButton({text:String(s.text??""),size:SIZES.includes(String(s.size))?String(s.size):"auto",color:intToHex(s.color??0xffffff),bg:intToHex(s.bgcolor??0),align:s.alignment||"center:center"});
+    if(s.png64){b.png64=s.png64.startsWith("data:")?s.png64:"data:image/png;base64,"+s.png64;b.image.mode="upload";b.image.src=b.png64;b.image.fit="contain"}
+    const conv=a=>({connection:a.instance??a.connectionId??"internal",action:a.action??a.definitionId??"",options:unwrap(a.options||{})});
+    const steps=Object.keys(ctl.steps||{}).sort((x,y)=>+x-+y).map(k=>{const as=ctl.steps[k].action_sets||{};return{down:(as.down||[]).map(conv),up:(as.up||[]).map(conv),rotL:(as.rotate_left||[]).map(conv),rotR:(as.rotate_right||[]).map(conv)}});
+    if(steps.length)b.steps=steps;
+    b.feedbacks=(ctl.feedbacks||[]).filter(f=>f).map(f=>({connection:f.instance_id??f.connectionId??"internal",type:f.definitionId??f.type,options:unwrap(f.options||{}),style:{bgcolor:f.style?.bgcolor!=null?intToHex(f.style.bgcolor):"#c8102e",color:f.style?.color!=null?intToHex(f.style.color):"#ffffff"},inverted:!!f.isInverted}));
+    buttons[keyId(+r,+c)]=b}
+  commit(()=>{S.pages.push({id:uid(),name:P.name,buttons});S.pageIdx=S.pages.length-1;selected=null;S.example=false});
+  $("#importDlg").close();toast(skipped?`Page opened. ${skipped} button(s) used a type Deckwright can't edit and were skipped.`:"Page opened");
+});
+
+/* ---------- module library: real actions, feedbacks, presets and settings ---------- */
+// Extracted from the Companion modules themselves: {moduleId: {v, actions, feedbacks, presets, config}}
+const LIBRARY=/*@data:library*/null;
+for(const m of Object.values(LIBRARY)){m.aById=new Map(m.actions.map(a=>[a.id,a]));m.fById=new Map(m.feedbacks.map(f=>[f.id,f]))}
+const libOf=connId=>{const c=S.connections.find(x=>x.id===connId);return c?LIBRARY[c.module]||null:null};
+const libName=mod=>CAT.get(mod)?.[2]||mod;
+function optDefaults(opts){const o={};for(const f of opts||[])if(f.d!==undefined)o[f.id]=clone(f.d);return o}
+function optField(f,val,attrs){
+  const v=val===undefined?f.d:val;const tip=f.tip?` title="${esc(f.tip)}"`:"";
+  let ctl;
+  if((f.t==="dropdown"||f.t==="multidropdown")&&f.c&&f.c.length){
+    const sel=f.multi?(Array.isArray(v)?v.map(String):[]):[String(v)];
+    let opts=f.c.map(([id,l])=>`<option value="${esc(id)}" ${sel.includes(String(id))?"selected":""}>${esc(l)}</option>`).join("");
+    if(!f.multi&&v!==undefined&&v!==null&&!f.c.some(([id])=>String(id)===String(v)))opts=`<option value="${esc(v)}" selected>${esc(v)}</option>`+opts;
+    ctl=`<select class="inp" ${attrs} ${f.multi?"multiple size=\"4\"":""}>${opts}</select>`;
+  }else if(f.t==="checkbox"){ctl=`<input type="checkbox" ${attrs} ${v?"checked":""}>`}
+  else if(f.t==="number"){ctl=`<input class="inp" type="number" ${attrs} value="${esc(v??"")}" ${f.min!=null?`min="${f.min}"`:""} ${f.max!=null?`max="${f.max}"`:""} ${f.step!=null?`step="${f.step}"`:""}>`}
+  else if(f.t==="colorpicker"){const hx=typeof v==="number"?intToHex(v):(normHex(v)||"#ff0000");ctl=`<input type="color" ${attrs} value="${hx}">`}
+  else ctl=`<input class="inp" ${attrs} value="${esc(typeof v==="object"&&v!==null?JSON.stringify(v):v??"")}" spellcheck="false">`;
+  return `<label class="opt ${f.t==="checkbox"?"opt-check":""}"${tip}><span>${esc(f.l)}</span>${ctl}</label>`;
+}
+function optFields(opts,values,kind){
+  if(!opts||!opts.length)return `<span class="empty-note">No options.</span>`;
+  return `<div class="opts">${opts.map(f=>optField(f,values?.[f.id],`data-opt="${esc(f.id)}" data-okind="${kind}"`)).join("")}</div>`;
+}
+function readOpt(t,def){
+  const f=def?.find(x=>x.id===t.dataset.opt);
+  if(t.type==="checkbox")return t.checked;
+  if(t.type==="color")return hexToInt(t.value);
+  if(t.multiple){return [...t.selectedOptions].map(o=>{const c=f?.c?.find(([id])=>String(id)===o.value);return c?c[0]:o.value})}
+  if(t.tagName==="SELECT"){const c=f?.c?.find(([id])=>String(id)===t.value);return c?c[0]:t.value}
+  if(t.type==="number")return t.value===""?"":Number(t.value);
+  return t.value;
+}
+// Presets refer to their own connection's variables, e.g. $(atem:short_1); point them at this connection's label
+function fixVars(v,conn){
+  const short=CAT.get(conn.module)?.[5]||"";
+  const re=new RegExp("\\$\\((harness"+(short?"|"+short.replace(/[^\w-]/g,""):"")+"):","g");
+  if(typeof v==="string")return v.replace(re,`$(${conn.label}:`);
+  if(Array.isArray(v))return v.map(x=>fixVars(x,conn));
+  if(v&&typeof v==="object"){const o={};for(const k in v)o[k]=fixVars(v[k],conn);return o}
+  return v;
+}
+function presetToButton(p,conn){
+  const acts=l=>(l||[]).map(x=>({connection:conn.id,action:x.a,options:fixVars(clone(x.o||{}),conn)}));
+  const b=newButton({text:fixVars(String(p.tx||"").replace(/\\n/g,"\n"),conn),size:SIZES.includes(String(p.sz))?String(p.sz):"auto",color:p.fg||"#ffffff",bg:p.bg||"#000000",align:p.al||"center:center"});
+  b.steps=p.st.map(s=>({down:acts(s.down),up:acts(s.up),rotL:acts(s.rotL),rotR:acts(s.rotR)}));
+  b.feedbacks=(p.fb||[]).map(f=>({connection:conn.id,type:f.f,options:fixVars(clone(f.o||{}),conn),style:f.s?{bgcolor:f.s.bg||undefined,color:f.s.fg||undefined}:{},inverted:!!f.inv}));
+  if(p.png){b.png64=p.png.startsWith("data:")?p.png:"data:image/png;base64,"+p.png;b.image.mode="upload";b.image.src=b.png64;b.image.fit="contain"}
+  b.fromPreset=p.n;return applyPresetIcon(b,p);
+}
+// Variables like $(atem:short_1) show as {short_1} in previews; Companion fills in the real value
+const ATEM_SRC={0:"Blk",1000:"Bars",2001:"Col 1",2002:"Col 2",3010:"MP 1",3011:"MP 1K",3020:"MP 2",3021:"MP 2K",3030:"MP 3",3040:"MP 4",6000:"SSrc",10010:"PGM",10011:"PVW"};
+const varName=n=>{const m=/^(?:short|long)_(\d+)$/.exec(n);if(m){const v=+m[1];return ATEM_SRC[v]||(v>0&&v<1000?"In "+v:String(v))}
+  // other variables preview as a couple of readable words; Companion shows the live value
+  const w=n.replace(/([a-z0-9])([A-Z])/g,"$1 $2").replace(/[_-]+/g," ").toLowerCase().replace(/\b(current|formatted|value|text)\b/g,"").trim().split(/\s+/).filter(Boolean).slice(0,2).join(" ")||n;
+  return w.charAt(0).toUpperCase()+w.slice(1)};
+const showVars=t=>String(t||"").replace(/\$\(([^:()]+):([^()]+)\)/g,(_,c,n)=>varName(n));
+
+/* preset browser */
+let presetMod=null,presetCat="",presetQ="";
+function presetConn(mod){return S.connections.find(c=>c.id===$("#presetConn")?.value&&c.module===mod)||S.connections.find(c=>c.module===mod)}
+function renderPresets(){
+  const mods=Object.keys(LIBRARY);if(!presetMod||!LIBRARY[presetMod])presetMod=(S.connections.find(c=>LIBRARY[c.module])||{}).module||mods[0];
+  const L=LIBRARY[presetMod];const cats=[...new Set(L.presets.map(p=>p.cat))];
+  if(presetCat&&!cats.includes(presetCat))presetCat="";
+  const q=presetQ.trim().toLowerCase();
+  const list=L.presets.map((p,i)=>[p,i]).filter(([p])=>(!presetCat||p.cat===presetCat)&&(!q||(p.n+" "+p.tx+" "+p.cat).toLowerCase().includes(q)));
+  const conns=S.connections.filter(c=>c.module===presetMod);
+  $("#presetMods").innerHTML=mods.map(m=>`<button data-pmod="${esc(m)}" aria-pressed="${m===presetMod}">${esc(libName(m))}<span class="count">${LIBRARY[m].presets.length}</span></button>`).join("");
+  $("#presetBar").innerHTML=`<select class="inp" id="presetCat" aria-label="Category"><option value="">All categories (${L.presets.length})</option>${cats.map(c=>`<option ${c===presetCat?"selected":""}>${esc(c)}</option>`).join("")}</select>
+    <input class="inp" id="presetSearch" placeholder="Search presets" value="${esc(presetQ)}" aria-label="Search presets">
+    ${conns.length>1?`<select class="inp" id="presetConn" aria-label="Connection">${conns.map(c=>`<option value="${esc(c.id)}">${esc(c.label)}</option>`).join("")}</select>`:`<span class="empty-note">${conns.length?`Uses connection “${esc(conns[0].label)}”`:`Adds a ${esc(libName(presetMod))} connection`}</span>`}`;
+  const shown=list.slice(0,240);
+  const byCat={};for(const[p,i]of shown)(byCat[p.cat]??=[]).push([p,i]);
+  $("#presetGrid").innerHTML=shown.length?Object.entries(byCat).map(([c,items])=>`<div class="pcat"><div class="pcat-h"><span>${esc(c)}</span><button class="btn ghost sm" data-pfill="${esc(c)}">Fill empty keys with these</button></div><div class="pgrid">${items.map(([p,i])=>{const b=presetToButton(p,{id:"x",label:CAT.get(presetMod)?.[5]||"x",module:presetMod});return `<button class="pitem" data-preset="${i}" title="${esc(p.n)}">${keyHTML("p"+i,b).replace(/^<button/,"<div").replace(/<\/button>$/,"</div>")}<small>${esc(p.n)}</small></button>`}).join("")}</div></div>`).join("")+(list.length>shown.length?`<p class="empty-note">Showing ${shown.length} of ${list.length}. Pick a category or search to narrow it down.</p>`:"")
+    :`<p class="empty-note">No presets match.</p>`;
+  paintPresetPreviews();
+  $("#presetCount").textContent=`${libName(presetMod)} ${LIBRARY[presetMod].v} · ${L.actions.length} actions · ${L.feedbacks.length} feedbacks · ${L.presets.length} presets`;
+}
+function openPresets(mod){if(mod)presetMod=mod;presetQ="";presetCat="";renderPresets();const d=$("#presetDlg");const was=d.open;if(!was)d.show();document.body.classList.add("drawer-open");if(!was)placeDrawer(false);scheduleOverlay()}
+/* the presets panel opens beside the deck; drag its header to move it, drag its corner to resize. Position is remembered per browser. */
+const floating=()=>innerWidth>1000;
+function loadDrawerPos(){try{return JSON.parse(localStorage.getItem("deckwright.drawer")||"null")}catch(_){return null}}
+function saveDrawerPos(v){try{v?localStorage.setItem("deckwright.drawer",JSON.stringify(v)):localStorage.removeItem("deckwright.drawer")}catch(_){}}
+function clampDrawer(x,y,w,h){const W=innerWidth,H=innerHeight;w=Math.min(Math.max(w,320),W-24);h=Math.min(Math.max(h,320),H-24);return{x:Math.min(Math.max(8,x),W-w-8),y:Math.min(Math.max(8,y),H-h-8),w,h}}
+function applyDrawer(r){const d=$("#presetDlg");Object.assign(d.style,{left:r.x+"px",top:r.y+"px",width:r.w+"px",height:r.h+"px",right:"auto",bottom:"auto"})}
+function placeDrawer(snap){
+  const d=$("#presetDlg");if(!floating()){d.removeAttribute("style");return}
+  const saved=snap?null:loadDrawerPos();if(snap)saveDrawerPos(null);
+  if(saved){applyDrawer(clampDrawer(saved.x,saved.y,saved.w,saved.h));return}
+  const dk=$("#deckNode").getBoundingClientRect();const room=innerWidth-dk.right-30;const w=room>=340?Math.min(460,room):440,h=Math.min(innerHeight-dk.top-90,760);
+  // right of the deck if there is room, otherwise over the inspector edge
+  let x=dk.right+14;if(x+w>innerWidth-8)x=innerWidth-w-16;
+  applyDrawer(clampDrawer(x,dk.top,w,h));
+}
+let ddrag=null;
+document.addEventListener("pointerdown",e=>{const h=e.target.closest("#drawerHead");if(!h||e.target.closest("button")||!floating()||e.button!==0)return;
+  const r=$("#presetDlg").getBoundingClientRect();ddrag={dx:e.clientX-r.left,dy:e.clientY-r.top,w:r.width,h:r.height};h.setPointerCapture(e.pointerId);e.preventDefault()});
+document.addEventListener("pointermove",e=>{if(!ddrag)return;applyDrawer(clampDrawer(e.clientX-ddrag.dx,e.clientY-ddrag.dy,ddrag.w,ddrag.h))});
+document.addEventListener("pointerup",()=>{if(!ddrag)return;ddrag=null;const r=$("#presetDlg").getBoundingClientRect();saveDrawerPos({x:r.left,y:r.top,w:r.width,h:r.height})});
+// remember a size changed with the resize corner
+try{new ResizeObserver(()=>{const d=$("#presetDlg");if(!d.open||ddrag||!floating()||!d.style.left)return;const r=d.getBoundingClientRect();saveDrawerPos({x:r.left,y:r.top,w:r.width,h:r.height})}).observe($("#presetDlg"))}catch(_){}
+window.addEventListener("resize",()=>{if($("#presetDlg").open)placeDrawer(false)});
+function closePresets(){const d=$("#presetDlg");if(d.open)d.close();document.body.classList.remove("drawer-open")}
+function ensureConn(mod){return presetConn(mod)||addConnection(mod)}
+function placePresets(idxs,target){
+  const pg=page();const order=allKeys().filter(k=>!isDialKey(k));
+  const start=selected&&!isDialKey(selected)?Math.max(0,order.indexOf(selected)):0;
+  const targets=[];
+  if(target)targets.push(target);
+  else for(let n=0;n<order.length&&targets.length<idxs.length;n++){const k=order[(start+n)%order.length];if(!pg.buttons[k])targets.push(k)}
+  if(!targets.length){toast("No empty keys left on this page. Drag a preset onto a key to replace it, or add a page.");return}
+  let conn;commit(()=>{conn=ensureConn(presetMod);targets.forEach((k,j)=>{pg.buttons[k]=presetToButton(LIBRARY[presetMod].presets[idxs[j]],conn)});
+    // move the selection to the next empty key so the next click carries on from there
+    const last=order.indexOf(targets[targets.length-1]);let next=null;for(let n=1;n<=order.length;n++){const k=order[(last+n)%order.length];if(!pg.buttons[k]){next=k;break}}
+    selected=target?target:(next||targets[targets.length-1]);multi.clear();S.example=false},{renderArtFor:targets});
+  markAI(targets);
+  toast(targets.length===1?`Placed “${LIBRARY[presetMod].presets[idxs[0]].n}” on ${keyCodeK(targets[0])}`:`Placed ${targets.length} presets${targets.length<idxs.length?` (ran out of empty keys after ${targets.length})`:""}`);
+}
+document.addEventListener("click",e=>{const t=e.target.closest("button")||e.target;
+  if(t.id==="presetsBtn"||t.id==="presetsHere"){openPresets(t.dataset.mod);return}
+  if(t.id==="closePresets"){closePresets();return}
+  if(t.id==="snapDrawer"){placeDrawer(true);return}
+  const pm=t.closest("[data-pmod]");if(pm){presetMod=pm.dataset.pmod;presetCat="";renderPresets();return}
+  const pi=t.closest("[data-preset]");if(pi){if(presetDragJustEnded)return;placePresets([+pi.dataset.preset]);return}
+  const pf=t.closest("[data-pfill]");if(pf){const L=LIBRARY[presetMod];const q=presetQ.trim().toLowerCase();const idxs=L.presets.map((p,i)=>[p,i]).filter(([p])=>p.cat===pf.dataset.pfill&&(!q||(p.n+" "+p.tx).toLowerCase().includes(q))).map(([,i])=>i);placePresets(idxs);return}
+  const pfor=t.closest("[data-presetsfor]");if(pfor){openPresets(pfor.dataset.presetsfor);return}
+  const cs=t.closest("[data-connset]");if(cs){openConnSet=openConnSet===cs.dataset.connset?null:cs.dataset.connset;renderRail();return}
+});
+document.addEventListener("input",e=>{if(e.target.id==="presetSearch"){presetQ=e.target.value;const pos=e.target.selectionStart;renderPresets();const s=$("#presetSearch");s.focus();try{s.setSelectionRange(pos,pos)}catch(_){}}});
+document.addEventListener("change",e=>{const t=e.target;
+  if(t.id==="presetCat"){presetCat=t.value;renderPresets();return}
+  if(t.dataset.okind==="conn"){const c=S.connections.find(x=>x.id===t.closest("[data-connid]")?.dataset.connid);if(!c)return;const L=LIBRARY[c.module];
+    commit(()=>{c.config=c.config||{};c.config[t.dataset.opt]=readOpt(t,L?.config)});return}
+});
+
+/* drag a preset from the drawer onto any key */
+let pdrag=null,presetDragJustEnded=false;
+document.addEventListener("pointerdown",e=>{const it=e.target.closest("#presetGrid [data-preset]");if(!it||e.button!==0)return;
+  pdrag={i:+it.dataset.preset,x:e.clientX,y:e.clientY,el:it,ghost:null,over:null};});
+document.addEventListener("pointermove",e=>{if(!pdrag)return;
+  if(!pdrag.ghost){if(Math.hypot(e.clientX-pdrag.x,e.clientY-pdrag.y)<6)return;
+    const k=pdrag.el.querySelector(".key");pdrag.ghost=k.cloneNode(true);pdrag.ghost.classList.add("drag-ghost");const r=k.getBoundingClientRect();
+    pdrag.ghost.style.width=r.width+"px";pdrag.ghost.style.height=r.height+"px";document.body.appendChild(pdrag.ghost);document.body.classList.add("preset-dragging")}
+  pdrag.ghost.style.left=e.clientX+"px";pdrag.ghost.style.top=e.clientY+"px";
+  const tgt=document.elementFromPoint(e.clientX,e.clientY)?.closest("#deck .key[data-k]");
+  if(pdrag.over&&pdrag.over!==tgt)pdrag.over.classList.remove("drop");
+  if(tgt){tgt.classList.add("drop");pdrag.over=tgt}else pdrag.over=null;});
+function endPresetDrag(e,cancel){if(!pdrag)return;const d=pdrag;pdrag=null;document.body.classList.remove("preset-dragging");
+  if(!d.ghost)return;d.ghost.remove();if(d.over)d.over.classList.remove("drop");
+  presetDragJustEnded=true;setTimeout(()=>presetDragJustEnded=false,0);
+  if(!cancel&&d.over)placePresets([d.i],d.over.dataset.k);}
+document.addEventListener("pointerup",e=>endPresetDrag(e,false));
+document.addEventListener("pointercancel",e=>endPresetDrag(e,true));
+document.addEventListener("keydown",e=>{if(e.key==="Escape"&&$("#presetDlg").open&&!document.querySelector("dialog[open]:modal")){closePresets()}});
+
+/* connection settings */
+let openConnSet=null;
+function connSettingsHTML(c){
+  const L=LIBRARY[c.module];if(!L||!L.config.length)return "";
+  const vals={...optDefaults(L.config),...(c.raw?.config||{}),...(c.config||{})};
+  return `<div class="conn-set" data-connid="${esc(c.id)}"><span class="empty-note">Saved into the export, so Companion creates this connection already set up.</span><div class="opts">${L.config.map(f=>optField(f,vals[f.id],`data-opt="${esc(f.id)}" data-okind="conn"`)).join("")}</div></div>`;
+}
+
+/* compact library summary for the AI prompt */
+function libraryForPrompt(){
+  const mods=[...new Set(S.connections.map(c=>c.module))].filter(m=>LIBRARY[m]);const out={};
+  const sig=o=>(o||[]).map(f=>f.id+":"+f.t+(f.c?"["+f.c.slice(0,12).map(c=>c[0]).join("|")+(f.c.length>12?"|…":"")+"]":"")).join(", ");
+  for(const m of mods){const L=LIBRARY[m];
+    out[m]={actions:L.actions.map(a=>`${a.id} — ${a.n}${a.o?" ("+sig(a.o)+")":""}`),feedbacks:L.feedbacks.map(f=>`${f.id} — ${f.n}${f.ft?" ["+f.ft+"]":""}${f.o?" ("+sig(f.o)+")":""}`)}}
+  const s=JSON.stringify(out);return s.length>150000?s.slice(0,150000):s;
+}
+
+/* ---------- automatic icons for preset buttons ---------- */
+// First matching rule wins. Tested against "category name action-id text" of the preset.
+const ICON_RULES=[
+  [/\b(mute|unmute)\b/,"volume-x","#ff5a5f"],
+  [/\bsolo\b/,"headphones","#3ddbd9"],
+  [/\b(record|recording|rec)\b/,"circle-dot","#ff5a5f"],
+  [/\b(stream|streaming|external)\b/,"radio","#ff5a5f"],
+  [/\b(preview|pvw)\b/,"eye","#3ccf74"],
+  [/\b(program|pgm|on air|live)\b/,"tv","#ff5a5f"],
+  [/\bcut\b/,"scissors","#ffb21a"],
+  [/fade to black|\bftb\b|blackout/,"moon","#a7a7b0"],
+  [/\b(auto|transition|mix|wipe|dip|stinger|merge)\b/,"arrow-right-left","#ffb21a"],
+  [/t-?bar/,"sliders-vertical","#ffb21a"],
+  [/\bmacro/,"list-ordered","#6a95ff"],
+  [/super ?source|\bssrc\b/,"layout-grid","#c08bff"],
+  [/multi ?view|\bmv\b/,"layout-dashboard","#8d8d95"],
+  [/\b(dsk|usk|keyer|key|overlay|lower third)\b/,"layers","#c08bff"],
+  [/\b(aux|output)\b/,"monitor","#6a95ff"],
+  [/\b(still|image|photo|picture)\b/,"image","#c08bff"],
+  [/media ?player|\bmp ?\d|\bclip\b|\bvideo\b/,"film","#c08bff"],
+  [/\b(volume|audio|bus|gain|fader|level|meter)\b/,"volume-2","#3ddbd9"],
+  [/\b(mic|microphone)\b/,"mic","#3ddbd9"],
+  [/\b(play|start|go|trigger|launch|fire)\b/,"play","#3ccf74"],
+  [/\bpause\b/,"pause","#ffb21a"],
+  [/\b(stop|kill|panic)\b/,"square","#ff5a5f"],
+  [/\b(next|forward|advance)\b/,"skip-forward","#f1f1f2"],
+  [/\b(prev|previous|back)\b/,"skip-back","#f1f1f2"],
+  [/\b(restart|beginning|rewind|reset|jump to start)\b/,"rewind","#f1f1f2"],
+  [/\b(loop|repeat)\b/,"repeat","#6a95ff"],
+  [/\bshuffle\b/,"shuffle","#6a95ff"],
+  [/\b(fullscreen|full screen)\b/,"maximize","#f1f1f2"],
+  [/\b(title|text|caption|subtitle)\b/,"type","#f4e64a"],
+  [/\b(camera|cam|ptz|preset recall)\b/,"camera","#6a95ff"],
+  [/\b(replay|instant replay)\b/,"history","#c08bff"],
+  [/\bplaylist\b/,"list-music","#6a95ff"],
+  [/\bcue\b/,"list-checks","#6a95ff"],
+  [/\b(slide|slideshow|presentation|powerpoint)\b/,"presentation","#ffb21a"],
+  [/\b(folder|file)\b/,"folder-open","#8d8d95"],
+  [/\b(column)\b/,"columns-3","#6a95ff"],
+  [/\b(layer|group)\b/,"layers","#6a95ff"],
+  [/\b(deck|composition)\b/,"layout-template","#c08bff"],
+  [/\b(clear|disconnect|eject|unload)\b/,"circle-x","#ff5a5f"],
+  [/\b(effect|fx)\b/,"wand-sparkles","#c08bff"],
+  [/\b(tempo|bpm|tap)\b/,"activity","#f4e64a"],
+  [/\b(snapshot|startup|save)\b/,"save","#8d8d95"],
+  [/\b(timer|timecode|clock|countdown|time|duration|playhead|position|remaining|elapsed)\b/,"timer","#f4e64a"],
+  [/\b(state|status)\b/,"activity","#3ccf74"],
+  [/\b(laser|pointer)\b/,"pointer","#ff5a5f"],
+  [/\b(white|flash|bright)\b/,"sun","#f4e64a"],
+  [/\b(opacity|dim)\b/,"sun-dim","#f4e64a"],
+  [/\b(color|colour|bars)\b/,"palette","#c08bff"],
+  [/\b(input)\b/,"cable","#6a95ff"],
+];
+// Mix the accent into a near-black so icons sit on a tinted key; feedback colours still override it when active
+function tint(hex,amt=.16){const a=hexToInt(hex),b=0x0c0c0e;const ch=s=>Math.round(((a>>s)&255)*amt+((b>>s)&255)*(1-amt));return intToHex((ch(16)<<16)|(ch(8)<<8)|ch(0))}
+function presetIcon(p){
+  const a0=p.st?.[0]?.down?.[0]?.a||"";
+  const own=(p.n+" "+a0.replace(/([a-z])([A-Z])/g,"$1 $2").replace(/[_-]/g," ")+" "+String(p.tx||"").replace(/\$\([^)]*\)/g," ")).toLowerCase();
+  // the preset's own name and action decide first; the category only breaks ties
+  for(const hay of [own,(p.cat||"").toLowerCase()])for(const[re,icon,color]of ICON_RULES)if(re.test(hay)&&iconExists(icon))return{icon,color};
+  return{icon:"zap",color:"#c6f432"};
+}
+// How many lines a label wraps to at roughly `per` characters a line (Companion wraps on spaces)
+function wrapCount(t,per){let n=0;for(const line of String(t).split("\n")){let cur=0,l=1;for(const w of line.split(/\s+/).filter(Boolean)){if(cur&&cur+1+w.length>per){l++;cur=w.length}else cur+=(cur?1:0)+w.length;while(cur>per){l++;cur-=per}}n+=l}return n}
+// Lays out label + icon so they never overlap: picks the largest text size the label fits at,
+// then gives the icon whatever height is left above the text. Sizes are Companion points on a 72px key.
+const charsPerLine=fs=>Math.floor(64/(fs*0.62));
+function layoutLabel(b){
+  const t=showVars(b.text).trim();
+  if(!t){b.image.pos="center";b.image.scale=.6;delete b.image.box;return b}
+  let fs=10,n=wrapCount(t,charsPerLine(10));
+  for(const[f,max]of[[14,2],[12,2],[12,3],[10,3],[10,4]]){const c=wrapCount(t,charsPerLine(f));if(c<=max){fs=f;n=c;break}}
+  const textH=n*fs*1.14+4, zone=72-textH-3;
+  b.size=String(fs);b.align="center:bottom";b.image.pos="box";
+  b.image.box=zone<16?{s:0,cy:0}:{s:Math.round(Math.min(36,zone*.8)),cy:Math.round(2+zone/2)};
+  return b;
+}
+function applyPresetIcon(b,p){
+  if(p.png)return b;
+  const{icon,color}=presetIcon(p);
+  b.image.mode="design";b.image.bgStyle="none";b.image.icon={type:"lucide",value:icon};b.image.iconColor=color;
+  if(!p.bg||p.bg==="#000000")b.bg=tint(color);
+  return layoutLabel(b);
+}
+const presetArtCache=new Map();
+async function paintPresetPreviews(){
+  const mod=presetMod;
+  for(const el of [...document.querySelectorAll("#presetGrid [data-preset]")]){
+    if(presetMod!==mod)return; // the drawer switched apps; a newer pass is painting
+    const key=mod+"#"+el.dataset.preset;let url=presetArtCache.get(key);
+    if(url===undefined){const p=LIBRARY[mod].presets[+el.dataset.preset];if(!p)continue;const b=presetToButton(p,{id:"x",label:CAT.get(mod)?.[5]||"x",module:mod});url=await renderArt(b);presetArtCache.set(key,url)}
+    if(!url||!el.isConnected)continue;const k=el.querySelector(".key");if(!k||k.querySelector(".art"))continue;
+    k.insertAdjacentHTML("afterbegin",`<img class="art" src="${url}" alt="">`);
+  }
+}
+
+function wipePage(){const n=Object.keys(page().buttons).length;if(!n)return;commit(()=>{page().buttons={};selected=null;multi.clear();S.example=false});toast(`Wiped ${n} keys from “${page().name||"this page"}”. Press ⌘Z to undo.`)}
+
+/* ---------- boot screen: an animation across every key on page 1, played by a startup trigger ---------- */
+// How it works in Companion: every key's normal image is the final title screen. Each key also carries one
+// "Variable: check value" feedback per frame that swaps in that frame's slice of the picture while
+// $(internal:custom_boot_frame) equals the frame number. A startup trigger steps that variable 1..N, then "done".
+const BOOT_GAP=18, BOOT_VAR="boot_frame";
+const BOOT_STYLES=[["ignite","Ignition"],["scan","Scanline"],["ripple","Ripple"],["meter","Meters"]];
+const bootDefaults=()=>({title:"AV360",subtitle:"SYSTEM ONLINE",style:"ignite",c1:"#c6f432",c2:"#ff5ad9",secs:2,fps:12,afterPage:2,titleSize:58,subSize:20,deckId:"streamdeck:CL45L2A05421"});
+let bootCache=null; // {sig, finals:[dataURL per key], frames:[[dataURL per key] per frame]}
+const bootSig=cfg=>JSON.stringify([cfg,S.device]);
+const bootFrameCount=cfg=>Math.max(6,Math.round(cfg.secs*cfg.fps));
+function bootGeom(){const d=dev();const W=d.cols*72+(d.cols-1)*BOOT_GAP,H=d.rows*72+(d.rows-1)*BOOT_GAP;
+  const keys=[];for(let r=0;r<d.rows;r++)for(let c=0;c<d.cols;c++)keys.push({r,c,x:c*(72+BOOT_GAP),y:r*(72+BOOT_GAP)});return{W,H,keys}}
+const clamp01=v=>Math.max(0,Math.min(1,v));
+const smooth=(a,b,v)=>{const t=clamp01((v-a)/(b-a));return t*t*(3-2*t)};
+function rgba(hex,a){const n=hexToInt(hex);return`rgba(${n>>16&255},${n>>8&255},${n&255},${a})`}
+function mixHex(h1,h2,t){const a=hexToInt(h1),b=hexToInt(h2);const ch=s=>Math.round((a>>s&255)*(1-t)+(b>>s&255)*t);return intToHex(ch(16)<<16|ch(8)<<8|ch(0))}
+function rng(seed){return()=>{seed|=0;seed=seed+0x6D2B79F5|0;let t=Math.imul(seed^seed>>>15,1|seed);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296}}
+
+function drawTitle(x,cfg,W,H,alpha,scale=1,reveal=1){
+  if(alpha<=0)return;x.save();x.globalAlpha=alpha;
+  const title=String(cfg.title||"").toUpperCase(),sub=String(cfg.subtitle||"").toUpperCase();
+  // snap the title to one row of keys and the subtitle to the row below, so neither straddles a gap
+  const rows=dev().rows,rowY=r=>r*(72+BOOT_GAP)+36;
+  const tRow=sub&&rows>1?Math.max(0,Math.floor((rows-2)/2)):Math.floor((rows-1)/2),sRow=Math.min(rows-1,tRow+1);
+  let fs=+cfg.titleSize||58;x.font=`700 ${fs}px Geist, "Helvetica Neue", Arial, sans-serif`;
+  const tw=x.measureText(title).width;if(tw>W*.9)fs*=W*.9/tw;
+  x.translate(W/2,rowY(tRow));x.scale(scale,scale);
+  if(reveal<1){x.beginPath();x.rect(-W/2,-H,W*reveal,H*2);x.clip()}
+  x.font=`700 ${fs}px Geist, "Helvetica Neue", Arial, sans-serif`;x.textAlign="center";x.textBaseline="middle";
+  const g=x.createLinearGradient(-W/2,0,W/2,0);g.addColorStop(0,"#ffffff");g.addColorStop(.55,mixHex("#ffffff",cfg.c1,.35));g.addColorStop(1,cfg.c1);
+  x.shadowColor=rgba(cfg.c1,.55);x.shadowBlur=fs*.35;x.fillStyle=g;x.fillText(title,0,0);x.shadowBlur=0;
+  if(sub&&sRow!==tRow){let ss=+cfg.subSize||20;x.font=`600 ${ss}px "Geist Mono", Menlo, monospace`;const sw=x.measureText(sub).width;if(sw>W*.9){ss*=W*.9/sw;x.font=`600 ${ss}px "Geist Mono", Menlo, monospace`}
+    const dy=rowY(sRow)-rowY(tRow);x.fillStyle=cfg.c2;x.fillText(sub,0,dy-4);
+    x.fillStyle=rgba(cfg.c1,.9);const bw=Math.min(W*.5,x.measureText(sub).width);x.fillRect(-bw/2,dy+ss*.75,bw,3)}
+  x.restore();
+}
+function drawBackdrop(x,cfg,W,H,a=1){
+  x.fillStyle="#050506";x.fillRect(0,0,W,H);
+  const g=x.createRadialGradient(W/2,H*.45,0,W/2,H*.45,Math.max(W,H)*.7);g.addColorStop(0,rgba(cfg.c1,.26*a));g.addColorStop(.6,rgba(cfg.c2,.1*a));g.addColorStop(1,"rgba(0,0,0,0)");
+  x.fillStyle=g;x.fillRect(0,0,W,H);
+  x.strokeStyle=`rgba(255,255,255,${.08*a})`;x.lineWidth=1;
+  for(let gx=0;gx<W;gx+=24){x.beginPath();x.moveTo(gx+.5,0);x.lineTo(gx+.5,H);x.stroke()}
+  for(let gy=0;gy<H;gy+=24){x.beginPath();x.moveTo(0,gy+.5);x.lineTo(W,gy+.5);x.stroke()}
+}
+function drawBoot(x,cfg,t,frame){
+  const{W,H,keys}=bootGeom();const R=rng(1234+frame*97);
+  x.clearRect(0,0,W,H);x.fillStyle="#000";x.fillRect(0,0,W,H);
+  if(t>=1){drawBackdrop(x,cfg,W,H);drawTitle(x,cfg,W,H,1);return}
+  if(cfg.style==="ignite"){
+    drawBackdrop(x,cfg,W,H,smooth(.5,1,t));
+    for(const k of keys){const d=((k.x+36)/W+(k.y+36)/H)/2;const w=Math.exp(-Math.pow((t*1.5-d-.12)/.13,2));
+      if(w<.02)continue;x.fillStyle=rgba(mixHex(cfg.c1,cfg.c2,d),w*.95);x.fillRect(k.x,k.y,72,72);
+      x.strokeStyle=`rgba(255,255,255,${w*.8})`;x.lineWidth=2;x.strokeRect(k.x+8,k.y+8,56,56)}
+    drawTitle(x,cfg,W,H,smooth(.55,.85,t),1,smooth(.55,.9,t));
+  }else if(cfg.style==="scan"){
+    const p=smooth(0,.7,t),by=p*H;
+    drawBackdrop(x,cfg,W,H,1);drawTitle(x,cfg,W,H,1);
+    x.fillStyle="#000";x.fillRect(0,by,W,H-by);
+    const g=x.createLinearGradient(0,by-60,0,by);g.addColorStop(0,"rgba(0,0,0,0)");g.addColorStop(1,rgba(cfg.c1,.85));x.fillStyle=g;x.fillRect(0,by-60,W,60);
+    x.fillStyle="#fff";x.fillRect(0,by-2,W,3);
+    if(t<.85)for(let i=0;i<5;i++){const y=R()*by,h=4+R()*14,dx=(R()-.5)*60*(1-t);x.drawImage(x.canvas,0,y,W,h,dx,y,W,h);x.fillStyle=rgba(i%2?cfg.c2:cfg.c1,.35);x.fillRect(0,y,W*R(),2)}
+  }else if(cfg.style==="ripple"){
+    drawBackdrop(x,cfg,W,H,smooth(.4,1,t));
+    const M=Math.hypot(W,H)*.6;
+    for(let i=0;i<4;i++){const rr=(t*1.6-i*.18)*M;if(rr<=0)continue;const a=clamp01(1-rr/M);x.strokeStyle=rgba(i%2?cfg.c2:cfg.c1,a);x.lineWidth=10*a+2;x.beginPath();x.arc(W/2,H/2,rr,0,Math.PI*2);x.stroke()}
+    const a=smooth(.45,.85,t);drawTitle(x,cfg,W,H,a,1+(1-a)*.6);
+  }else{ // meters: an LED level meter per key column that settles into the title
+    drawBackdrop(x,cfg,W,H,smooth(.6,1,t));
+    const d=dev();const fall=1-smooth(.5,.78,t);
+    for(let c=0;c<d.cols;c++){const lvl=fall*Math.abs(Math.sin(t*Math.PI*3.2+c*.9))*(.55+.45*R());const segs=Math.ceil(H/12);
+      for(let s2=0;s2<segs;s2++){const sy=H-(s2+1)*12;if(s2/segs>lvl)break;const hot=s2/segs;x.fillStyle=hot>.8?"#ff4d4f":hot>.6?cfg.c2:cfg.c1;x.fillRect(c*(72+BOOT_GAP)+6,sy+2,60,8)}}
+    drawTitle(x,cfg,W,H,smooth(.6,.88,t));
+  }
+}
+async function buildBootCache(cfg){
+  const sig=bootSig(cfg);if(bootCache&&bootCache.sig===sig)return bootCache;
+  try{await document.fonts?.load?.('700 40px Geist');await document.fonts?.load?.('500 14px "Geist Mono"')}catch(_){}
+  const{W,H,keys}=bootGeom();const big=document.createElement("canvas");big.width=W;big.height=H;const bx=big.getContext("2d");
+  const tile=document.createElement("canvas");tile.width=tile.height=72;const tx=tile.getContext("2d");
+  const slice=()=>keys.map(k=>{tx.clearRect(0,0,72,72);tx.drawImage(big,k.x,k.y,72,72,0,0,72,72);return tile.toDataURL("image/png")});
+  const F=bootFrameCount(cfg),frames=[];
+  for(let f=1;f<=F;f++){drawBoot(bx,cfg,(f-1)/(F-1)*.999,f);frames.push(slice());if(f%4===0)await new Promise(r=>setTimeout(r,0))}
+  drawBoot(bx,cfg,1,F+1);const finals=slice();
+  bootCache={sig,finals,frames,F};return bootCache;
+}
+function bootFeedbacks(b){
+  if(!b.boot||!bootCache||!S.boot||bootCache.sig!==bootSig(S.boot))return[];
+  const{keys}=bootGeom();const idx=keys.findIndex(k=>k.r===b.boot.r&&k.c===b.boot.c);if(idx<0)return[];
+  return bootCache.frames.map((fr,f)=>({id:uid(16),type:"variable_value",instance_id:"internal",options:{variable:"internal:custom_"+BOOT_VAR,op:"eq",value:String(f+1)},style:{png64:fr[idx]},isInverted:false}));
+}
+function bootTriggerExport(){
+  const cfg=S.boot;const F=bootFrameCount(cfg),wait=Math.round(1000/cfg.fps);
+  const act=(action,options)=>({id:uid(16),action,instance:"internal",options});
+  const deck=String(cfg.deckId||"").trim();
+  const actions=[];
+  if(deck)actions.push(act("set_page",{controller:deck,controller_from_variable:false,page:1,page_from_variable:false}));
+  actions.push(act("custom_variable_create_value",{name:BOOT_VAR,value:"0"}));
+  for(let f=1;f<=F;f++){actions.push(act("custom_variable_set_value",{name:BOOT_VAR,value:String(f)}));actions.push(act("wait",{time:wait}))}
+  actions.push(act("custom_variable_set_value",{name:BOOT_VAR,value:"done"}));
+  return{version:6,type:"trigger_list",triggers:{[uid()]:{type:"trigger",options:{name:"Deckwright boot animation",enabled:true,sortOrder:0},action_sets:{0:actions},condition:[],
+    events:[{id:uid(),type:"startup",enabled:true,options:{delay:1500}}].concat(deck?[{id:uid(),type:"variable_changed",enabled:true,options:{variableId:"internal:surface_"+deck.replaceAll(":","_")+"_location"}}]:[])}},instances:{}};
+}
+
+/* studio dialog */
+let bootCfg=null,bootAnim=0;
+function bootForm(){
+  const c=bootCfg;
+  $("#bootForm").innerHTML=`
+    <div class="field"><span class="label">Title</span><input class="inp" id="bootTitle" value="${esc(c.title)}" maxlength="18"></div>
+    <div class="field"><span class="label">Subtitle</span><input class="inp" id="bootSub" value="${esc(c.subtitle)}" maxlength="28"></div>
+    <div class="row2"><div class="field"><span class="label">Title size <span class="mono" id="bootTSv">${c.titleSize}</span></span><input type="range" id="bootTS" min="32" max="72" step="2" value="${c.titleSize}"></div>
+    <div class="field"><span class="label">Subtitle size <span class="mono" id="bootSSv">${c.subSize}</span></span><input type="range" id="bootSS" min="12" max="34" step="1" value="${c.subSize}"></div></div>
+    <div class="field"><span class="label">Animation</span><div class="seg" id="bootStyle">${BOOT_STYLES.map(([v,l])=>`<button data-v="${v}" aria-pressed="${c.style===v}">${l}</button>`).join("")}</div></div>
+    <div class="row2">${colorField("bootC1","Main colour",c.c1)}${colorField("bootC2","Second colour",c.c2)}</div>
+    <div class="row2"><div class="field"><span class="label">Length</span><select class="inp" id="bootSecs">${[1.5,2,3,4].map(v=>`<option value="${v}" ${c.secs==v?"selected":""}>${v} seconds</option>`).join("")}</select></div>
+    <div class="field"><span class="label">Smoothness</span><select class="inp" id="bootFps">${[[8,"8 fps (lightest)"],[12,"12 fps"],[15,"15 fps (smoothest)"]].map(([v,l])=>`<option value="${v}" ${c.fps==v?"selected":""}>${l}</option>`).join("")}</select></div></div>
+    <div class="field"><span class="label">Pressing any key afterwards</span><select class="inp" id="bootAfter"><option value="0" ${!c.afterPage?"selected":""}>Does nothing</option>${[2,3,4,5].map(n=>`<option value="${n}" ${c.afterPage==n?"selected":""}>Goes to page ${n}</option>`).join("")}</select></div>
+    <div class="field"><span class="label">Also play when this Stream Deck is plugged in</span><input class="inp mono" id="bootDeck" value="${esc(c.deckId||"")}" placeholder="streamdeck:SERIAL (leave blank for startup only)" spellcheck="false"><span class="empty-note">Find it in Companion under Surfaces. The trigger also switches this deck to page 1 before playing.</span></div>`;
+}
+// play=true runs the animation once and then holds the final screen; play=false jumps straight to the final screen
+let bootGen=0;
+async function bootPreview(play=true){
+  const gen=++bootGen;cancelAnimationFrame(bootAnim);const cv=$("#bootCanvas");const{W,H,keys}=bootGeom();cv.width=W;cv.height=H;const x=cv.getContext("2d");
+  try{await document.fonts?.load?.('700 40px Geist')}catch(_){}
+  if(gen!==bootGen)return;
+  const F=bootFrameCount(bootCfg),dt=1000/bootCfg.fps;
+  const mask=()=>{x.save();x.globalCompositeOperation="destination-in";x.globalAlpha=1;x.fillStyle="#000";x.beginPath();for(const k of keys)x.roundRect?x.roundRect(k.x,k.y,72,72,10):x.rect(k.x,k.y,72,72);x.fill();x.restore()};
+  const showFinal=()=>{drawBoot(x,bootCfg,1,F+1);mask();$("#bootInfo").textContent=`Final screen · ${F} frames · ${(F/bootCfg.fps).toFixed(1)}s · ${keys.length} keys`};
+  if(!play){showFinal();return}
+  let f=1,last=0;
+  const step=ts=>{if(gen!==bootGen||!$("#bootDlg").open)return;
+    if(ts-last>=dt){last=ts;if(f>F){showFinal();return}drawBoot(x,bootCfg,(f-1)/(F-1)*.999,f);mask();$("#bootInfo").textContent=`Frame ${f} of ${F}`;f++}
+    bootAnim=requestAnimationFrame(step)};
+  bootAnim=requestAnimationFrame(step);
+}
+function openBoot(){bootCfg={...bootDefaults(),...(S.boot||{})};bootForm();$("#bootDlg").showModal();bootPreview()}
+function readBootForm(){const c=bootCfg;c.title=$("#bootTitle").value;c.subtitle=$("#bootSub").value;c.c1=normHex($("#bootC1H").value)||c.c1;c.c2=normHex($("#bootC2H").value)||c.c2;
+  c.secs=+$("#bootSecs").value;c.fps=+$("#bootFps").value;c.afterPage=+$("#bootAfter").value;
+  c.titleSize=+$("#bootTS").value;c.subSize=+$("#bootSS").value;c.deckId=$("#bootDeck").value.trim();$("#bootTSv").textContent=c.titleSize;$("#bootSSv").textContent=c.subSize}
+document.addEventListener("input",e=>{if(!e.target.closest("#bootForm"))return;const t=e.target;
+  if(t.id==="bootC1C"||t.id==="bootC2C"){$("#"+t.id.slice(0,-1)+"H").value=t.value}
+  readBootForm();bootPreview(false)});
+document.addEventListener("change",e=>{if(!e.target.closest("#bootForm"))return;readBootForm();bootPreview(e.target.id==="bootSecs"||e.target.id==="bootFps")});
+async function applyBoot(){
+  readBootForm();const btn=$("#bootApply");btn.disabled=true;btn.textContent="Rendering frames…";
+  try{
+    const cfg={...bootCfg};const cache=await buildBootCache(cfg);const{keys}=bootGeom();
+    commit(()=>{S.boot=cfg;let i=S.pages.findIndex(p=>p.boot);
+      if(i<0){S.pages.unshift({id:uid(),name:"Boot",boot:true,buttons:{}});i=0}else if(i!==0){const[p]=S.pages.splice(i,1);S.pages.unshift(p)}
+      const pg=S.pages[0];pg.buttons={};
+      keys.forEach((k,j)=>{const b=newButton({bg:"#000000"});b.png64=cache.finals[j];b.image.mode="upload";b.image.src=cache.finals[j];b.image.fit="cover";b.boot={r:k.r,c:k.c};
+        if(cfg.afterPage)b.steps[0].down=[{connection:"internal",action:"set_page",options:{controller:"self",controller_from_variable:false,page:cfg.afterPage,page_from_variable:false}}];
+        pg.buttons[keyId(k.r,k.c)]=b});
+      S.pageIdx=0;selected=null;multi.clear();S.example=false});
+    $("#bootDlg").close();toast(`Boot screen is on page 1: ${cache.F} frames across ${keys.length} keys. Now save the startup trigger. Companion needs both files.`);
+    setTimeout(()=>playBootOnDeck(),250);
+  }finally{btn.disabled=false;btn.textContent="Put on page 1"}
+}
+async function saveBootTrigger(){
+  if(!S.boot){readBootForm();S.boot={...bootCfg};persist()}
+  const data=JSON.stringify(bootTriggerExport(),null,2);
+  try{toast(savedNote(await saveFile("Deckwright boot trigger.companionconfig",data)))}catch(e){if(e?.code!=="declined")toast("Couldn't save here. Try again")}
+}
+async function playBootOnDeck(){
+  const pg=page();if(!pg.boot||!S.boot)return;const cache=await buildBootCache(S.boot);const{keys}=bootGeom();
+  const imgs=keys.map(k=>$(`#deck [data-k="${keyId(k.r,k.c)}"] .art`));const dt=1000/S.boot.fps;
+  for(const fr of cache.frames){imgs.forEach((im,j)=>{if(im)im.src=fr[j]});await new Promise(r=>setTimeout(r,dt))}
+  imgs.forEach((im,j)=>{if(im)im.src=cache.finals[j]});
+}
+document.addEventListener("click",e=>{const t=e.target.closest("button")||e.target;
+  if(t.id==="bootBtn"||t.id==="bootEdit"){openBoot();return}
+  const bs=t.closest("#bootStyle [data-v]");if(bs){bootCfg.style=bs.dataset.v;[...$("#bootStyle").children].forEach(x=>x.setAttribute("aria-pressed",x===bs));bootPreview(true);return}
+  if(t.id==="bootReplay"){bootPreview(true);return}
+  if(t.id==="bootApply"){applyBoot();return}
+  if(t.id==="bootTrigger"||t.id==="bootTrigger2"){saveBootTrigger();return}
+  if(t.id==="bootPlayDeck"){playBootOnDeck();return}
+});
+
+/* ---------- right-click menu on keys ---------- */
+let ctxKey=null;
+function openCtx(x,y,k){
+  ctxKey=k;const b=page().buttons[k];const many=multi.size>1&&multi.has(k);const dial=isDialKey(k);
+  const item=(id,label,hint,dis,cls="")=>`<button role="menuitem" data-ctx="${id}" ${dis?"disabled":""} class="${cls}"><span>${label}</span>${hint?`<kbd>${hint}</kbd>`:""}</button>`;
+  const m=$("#ctx");
+  m.innerHTML=`<div class="ctx-h">${esc(many?`${multi.size} keys`:keyCodeK(k)+(b?" · "+(showVars(b.text).replace(/\n/g," ").trim()||"Untitled"):" · empty"))}</div>`+
+    item("copy","Copy","⌘C",!b||many)+item("paste",clipboard?"Paste":"Paste (nothing copied)","⌘V",!clipboard||many)+
+    item("dup","Duplicate","⌘D",!b||many)+
+    (b||many?"":item("new",dial?"New dial":"New button","",false)+(dial?"":item("presets","Browse presets…","",false)))+
+    `<div class="ctx-sep"></div>`+item("del",many?`Delete ${multi.size} keys`:"Delete","⌫",!b&&!many,"danger")+item("wipe","Wipe page","",!Object.keys(page().buttons).length,"danger");
+  m.hidden=false;
+  const r=m.getBoundingClientRect();m.style.left=Math.min(x,innerWidth-r.width-8)+"px";m.style.top=Math.min(y,innerHeight-r.height-8)+"px";
+  m.querySelector("button:not([disabled])")?.focus();
+}
+function closeCtx(){const m=$("#ctx");if(m&&!m.hidden){m.hidden=true;ctxKey=null}}
+$("#deck").addEventListener("contextmenu",e=>{const el=e.target.closest("[data-k]");if(!el)return;e.preventDefault();
+  const k=el.dataset.k;if(!(multi.size>1&&multi.has(k))){multi.clear();selected=k;stepIdx=0;render()}
+  openCtx(e.clientX,e.clientY,k)});
+document.addEventListener("click",e=>{const it=e.target.closest("[data-ctx]");
+  if(!it){if(!e.target.closest("#ctx"))closeCtx();return}
+  const k=ctxKey;const act=it.dataset.ctx;closeCtx();if(!k)return;selected=multi.size>1?selected:k;
+  if(act==="copy")copy();
+  else if(act==="paste")paste();
+  else if(act==="dup")duplicate();
+  else if(act==="new"){commit(()=>{page().buttons[k]=newButton()});tab="look"}
+  else if(act==="presets")openPresets();
+  else if(act==="wipe")wipePage();
+  else if(act==="del"){if(multi.size>1&&multi.has(k)){const ks=[...multi];commit(()=>{ks.forEach(x=>delete page().buttons[x]);multi.clear();selected=null})}else commit(()=>{delete page().buttons[k]})}
+});
+document.addEventListener("keydown",e=>{if(e.key==="Escape")closeCtx()},true);
+window.addEventListener("blur",closeCtx);
+document.addEventListener("scroll",closeCtx,true);
+
+/* ---------- sources card tabs ---------- */
+document.addEventListener("click",e=>{const b=e.target.closest("[data-src]");if(!b)return;
+  [...$("#srcTabs").children].forEach(x=>x.setAttribute("aria-pressed",x===b));$("#paneConns").hidden=b.dataset.src!=="conns";$("#paneKnow").hidden=b.dataset.src!=="know";scheduleOverlay()});
+document.addEventListener("scroll",()=>scheduleOverlay(),true);
+
+/* ---------- module browser ---------- */
+function safeLabel(base){let b=String(base||"conn").toLowerCase().replace(/[^a-z0-9_-]+/g,"_").replace(/^_+|_+$/g,"")||"conn";let l=b,n=2;while(S.connections.some(c=>c.label===l))l=b+"_"+n++;return l}
+function addConnection(module,label){const c={id:uid(),label:safeLabel(label||CAT.get(module)?.[5]||module),module};S.connections.push(c);return c}
+function renderModules(){
+  const q=$("#modSearch").value.trim().toLowerCase();const have=new Set(S.connections.map(c=>c.module));
+  const row=m=>`<button class="mod" data-addmod="${esc(m[0])}"><b>${esc(m[1]||m[2])}${m[1]?` <span>${esc(m[2])}</span>`:""}</b><small>${LIBRARY[m[0]]?"full library · ":""}${esc(m[0])}${m[4]?" · deprecated":""}${m[3]?" · "+esc(m[3]):""}</small><span class="add ${have.has(m[0])?"have":""}">${have.has(m[0])?"Added · add another":ico("plus")+"Add"}</span></button>`;
+  let list,h="";
+  if(!q){list=POPULAR.map(id=>CAT.get(id));h=`<div class="mod-head">Popular</div>`+list.map(row).join("")+`<div class="mod-head">All ${CATALOG.length}</div>`+CATALOG.slice(0,120).map(row).join("")+`<p class="empty-note" style="padding:6px 2px">Search to see the rest.</p>`}
+  else{const terms=q.split(/\s+/);list=CATALOG.filter(m=>{const hay=(m[0]+" "+m[1]+" "+m[2]+" "+m[3]+" "+m[5]).toLowerCase();return terms.every(t=>hay.includes(t))});
+    list.sort((a,b)=>(a[4]-b[4])||((a[0].includes(q)?0:1)-(b[0].includes(q)?0:1)));
+    h=list.length?list.slice(0,200).map(row).join(""):`<p class="empty-note" style="padding:10px 2px">No connection types match “${esc(q)}”. Try the maker's name or a protocol like OSC, HTTP or VISCA.</p>`}
+  $("#modList").innerHTML=h;$("#modCount").textContent=q?`${list.length} match${list.length===1?"":"es"}`:`${CATALOG.length} connection types`;
+}
+document.addEventListener("click",e=>{const t=e.target.closest("button")||e.target;
+  if(t.id==="openModules"){$("#modSearch").value="";renderModules();$("#modDlg").showModal();$("#modSearch").focus();return}
+  const am=t.closest("[data-addmod]");if(am){let c;commit(()=>{c=addConnection(am.dataset.addmod)});renderModules();toast(`Added ${modTitle(c.module)} as “${c.label}”`);return}
+});
+document.addEventListener("input",e=>{if(e.target.id==="modSearch")renderModules()});
+
+/* ---------- canvas: wires, tags, automation chain ---------- */
+function ico(n){return lucideSvg(n)||""}
+const keyCodeK=k=>{const[r,c]=parseKey(k);return keyCode(r,c)};
+let recentAI=new Set(),recentT=0;
+function markAI(keys){recentAI=new Set(keys);clearTimeout(recentT);recentT=setTimeout(()=>{recentAI.clear();drawOverlay()},6000)}
+let ovRaf=0;function scheduleOverlay(){cancelAnimationFrame(ovRaf);ovRaf=requestAnimationFrame(drawOverlay)}
+function wirePath(x1,y1,x2,y2,cls){const dx=Math.max(36,Math.abs(x2-x1)*.5);return `<path class="${cls}" d="M${x1} ${y1} C${x1+dx} ${y1}, ${x2-dx} ${y2}, ${x2} ${y2}"/>`}
+function drawOverlay(){
+  const board=$("#board"),svg=$("#wires"),tags=$("#tags");if(!board)return;
+  const B=board.getBoundingClientRect();const rel=r=>({l:r.left-B.left,t:r.top-B.top,r:r.right-B.left,b:r.bottom-B.top});
+  let paths="",dots="";
+  if(getComputedStyle(svg).display!=="none"){
+    const p=$("#nodePrompt"),d=$("#deckNode"),ins=$("#insp");
+    if(p&&d){const a=rel(p.getBoundingClientRect()),c=rel(d.getBoundingClientRect());paths+=wirePath(a.r,a.t+23,c.l,c.t+23,"w-prompt");dots+=`<circle cx="${a.r}" cy="${a.t+23}" r="4"/><circle cx="${c.l}" cy="${c.t+23}" r="4"/>`}
+    const ke=multi.size<2&&selected&&$(`#deck [data-k="${selected}"]`);
+    if(ke&&d&&ins){const k=rel(ke.getBoundingClientRect()),c=rel(d.getBoundingClientRect()),i=rel(ins.getBoundingClientRect());const y1=(k.t+k.b)/2;
+      paths+=wirePath(c.r,y1,i.l,i.t+23,"w-sel");dots+=`<circle class="sel" cx="${c.r}" cy="${y1}" r="3.5"/><circle class="sel" cx="${i.l}" cy="${i.t+23}" r="3.5"/>`}
+  }
+  svg.innerHTML=paths+dots;
+  const tag=(k,cls,text)=>{const e=$(`#deck [data-k="${k}"]`);if(!e)return"";const r=rel(e.getBoundingClientRect());return `<span class="ctag ${cls}" style="left:${r.l}px;top:${r.t-4}px">${esc(text)}</span>`};
+  let th="";
+  if(multi.size>1)multi.forEach(k=>th+=tag(k,"pink",keyCodeK(k)));else if(selected)th+=tag(selected,"yellow",keyCodeK(selected));
+  recentAI.forEach(k=>{if(k!==selected&&!multi.has(k))th+=tag(k,"lime","new")});
+  tags.innerHTML=th;
+}
+function renderChain(){
+  const el=$("#chain");const b=sel();
+  if(!b||multi.size>1||b.kind!=="button"){el.hidden=true;scheduleOverlay();return}
+  el.hidden=false;const st=b.steps[stepIdx]||b.steps[0];const dial=isDialKey(selected);
+  const node=(title,sub,color,goto="actions",cls="")=>`<button class="cnode ${cls}" data-goto="${goto}"><span class="dot" style="background:${color}"></span><span class="ct"><b>${esc(title)}</b>${sub?`<small>${esc(sub)}</small>`:""}</span></button>`;
+  const link='<span class="clink"></span>';
+  const actNode=a=>{
+    if(a.connection==="internal"&&a.action==="wait")return node("Wait",((+a.options?.time||0)/1000)+" s","var(--yellow)");
+    const c=S.connections.find(x=>x.id===a.connection);
+    const vals=Object.entries(a.options||{}).filter(([k,v])=>v!==""&&v!=null&&typeof v!=="object"&&!/mixeffect|^me$/i.test(k)).map(([,v])=>String(v)).slice(0,2).join(", ");
+    const color=a.connection==="internal"?"var(--muted)":c?connColor(c.id):"var(--live)";
+    return node(humanize(a.action)||"(no action)",(c?c.label:a.connection==="internal"?"internal":"missing connection")+(vals?" · "+vals:""),color)};
+  const row=(label,list,trig)=>`<div class="chain-row">${node(trig,label,"var(--lime)","actions","trig")}${list.length?list.map(a=>link+actNode(a)).join(""):link+`<button class="cnode cempty" data-goto="actions">+ Add an action</button>`}</div>`;
+  let h=`<header class="node-h"><span class="dot lime"></span><span class="grow">Automation</span>${b.steps.length>1?`<span class="chip">Step ${stepIdx+1} of ${b.steps.length}</span>`:""}<span class="chip">${keyCodeK(selected)}</span></header><div class="node-b">`;
+  h+=row(b.steps.length>1?`step ${stepIdx+1}`:"on press",st.down,dial?"Push":"Press");
+  if(st.up.length)h+=row("on release",st.up,"Release");
+  if(dial){h+=row("turn left",st.rotL,"Turn ⟲");h+=row("turn right",st.rotR,"Turn ⟳")}
+  if(b.feedbacks.length)h+=`<div class="chain-row">${node("Lights up","when…","var(--pink)","feedback","trig")}${b.feedbacks.map(f=>{const v=Object.values(f.options||{}).filter(x=>typeof x!=="object"&&x!=="").slice(0,2).join(", ");return link+node(humanize(f.type)||"(no feedback)",v||"",f.style?.bgcolor||"var(--live)","feedback")}).join("")}</div>`;
+  el.innerHTML=h+"</div>";scheduleOverlay();
+}
+function sizeDeck(){const d=dev(),nb=$("#deckNode .node-b"),deck=$("#deck");if(!nb||!deck)return;
+  const avail=nb.clientWidth-30;const k=Math.max(40,Math.min(d.cols>=8?80:96,Math.floor(avail/(d.cols*1.17+.45))));deck.style.setProperty("--k",k+"px")}
+window.addEventListener("resize",()=>{sizeDeck();scheduleOverlay()});
+try{new ResizeObserver(scheduleOverlay).observe(document.body)}catch(_){}
+document.fonts?.ready?.then(scheduleOverlay);
+
+/* ---------- boot ---------- */
+const SHEET_CSS='.sheet{--kk:58px;background:#fff;color:#16191c;font:13px/1.45 "Barlow",Arial,sans-serif;padding:28px;text-align:left}\n.sheet .sh-head{border-bottom:2px solid #16191c;padding-bottom:10px;margin-bottom:20px}\n.sheet h1{font:700 26px/1.1 "Barlow Semi Condensed","Arial Narrow",sans-serif;margin:0;color:#16191c}\n.sheet .sh-head p{margin:4px 0 0;color:#5b636a;font-size:13px}\n.sheet .sh-page{margin-bottom:30px}\n.sheet h2{font:700 19px "Barlow Semi Condensed","Arial Narrow",sans-serif;margin:0 0 10px;display:flex;gap:10px;align-items:baseline;color:#16191c}\n.sheet h2 span{font:600 11px "JetBrains Mono",monospace;color:#5b636a;letter-spacing:.06em;text-transform:uppercase}\n.sheet .sh-map{display:grid;gap:8px 10px;background:#1a1d20;padding:12px 14px 8px;border-radius:14px;width:max-content;max-width:100%;margin-bottom:16px;-webkit-print-color-adjust:exact;print-color-adjust:exact}\n.sheet figure{margin:0;display:flex;flex-direction:column;align-items:center;gap:3px}\n.sheet figcaption{font:500 10px "JetBrains Mono",monospace;color:#9aa3ab}\n.sheet .sk{width:var(--kk);height:var(--kk);border-radius:8px;position:relative;overflow:hidden;background:#000;-webkit-print-color-adjust:exact;print-color-adjust:exact}\n.sheet .sk.empty{background:#0d0f10}\n.sheet .sk img{position:absolute;inset:0;width:100%;height:100%;object-fit:contain}\n.sheet .sk span{position:absolute;inset:3px;display:flex;font-family:Arimo,Arial,Helvetica,sans-serif;line-height:1.05;white-space:pre-wrap;overflow-wrap:anywhere}\n.sheet .sh-dial{width:var(--kk);height:var(--kk);border-radius:50%;background:#2a3036;color:#e6e8e4;display:flex;align-items:center;justify-content:center;font-size:9px;text-align:center;padding:6px;overflow:hidden}\n.sheet table{width:100%;border-collapse:collapse}\n.sheet th{text-align:left;font:600 10px "Barlow Semi Condensed",sans-serif;letter-spacing:.08em;text-transform:uppercase;color:#5b636a;border-bottom:1px solid #c9ced2;padding:4px 8px}\n.sheet td{border-bottom:1px solid #e3e6e8;padding:6px 8px;vertical-align:middle;color:#16191c}\n.sheet td.code{font:600 12px "JetBrains Mono",monospace;width:40px}\n.sheet td.th{width:48px}\n.sheet td.th .sk{--kk:36px;border-radius:5px}\n.sheet td.lbl{font-weight:600;width:22%}\n.sheet tr{break-inside:avoid}\n.sheet .sh-empty{color:#5b636a}\n.sheet .sh-foot{color:#8a9097;font-size:11px;margin-top:4px}';
+{const st=document.createElement("style");st.textContent=SHEET_CSS;document.head.appendChild(st)}
+document.querySelectorAll("[data-ico]").forEach(el=>{el.innerHTML=ico(el.dataset.ico)});
+S=load();
+syncCompanionLink();
+render();
+// wait for lucide (it loads before this script, but art for the sample needs it)
+refreshAllArt();
+})();
+</script>

@@ -1,0 +1,6858 @@
+[
+[
+"1stpass-1stpass",
+"1stPass",
+"1stPass",
+"timecode ltc markers titles tally camera switcher",
+0,
+"1stPass"
+],
+[
+"7thsensedesign-delta",
+"7thSense Design",
+"Delta Media Server",
+"Media Server",
+0,
+"delta"
+],
+[
+"pnh-opencountdown",
+"[Project-Name-Here]",
+"opencountdown",
+"Software Countdown Professional",
+0,
+"opencountdown"
+],
+[
+"pnh-soundr",
+"[Project-Name-Here]",
+"Soundr",
+"Software Soundr Sound",
+0,
+"soundr"
+],
+[
+"ableton-osc",
+"",
+"Ableton Live (OSC)",
+"ableton live osc music jingles Audio follow Video AfV",
+0,
+"ableton"
+],
+[
+"tow-mixeffect",
+"Adam Tow",
+"MixEffect",
+"MixEffect ATEM",
+0,
+"mixeffect"
+],
+[
+"adder-infinity-aim",
+"Adder",
+"AIM",
+"",
+0,
+"AIM"
+],
+[
+"adder-infinity-alif",
+"Adder",
+"ALIF",
+"",
+0,
+"ALIF"
+],
+[
+"adder-avm",
+"Adder",
+"AVM",
+"",
+0,
+"AVM"
+],
+[
+"adder-ccs-pro",
+"Adder",
+"CCS-PRO4; CCS-PRO8",
+"kvm switch",
+0,
+"CCS-PRO"
+],
+[
+"adder-infinity100xseries",
+"Adder",
+"Infinity 1000R Series; Infinity 2020R Series",
+"IP KVM KVM",
+0,
+"Infinity 1000R"
+],
+[
+"adder-xdip",
+"Adder",
+"XDIP",
+"IP KVM KVM Matrix KVM Extender Remote Control",
+0,
+"XDIP"
+],
+[
+"adlerluiz-ytmdesktop",
+"adlerluiz",
+"YouTube Music Desktop",
+"ytmdesktop youtube music desktop",
+0,
+"YTMDesktop"
+],
+[
+"generic-aes70",
+"",
+"AES70",
+"OCA Open Control Architecture",
+0,
+"AES70"
+],
+[
+"aetaaudio-codecs",
+"",
+"AETA Audio Codecs",
+"Audio Codecs Broadcast SIP VoIP",
+0,
+"AETA"
+],
+[
+"agf-characterworks",
+"AGF",
+"Characterworks",
+"",
+0,
+"characterworks"
+],
+[
+"aimedia-encoder-captions",
+"AI Media",
+"AV 610; HD 1492; HD 492",
+"Captions EEG",
+0,
+"Encoder Captions"
+],
+[
+"aimedia-icap",
+"AI Media",
+"iCap Portal",
+"EEG Captioning Closed Captions",
+0,
+"AI Media iCap Portal"
+],
+[
+"aimedia-lexilive",
+"AI Media",
+"Lexi Live",
+"Closed Captioning",
+0,
+"Lexi-Live"
+],
+[
+"aja-fs",
+"AJA",
+"FS2; FS4; FS-HDR",
+"",
+0,
+"fs"
+],
+[
+"aja-helo",
+"AJA",
+"HELO",
+"Stream Encode Recording",
+0,
+"helo"
+],
+[
+"aja-kipro",
+"AJA",
+"Ki Pro; Ki Pro Ultra",
+"Recording",
+0,
+"kipro"
+],
+[
+"aja-kumo",
+"AJA",
+"Kumo",
+"Protocol Matrix",
+0,
+"kumo"
+],
+[
+"allenheath-ahm",
+"Allen & Heath",
+"AHM",
+"Audio Sound",
+0,
+"AHM"
+],
+[
+"allenheath-avantis",
+"Allen & Heath",
+"Avantis",
+"Software Allen & Heath Mixer",
+0,
+"Avantis"
+],
+[
+"allenheath-cq",
+"Allen & Heath",
+"CQ-12T; CQ-18T; CQ-20B",
+"",
+0,
+"allenheath-cq"
+],
+[
+"allenheath-dlive",
+"Allen & Heath",
+"dLive",
+"Audio Sound",
+0,
+"dLive"
+],
+[
+"allenheath-dlive-ilive",
+"Allen & Heath",
+"dLive; ilive",
+"Audio Sound",
+0,
+"dLive-ilive"
+],
+[
+"allenheath-qu",
+"Allen & Heath",
+"QU16; QU24; QU32; QUSB; QUPAC",
+"QU16 QU24 QU32 QUSB QUPAC",
+0,
+"QU"
+],
+[
+"allenheath-sq",
+"Allen & Heath",
+"SQ5; SQ6; SQ7",
+"SQ5 SQ6 SQ7",
+0,
+"SQ"
+],
+[
+"analogway-livepremier",
+"Analog Way",
+"Aquilon",
+"Protocol Image Processing LivePremier",
+0,
+"livepremier"
+],
+[
+"analogway-awj",
+"Analog Way",
+"AWJ Protocol Device; LivePremier; Alta 4K; Midra 4K",
+"Image Processing Video Aquilon Zenith Pulse Switcher HDR LUT",
+0,
+"AWJdevice"
+],
+[
+"analogway-coreplay",
+"Analog Way",
+"CorePlay Solo",
+"CorePlay Solo Media Player Video Player Player DVR",
+0,
+"coreplay"
+],
+[
+"analogway-eks500",
+"Analog Way",
+"EKS 500",
+"Image Processing",
+0,
+"Eikos"
+],
+[
+"analogway-livecore",
+"Analog Way",
+"LiveCore series",
+"Protocol Image Processing",
+0,
+"livecore"
+],
+[
+"analogway-midra",
+"Analog Way",
+"Midra; Eikos2; Saphyr; Pulse2; SmartMatriX2; QuickMatriX; QuickVu; Saphyr - H; Pulse2 - H; SmartMatriX2 - H",
+"Protocol Image Processing",
+0,
+"midra"
+],
+[
+"analogway-picturall",
+"Analog Way",
+"Picturall Media Server",
+"Protocol Media Server",
+0,
+"Picturall"
+],
+[
+"analogway-pls300",
+"Analog Way",
+"PLS 300",
+"Image Processing",
+0,
+"pulse"
+],
+[
+"analogway-vertige",
+"Analog Way",
+"Vertige",
+"Protocol Image Processing",
+0,
+"vertige"
+],
+[
+"analogway-vio",
+"Analog Way",
+"VIO 4K",
+"Image Processing",
+0,
+"vio4k"
+],
+[
+"anomes-millumin",
+"Anomes",
+"Millumin 2; Millumin 3; Millumin 4",
+"Software Video",
+0,
+"millumin"
+],
+[
+"apc-rackpdu",
+"APC",
+"Rack PDU",
+"rackpdu pdu power apc",
+0,
+"APC Rack PDU"
+],
+[
+"apc-ups",
+"APC",
+"UPS",
+"",
+0,
+"APC UPS Monitor"
+],
+[
+"amaran-desktop",
+"Aputure",
+"Amaran Lights",
+"amaran aputure lighting",
+0,
+"amaran"
+],
+[
+"arkaos-mediamaster",
+"ArKaos",
+"MediaMaster Remote Player",
+"Video Media ArKaos MediaMaster ArKaos Hub Remote Player Cue Controller Stream",
+0,
+"arkaos"
+],
+[
+"arkona-bladerunner",
+"Arkona Technologies",
+"BLADE//runner AT1130",
+"video audio routing monitoring processing",
+0,
+"BLADErunner"
+],
+[
+"arri-tally",
+"Arri",
+"Alexa; Amira",
+"Arri Tally Camera Alexa Amira",
+0,
+"arri-tally"
+],
+[
+"astrastudio-onairscreen",
+"",
+"astrastudio OnAirScreen",
+"onairscreen studio broadcast led timer http",
+0,
+"oas"
+],
+[
+"aten-matrix",
+"ATEN",
+"Matrix",
+"Matrix",
+0,
+"aten"
+],
+[
+"atlasied-atmosphere",
+"AtlasIED",
+"Atmosphere",
+"Audio",
+0,
+"atmosphere"
+],
+[
+"atlona-clso",
+"Atlona",
+"AT-UHD-CLSO-840",
+"video matrix hdmi routing atlona",
+0,
+"AT-UHD-CLSO-840"
+],
+[
+"atlona-omega",
+"Atlona",
+"Omega Matrix Switchers",
+"Switchers Video",
+0,
+"omega"
+],
+[
+"attend2it-speakertimer",
+"Attend2IT",
+"Speakertimer.co.uk",
+"timer speakertimer countdown",
+0,
+"SpeakerTimer"
+],
+[
+"audac-mtx",
+"Audac",
+"MTX48/88",
+"Audio",
+0,
+"MTX"
+],
+[
+"audinate-dante-ddm",
+"Audinate",
+"Dante",
+"Audinate Dante subscription subscribe DDM",
+0,
+"audinate-dante-ddm"
+],
+[
+"audinate-dantecontroller",
+"Audinate",
+"Dante Controller",
+"audio routing Dante",
+0,
+"audinate-dantecontroller"
+],
+[
+"audiotechnica-discussionsystem",
+"Audio Technica",
+"AT-UC50; AT-UCIR",
+"Audio microphone conference",
+0,
+"at-uc"
+],
+[
+"audiotechnica-digitalmixer",
+"Audio Technica",
+"ATDM-0604; ATDM-0604a; ATDM-1012; ATDM-1012DAN",
+"Audio Mixer",
+0,
+"atdm"
+],
+[
+"audiotechnica-ceilingarray",
+"Audio Technica",
+"ATND-1061",
+"Audio microphone ceiling",
+0,
+"atnd-1061"
+],
+[
+"audiotechnica-esw",
+"Audio Technica",
+"Engineered Sound Wireless; ESW",
+"microphone wireless",
+0,
+"at-esw"
+],
+[
+"audiotechnica-system20",
+"Audio Technica",
+"System 20 PRO",
+"",
+0,
+"audiotechnica-system20"
+],
+[
+"audiostrom-liveprofessor",
+"Audioström",
+"LiveProfessor",
+"Software Sound",
+0,
+"LiveProfessor"
+],
+[
+"audivero-unityintercom-client",
+"Audivero",
+"Unity Intercom Client",
+"Intercom",
+0,
+"unityintercom-client"
+],
+[
+"auri-tx2n",
+"Auri",
+"TX2N; TX2N-D; D4; D16",
+"Auracast Listen Technologies Ampertronic",
+0,
+"TX2N"
+],
+[
+"autodirector-mirusuite",
+"AutoDirector",
+"MiruSuite",
+"Automatic PTZ Switcher Person Tracking",
+0,
+"MiruSuite"
+],
+[
+"aver-ptz",
+"Aver",
+"PTZ",
+"VISCA VISCA over IP PTZ Camera Aver UDP",
+0,
+"aver-ptz"
+],
+[
+"avgear-matrix",
+"",
+"avgear-Matrix",
+"avgear matrix switcher",
+0,
+"Matrix"
+],
+[
+"avgear-ip410",
+"AVGear",
+"IP410",
+"IP PDU",
+0,
+"IP410"
+],
+[
+"avishop-hdbaset-matrix",
+"AVIShop",
+"HDBaseT 8x8 4K",
+"videohub Matrix",
+0,
+"HDBaseT"
+],
+[
+"avitech-sequoia4k60-sequoia4k60l",
+"",
+"Avitech 4K60 & 4K60L",
+"",
+0,
+"sequoia"
+],
+[
+"avitech-pacificms1plus",
+"Avitech",
+"Pacific MS 1Plus",
+"",
+0,
+"avitech-pacific-ms-1plus"
+],
+[
+"avmatrix-shark",
+"AVMATRIX",
+"Shark S8X",
+"AVMATRIX SHARK",
+0,
+"avmatrix-shark"
+],
+[
+"avmediatools-protimer",
+"AVMediatools",
+"ProTimer",
+"protimer timer",
+0,
+"ProTimer"
+],
+[
+"avocet-landscape",
+"Avocet RT Ltd",
+"StreamDeck Interface",
+"",
+0,
+"avocet-landscape"
+],
+[
+"avolites-ai",
+"Avolites",
+"AI",
+"Vision Mixer Media Server Software",
+0,
+"ai"
+],
+[
+"avolites-titan",
+"Avolites",
+"Titan",
+"Lighting",
+0,
+"titan"
+],
+[
+"avproedge-mxnet",
+"AVPro Edge",
+"MXnet 1G Control Box",
+"mxnet avproedge control mxnet 1G 1G control box",
+0,
+"avproedge-mxnet"
+],
+[
+"avproconnect-acmx1616-auhd",
+"AVProconnect",
+" AC-MX1616-AUHD",
+"Matrix",
+0,
+"AC-MX1616"
+],
+[
+"avstumpfl-pixera",
+"AVStumpfl",
+"Pixera",
+"Software Media Server Showcontrol",
+0,
+"pixera"
+],
+[
+"aws-ec2",
+"AWS",
+"EC2",
+"",
+0,
+"aws-ec2"
+],
+[
+"aws-elementallive",
+"AWS",
+"Elemental Live",
+"Streaming",
+0,
+"elemental"
+],
+[
+"aws-medialive",
+"AWS",
+"Elemental MediaLive",
+"aws medialive amazon web services",
+0,
+"medialive"
+],
+[
+"axeltechnology-cgplus",
+"AxelTech",
+"CG Plus",
+"axel,technology,cg,cgplus,video,broadcast,news,plus,axe",
+0,
+"CG Plus"
+],
+[
+"axeltechnology-vjpro",
+"AxelTech",
+"VJ Pro",
+"vjpro vj axel technology pro vj pro",
+0,
+"vjpro"
+],
+[
+"axeltechnology-xplayout",
+"AxelTech",
+"XPlayout",
+"xplayout vj axel technology play out xplay",
+0,
+"xplayout"
+],
+[
+"axeltechnology-xradio",
+"AxelTech",
+"XRadio",
+"xradio vj axel technology",
+0,
+"xradio"
+],
+[
+"axeltechnology-youplay",
+"AxelTech",
+"YouPlay",
+"axel youplay you play",
+0,
+"youplay"
+],
+[
+"aximmetry-composer",
+"Aximmetry",
+"Composer",
+"Virtual Sudio",
+0,
+"aximmetry"
+],
+[
+"axis-ptz",
+"axis",
+"PTZ Camera",
+"ptz Camera",
+0,
+"axis-PTZ"
+],
+[
+"ballscore-broadcast",
+"Ball Score",
+"Broadcast",
+"",
+0,
+"Ball Score"
+],
+[
+"barco-clickshare",
+"Barco",
+"Clickshare",
+"barco sharing clickshare",
+0,
+"clickshare"
+],
+[
+"barco-dcs",
+"Barco",
+"DCS 100/200",
+"Image Processing",
+0,
+"dcs"
+],
+[
+"barco-dp",
+"Barco",
+"DP Projector",
+"Protocol Projector",
+0,
+"DP projector"
+],
+[
+"barco-encore",
+"Barco",
+"Encore",
+"Image Processing",
+0,
+"encore"
+],
+[
+"barco-eventmaster",
+"Barco",
+"Event Master",
+"Protocol Image Processing",
+0,
+"eventmaster"
+],
+[
+"barco-eventmaster-xml",
+"Barco",
+"Event Master xml",
+"Protocol Image Processing",
+0,
+"eventmaster xml"
+],
+[
+"barco-hdx",
+"Barco",
+"HDX, HDF Projector",
+"Protocol Projector",
+0,
+"HDX, HDF projector"
+],
+[
+"barco-imagepro",
+"Barco",
+"ImagePro",
+"Image Processing",
+0,
+"imagepro"
+],
+[
+"barco-matrixpro",
+"Barco",
+"MatrixPro-II",
+"Protocol Matrix",
+0,
+"MatrixPro-II"
+],
+[
+"barco-pds",
+"Barco",
+"PDS",
+"Image Processing",
+0,
+"pds"
+],
+[
+"barco-pulse",
+"Barco",
+"UDX Pulse Projector",
+"Projector Protocol",
+0,
+"pulse"
+],
+[
+"baserow-baserow",
+"Baserow",
+"Baserow",
+"",
+0,
+"baserow"
+],
+[
+"bbc-raven",
+"BBC",
+"Raven",
+"Video Media Broadcast Server",
+0,
+"raven"
+],
+[
+"beaware-conferencecaptioning",
+"BeAware",
+"ConferenceCaptioning",
+"captioning transcription translation AI offline",
+0,
+"ConferenceCaptioning"
+],
+[
+"behringer-x32",
+"Behringer/Midas",
+"X32/M32",
+"Audio",
+0,
+"x32"
+],
+[
+"behringer-xair",
+"Behringer/Midas",
+"XR/MR; XAir; XR12; XR16; X18; XR18; MAir; MR12; MR16; MR18; M18",
+"Audio Mixer Console",
+0,
+"xair"
+],
+[
+"behringer-wing",
+"Behringer",
+"WING",
+"",
+0,
+"wing"
+],
+[
+"betr-support",
+"Betr Production",
+"Betr Support",
+"",
+0,
+"betr-support"
+],
+[
+"biamp-audia",
+"Biamp",
+"Audia; Nexia",
+"dsp audio audia Biamp",
+0,
+"biamp-audia"
+],
+[
+"biamp-qtx",
+"Biamp",
+"Qt X",
+"Sound Masking REST Qt X Cambridge",
+0,
+"Qt X"
+],
+[
+"biamp-tesira",
+"Biamp",
+"Tesira; Tesira Server; Tesira Forte; Tesira Forte X; Tesira Volta",
+"audio dsp metering subscriptions",
+0,
+"tesira"
+],
+[
+"binary-moipcontroller",
+"Binary",
+"B-900-MOIP-4K-CTRL",
+"",
+0,
+"moip ctrl"
+],
+[
+"birddog-central",
+"BirdDog",
+"Central",
+"BirdDog Central Software",
+0,
+"BirdDog Central"
+],
+[
+"birddog-connect",
+"BirdDog",
+"Connect",
+"BirdDog Connect",
+0,
+"BirdDog Connect"
+],
+[
+"birddog-converters",
+"BirdDog",
+"Converters",
+"NDI Video",
+0,
+"BirdDog NDI"
+],
+[
+"birddog-ptz",
+"BirdDog",
+"PTZ",
+"Protocol Camera",
+0,
+"BirdDog PTZ"
+],
+[
+"bitfire-api",
+"BitFire",
+"API",
+"BF bf API api",
+0,
+"Bitfire"
+],
+[
+"companion-satellite",
+"Bitfocus Companion",
+"Satellite API",
+"",
+0,
+"satellite"
+],
+[
+"bitfocus-cloud",
+"Bitfocus",
+"Companion Cloud",
+"cloud",
+0,
+"cloud"
+],
+[
+"bitfocusas-listener",
+"Bitfocus",
+"Listener",
+"",
+0,
+"bf-listener"
+],
+[
+"blackdiamondvideo-phantom800",
+"Black Diamond Video",
+"Phantom 800",
+"Protocol Matrix",
+0,
+"Phantom-800"
+],
+[
+"blackbird-hdmimatrix",
+"Blackbird",
+"HDMI Matrix",
+"keyword",
+0,
+"hdmimatrix"
+],
+[
+"blackbox-boxilla",
+"Blackbox",
+"Boxilla",
+"blackbox emerald kvm",
+0,
+"boxilla"
+],
+[
+"bmd-atem",
+"Blackmagic Design",
+"ATEM",
+"Vision Mixer",
+0,
+"atem"
+],
+[
+"bmd-audiomonitor",
+"Blackmagic Design",
+"Audio Monitor",
+"Audio Monitoring Meter",
+0,
+"AudioMonitor"
+],
+[
+"bmd-cameras",
+"Blackmagic Design",
+"Blackmagic Cameras API",
+"camera blackmagic rest control broadcast pyxis ursa cine micro studio",
+0,
+"bmd-cameras"
+],
+[
+"bmd-fairlight-live",
+"Blackmagic Design",
+"Fairlight Live",
+"audio mixer fairlight osc",
+0,
+"fairlight-live"
+],
+[
+"bmd-gpi-and-tally-interface",
+"Blackmagic Design",
+"GPI and Tally Interface",
+"GPIO GPI Tally Videohub Blackmagic",
+0,
+"bmd-gpi"
+],
+[
+"bmd-hyperdeck",
+"Blackmagic Design",
+"Hyperdeck",
+"Recording Video Media",
+0,
+"hyperdeck"
+],
+[
+"bmd-multiview16",
+"Blackmagic Design",
+"Multiview 16",
+"Multiviewer",
+0,
+"mv16"
+],
+[
+"bmd-multiview4",
+"Blackmagic Design",
+"Multiview 4",
+"Multiviewer Monitor MV Quad",
+0,
+"multiview4"
+],
+[
+"bmd-smartview",
+"Blackmagic Design",
+"SmartView; SmartScope",
+"Scope Monitor",
+0,
+"smart"
+],
+[
+"bmd-teranex",
+"Blackmagic Design",
+"Teranex",
+"Image Processing",
+0,
+"teranex"
+],
+[
+"bmd-ultimatte",
+"Blackmagic Design",
+"Ultimatte",
+"Blackmagic Ultimatte Keyer",
+0,
+"bmd-ultimatte"
+],
+[
+"bmd-videohub",
+"Blackmagic Design",
+"Videohub",
+"Matrix Router",
+0,
+"videohub"
+],
+[
+"bmd-webpresenter",
+"Blackmagic Design",
+"WebPresenter HD; WebPresenter 4K; Streaming Encoder HD; Streaming Encoder 4K",
+"Streaming Encoder Web Encoder Streaming Encoder Livestream Encoding RTMP SRT",
+0,
+"WebPresenter"
+],
+[
+"bluebottle-leaguebroadcast",
+"BlueBottleGG",
+"LeagueBroadcast",
+"league of legends esports broadcast overlay graphics",
+0,
+"leaguebroadcast"
+],
+[
+"blustream-hdmimatrix",
+"BLUSTREAM",
+"BLUSTREAM-MATRIX",
+"HDMI Matrix",
+0,
+"BLUSTREAM-MATRIX"
+],
+[
+"boinx-mimolive",
+"Boinx",
+"mimoLive",
+"Software Vision Mixer",
+0,
+"mimoLive"
+],
+[
+"bolin-ptz",
+"Bolin Technology",
+"PTZ",
+"PTZ Camera",
+0,
+"bolin-ptz"
+],
+[
+"borealis-vor",
+"Borealis Solutions",
+"Vor",
+"borealis vor recording osc",
+0,
+"vor"
+],
+[
+"bosch-dicentis",
+"Bosch",
+"Dicentis Conference System",
+"conference microphone audio",
+0,
+"dicentis"
+],
+[
+"bosch-hd-cameracontrol",
+"Bosch",
+"HD Camera Control",
+"camera video tcp switcher",
+0,
+"bosch-hd-camera"
+],
+[
+"kommander-t3",
+"BowTek",
+"Kommander T0/T1/T3; F1/F1Pro/F2/F9; PS-Series",
+"Kommander T0/T1/T3",
+0,
+"Kommander"
+],
+[
+"boxcast-api",
+"Boxcast",
+"API",
+"streaming",
+0,
+"boxcast-api"
+],
+[
+"brainsalt-backstage",
+"Brainsalt",
+"Backstage",
+"brainsalt backstage media server projection mapping",
+0,
+"Backstage"
+],
+[
+"brainstorm-suite",
+"Brainstorm Multimedia",
+"Brainstorm Suite",
+"brainstorm Infinity Aston Edison Companion Suite",
+0,
+"Suite"
+],
+[
+"brightlink-bl-8x8-hdbt-hd20",
+"BrightLink",
+"BL-8X8-HDBT-HD20",
+"BrightLink HDMI Matrix",
+0,
+"brightlink"
+],
+[
+"brightsign-player",
+"BrightSign",
+"Player",
+"Media",
+0,
+"BrightSign"
+],
+[
+"broadlink-remote",
+"BroadLink",
+"RM4 Pro",
+"rf ir",
+0,
+"rm4pro"
+],
+[
+"brompton-tessera",
+"Brompton Technology",
+"Tessera LED Processor Control",
+"brompton tessera processor control led panel",
+0,
+"Tessera"
+],
+[
+"bss-soundweb",
+"BSS",
+"Soundweb London",
+"Harman BSS Soundweb",
+0,
+"BSS Soundweb"
+],
+[
+"bom-api",
+"Bureau of Meteorology",
+"API",
+"BoM Australia",
+0,
+"BoM API"
+],
+[
+"bytehive-playoutbee",
+"ByteHive",
+"PlayoutBee",
+"keyword",
+0,
+"playoutbee"
+],
+[
+"cablematters-matrix",
+"Cable Matters",
+"Matrix",
+"matrix hdmi 4x4 Cable Matters",
+0,
+"cm-matrix"
+],
+[
+"calrec-cscp",
+"Calrec",
+"CSCP",
+"serial protocol cscp",
+0,
+"cscp"
+],
+[
+"camstreamer-camstreamer",
+"camstreamer",
+"camstreamer Camera",
+"camstreamer Camera",
+0,
+"camstreamer-camstreamer"
+],
+[
+"canon-controller",
+"",
+"Canon Camera Controller",
+"canon ptz camera controller rc-ip1000",
+0,
+"canon-controller"
+],
+[
+"canon-ptz",
+"Canon",
+"CR-N100; CR-N300; CR-N350; CR-N400; CR-N500; CR-N700; CR-X300; CR-X500; XF605; C300 MkIII; C500 MkII; C80; C70",
+"ptz camera",
+0,
+"canon-ptz"
+],
+[
+"canon-xf",
+"Canon",
+"XF405; XF705; C100; C200; Browser Remote",
+"Canon",
+0,
+"canon-xf"
+],
+[
+"captionkit-api",
+"CaptionKit",
+"API",
+"",
+0,
+"CaptionKit"
+],
+[
+"capture-visualiser",
+"",
+"Capture Visualiser",
+"osc lighting previz",
+0,
+"capture"
+],
+[
+"casparcg-server",
+"CasparCG",
+"Server",
+"Video Software Graphics",
+0,
+"caspar"
+],
+[
+"castr-api",
+"castr.io",
+"API v2",
+"castr.io restreaming",
+0,
+"castr-api"
+],
+[
+"cedar-dns8d",
+"Cedar",
+"DNS 8D",
+"Dante Noise Supressor DNS",
+0,
+"DNS 8D"
+],
+[
+"chamsys-magicq-osc",
+"ChamSys",
+"MagicQ",
+"Lighting",
+0,
+"magicq"
+],
+[
+"chamsys-magicq-udp",
+"ChamSys",
+"MagicQ (UDP)",
+"Lighting",
+0,
+"magicq"
+],
+[
+"chamsys-quickq",
+"Chamsys",
+"QuickQ",
+"Lighting",
+0,
+"quickq"
+],
+[
+"chilibytes-pdfosc",
+"ChiliBytes",
+"PDFOSC",
+"PDF OSC Open Sound Control",
+0,
+"PDFOSC"
+],
+[
+"christie-pandorasbox",
+"Christie Digital Systems",
+"Pandoras Box",
+"Media Server",
+1,
+"christie-pb"
+],
+[
+"christie-wd",
+"Christie Digital Systems",
+"Widget Designer",
+"Media Server",
+0,
+"WD"
+],
+[
+"christie-projector",
+"Christie",
+"Projector",
+"Projectors",
+0,
+"ChristiePj"
+],
+[
+"christie-spyder",
+"Christie",
+"Spyder X20/X80",
+"Image Processing",
+0,
+"spyder"
+],
+[
+"churchapps-freeshow",
+"ChurchApps",
+"FreeShow",
+"Software Presentation",
+0,
+"freeshow"
+],
+[
+"chyronhego-lyric",
+"ChyronHego",
+"Lyric",
+"Intelligent Interface CG",
+0,
+"Lyric"
+],
+[
+"cidercollective-cider",
+"Cider Collective",
+"Cider",
+"audio music playback apple music",
+0,
+"Cider"
+],
+[
+"cinegy-capture",
+"Cinegy",
+"Capture",
+"Ingest Recording Capture Pro CapturePro Manager Control",
+0,
+"cinegy-capture"
+],
+[
+"cisco-cms",
+"Cisco",
+"CMS Meeting Server",
+"Video Conferencing",
+0,
+"cms"
+],
+[
+"cisco-roomos",
+"Cisco",
+"RoomOS",
+"Hardware",
+0,
+"RoomOS"
+],
+[
+"classx-liveboard",
+"ClassX",
+"LiveBoard",
+"ClassX LiveBoard",
+0,
+"LiveBoard"
+],
+[
+"classx-mixboard",
+"ClassX",
+"MixBoard",
+"ClassX MixBoard",
+0,
+"MixBoard"
+],
+[
+"cleartouch-ippctrl",
+"Clear Touch",
+"IP Panel Control (Telnet)",
+"Software",
+0,
+"IPPCTRL"
+],
+[
+"clearcom-rest",
+"Clear-Com",
+"Arcadia",
+"Arcadia Freespeak Edge Icon",
+0,
+"CC Rest"
+],
+[
+"clearcom-station-ic",
+"Clear-Com",
+"Station-IC",
+"Clear-Com Station-IC Intercom",
+0,
+"CC Station-IC"
+],
+[
+"cockos-reaper",
+"Cockos",
+"REAPER",
+"Audio Recording",
+0,
+"reaper"
+],
+[
+"coda-linus",
+"CODA Audio",
+"LINUS6.4",
+"Amplifier Loudspeaker DSP Amplifier Loudspeaker Management",
+0,
+"Linus"
+],
+[
+"colorlight-grandshow",
+"Colorlight",
+"GrandShow",
+"Colorlight GrandShow",
+0,
+"GrandShow"
+],
+[
+"colorlight-processor",
+"Colorlight",
+"U-Series; Z-Series; X-Series; V-Series; VX-Series; D-Series; some S-Series",
+"LED Processing",
+0,
+"colorlight"
+],
+[
+"combitech-vidblasterx",
+"CombiTech",
+"VidBlasterX",
+"",
+0,
+"vidblasterx"
+],
+[
+"folivora-btt",
+"",
+"companion-module-folivora-btt",
+"macOS automation BetterTouchTool BTT Alfred Keyboard Maestro Shortcuts",
+0,
+"BTT"
+],
+[
+"cosmomedia-slidelizer",
+"cosmomedia",
+"Slidelizer",
+"Timer NDI Presenter Slides",
+0,
+"Slidelizer"
+],
+[
+"creativeland-capacitimer",
+"Creativeland",
+"Capacitimer",
+"timer countdown clock display",
+0,
+"capacitimer"
+],
+[
+"creativeland-mediacontrolbridge",
+"Creativeland",
+"Media Control Bridge",
+"media music spotify apple music macos playback control",
+0,
+"mcb"
+],
+[
+"crestron-digitalmatrix",
+"Crestron",
+"DigitalMedia Switcher",
+"DM8x8 DM16x16 DM32x32 Matrix Switcher AV Switch",
+0,
+"dm"
+],
+[
+"crestron-nvx",
+"Crestron",
+"DM-NVX; DM-NVX-360; DM-NVX-351; DM-NVX-E30; DM-NVX-D30; DM-NVX-363",
+"AV over IP CresNext video audio USB KVM matrix",
+0,
+"DM NVX"
+],
+[
+"crestron-hd-mdnxm-4kz-e",
+"Crestron",
+"HD-MD4X1-4KZ-E; HD-MD4X2-4KZ-E; HD-MD8X8-4KZ-E; HD-TXU-4KZ-211; HD-TXU-4KZ-211-CHGR; HD-TXU-4KZ-111-E",
+"HDMI Matrix Switcher 4K",
+0,
+"HD-MDNXM-4KZ-E"
+],
+[
+"crewlan-connect",
+"",
+"CrewLAN Connect",
+"status alerts shoutbox public api macros",
+0,
+"CrewLAN"
+],
+[
+"crystal-scte",
+"Crystal",
+"SCTE104 Inserts",
+"Protocol",
+0,
+"crystal-scte"
+],
+[
+"ctpsystems-dio8008r",
+"CTP Systems",
+"DIO8008R; DIO8008RX",
+"Dante Audio Router Matrix",
+0,
+"DIO8008R"
+],
+[
+"cuemanager-cuesheetconnector",
+"Cue Manager",
+"Cue Sheet Connector",
+"cue manager shof rundown ontime time timer qlab schedule scheduling showflow control present show countdown dsan studio ",
+0,
+"cuemanager-cuesheetconnector"
+],
+[
+"cuevacontrol-relo-io8",
+"Cueva Control",
+"RELO-IO8",
+"relay io gpio cueva automation relo",
+0,
+"RELO-IO8"
+],
+[
+"cvmeventi-countdown",
+"CVM Eventi",
+"Countdown",
+"CVM Timer Countdown Clock",
+0,
+"cvmeventi-countdown"
+],
+[
+"cyberpower-pdu",
+"CyberPower",
+"PDU",
+"Power Control",
+0,
+"CyberPower PDU"
+],
+[
+"cyp-matrix",
+"CYP",
+"V8H8HPA",
+"HDMI Matrix",
+0,
+"V8H8HPA"
+],
+[
+"dbaudiotechnik-amps",
+"d&b audiotechnik",
+"5D; 10D; 30D; 40D; D20; D40; D80",
+"Amp Amps Audio d&b d&b audiotechnik",
+0,
+"d&b-Amps"
+],
+[
+"dbaudiotechnik-dsp",
+"d&b audiotechnik",
+"DS100; DS100M",
+"DSP Audio",
+0,
+"dbaudiotechnik-dsp"
+],
+[
+"dashare-multiplay",
+"da-share",
+"MultiPlay",
+"Media Server Playback Software",
+0,
+"multiplay"
+],
+[
+"dashare-multiplay3",
+"da-Share",
+"MultiPlay 3",
+"multiplay osc",
+0,
+"multiplay"
+],
+[
+"dahuasecurity-ptz",
+"dahua",
+"PTZ Camera",
+"Camera",
+0,
+"dahua"
+],
+[
+"dan-dugan-automixer",
+"Dan Dugan Sound Design",
+"Model M; Model N",
+"Hardware Automixer MADI Dante",
+0,
+"Dugan Automixer"
+],
+[
+"danielnoethen-butt",
+"danielnoethen",
+"BUTT Controller (broadcast using this tool)",
+"BUTT buttjs radio.co shoutcast icecast",
+0,
+"butt"
+],
+[
+"aja-dante-12gam",
+"",
+"Dante 12GAM",
+"DANTE SDI EMBED",
+0,
+"DANTE-12GAM"
+],
+[
+"datapath-fx4",
+"Datapath",
+"FX4",
+"Display Controller",
+0,
+"fx4"
+],
+[
+"dataprobe-iboot-pdu",
+"Dataprobe",
+"iBoot PDU",
+"dataprobe iboot pdu outlet",
+0,
+"iboot-pdu"
+],
+[
+"dataton-watchout",
+"Dataton",
+"Watchout",
+"Media Server Software Video",
+0,
+"watchout"
+],
+[
+"dataton-watchout-json",
+"Dataton",
+"Watchout 7",
+"",
+0,
+"watchout-json"
+],
+[
+"datavideo-dvip",
+"Datavideo",
+"DVIP",
+"Vision Mixer",
+0,
+"dvip"
+],
+[
+"datavideo-visca",
+"Datavideo",
+"VISCA",
+"Protocol Camera",
+0,
+"dv-visca"
+],
+[
+"dcc-ex-commandstation",
+"DCC-EX",
+"DCC-EX",
+"DCC Railway Control Modelling",
+0,
+"dcc-ex"
+],
+[
+"denon-receiver",
+"Denon",
+"AVR",
+"",
+0,
+"Denon-AVR"
+],
+[
+"denon-dn-500bd-mkii",
+"Denon",
+"DN-500BD MKII",
+"DVD-Player Blue-Ray",
+0,
+"DN-500BD MKII"
+],
+[
+"denon-recorder",
+"Denon",
+"DN-900R; DN-700R; DN-500R; DN-F650R; DN-F450R",
+"SD Recorder USB Recorder",
+0,
+"recorder"
+],
+[
+"depili-clock-8001",
+"Depili",
+"Clock-8001",
+"Timing Clock",
+0,
+"clock-8001"
+],
+[
+"devantech-ds",
+"Devantech",
+"DSXXX",
+"Relay Electronics",
+0,
+"DS"
+],
+[
+"dexon-matrix",
+"DEXON",
+" Matrix 4x4 & 8x8",
+"Vision Mixer Matrix",
+0,
+"Matrix"
+],
+[
+"dexon-dimax",
+"DEXON",
+"DIMAX",
+"Vision Mixer Matrix",
+0,
+"Dimax"
+],
+[
+"dexon-divip",
+"DEXON",
+"DIVIP",
+"Vision Mixer Matrix",
+0,
+"Divip"
+],
+[
+"dhdaudio-ecp",
+"DHD Audio",
+"Series 52; RM4200D; XD2; XC2; SX2",
+"audio mixer console broadcast ecp",
+0,
+"DHD ECP"
+],
+[
+"dhdaudio-control-api",
+"DHD",
+"Control API",
+"audio control-api dhd",
+0,
+"Control API"
+],
+[
+"digico-osc",
+"DiGiCo",
+"osc support; SD; Quantum; S",
+"Audio Sound",
+0,
+"DiGiCo OSC"
+],
+[
+"digitalloggers-powercontroller",
+"Digital Loggers",
+"Power Controller",
+"power outlet",
+0,
+"digitallogger-power"
+],
+[
+"digitalprojection-highlight",
+"Digital Projection",
+"HIGHlite",
+"Projector",
+0,
+"dp highlite"
+],
+[
+"digitalprojection-projectors",
+"DigitalProjection",
+"Models supported by Projector Controller II",
+"DigitalProjection Satellite MLS SCM Titan HIGHlite E-Vision M-Vision TCP Projector",
+0,
+"DP-projectors"
+],
+[
+"directout-audioprocessors",
+"DirectOut technologies",
+"PRODIGY.MC; PRODIGY.MP; PRODIGY.MX; MAVEN.A",
+"Audio DSP Converter Conversion Redundancy",
+0,
+"DO"
+],
+[
+"discord-api",
+"Discord",
+"API",
+"Software Chat",
+0,
+"discord"
+],
+[
+"disguise-mtc",
+"Disguise",
+"Disguise - Multi Transport Control",
+"Media Server",
+0,
+"d3mtc"
+],
+[
+"disguise-smc",
+"Disguise",
+"Disguise - SMC",
+"Media Server Video D3",
+0,
+"SMC"
+],
+[
+"disguise-liveupdate",
+"Disguise",
+"LiveUpdate",
+"Video Playback Projection Mapping Extended Reality XR",
+0,
+"liveupdate"
+],
+[
+"disguise-osc",
+"Disguise",
+"OSC",
+"Protocol Disguise",
+0,
+"d3-osc"
+],
+[
+"djsoft-radioboss",
+"DJ Soft",
+"Radio BOSS",
+"Radio DJ",
+0,
+"radioboss"
+],
+[
+"dmxcore-dmxcore100",
+"DMX Core",
+"DMX Core 100",
+"dmx integration-api lighting cue preset playback",
+0,
+"dmxcore"
+],
+[
+"dmxcontrolprojects-dmxcontrol3",
+"DMXControl Projects e.V.",
+"DMXControl 3",
+"",
+0,
+"DMXControl 3"
+],
+[
+"dolby-cinemaprocessor",
+"Dolby",
+"Cinema Processor",
+"Cinema Processor",
+0,
+"cinemaprocessor"
+],
+[
+"dpa-wireless",
+"",
+"DPA Wireless",
+"wireless microphone osc",
+0,
+"DPA"
+],
+[
+"draco-tera",
+"Draco",
+"Tera KVM",
+"KVM Matrix",
+0,
+"draco-tera"
+],
+[
+"dsan-limitimer",
+"Dsan",
+"Limitimer",
+"Software Timing",
+0,
+"Limitimer"
+],
+[
+"dsan-perfectcue",
+"Dsan",
+"Perfectcue",
+"Software Show Control",
+0,
+"Perfectcue"
+],
+[
+"dtvideolabs-playbackproplus",
+"DT Videolabs",
+"PlaybackPro Plus",
+"Video Software",
+0,
+"pbp"
+],
+[
+"dylanmaudio-apps",
+"dylanmaudio",
+"dLive MIDI Bridge; Talk Light Trigger; Pilot Tone Trigger; Time Code Tool; Console Control",
+"Audio Mixer dLive MIDI Talkback Playback failover LTC MTC Show control",
+0,
+"dylanmaudio"
+],
+[
+"easyprompter-remote",
+"",
+"EasyPrompter",
+"teleprompter prompter scroll broadcast",
+0,
+"EP"
+],
+[
+"easyrecord-cgcontrol",
+"Easyrecord",
+"Easyrecord CG control",
+"",
+0,
+"easyrecord"
+],
+[
+"eaton-epdu",
+"Eaton",
+"ePDU",
+"Power",
+0,
+"epdu"
+],
+[
+"ecamm-live",
+"ecamm",
+"Live",
+"streaming recordings podcast present",
+0,
+"ecammlive"
+],
+[
+"eiki-wspprojector",
+"Eiki",
+"WSP Projector",
+"Projector Eiki",
+0,
+"eiki-pj"
+],
+[
+"elgato-keylight",
+"Elgato",
+"Key Light; Ring Light",
+"Lighting",
+0,
+"keylight"
+],
+[
+"emotimo-st4",
+"eMotimo",
+"ST4; ST4.3; SA2.6",
+"",
+0,
+"Emotimo"
+],
+[
+"epiphan-pearl",
+"Epiphan",
+"Pearl",
+"Stream Encode Recording",
+0,
+"pearl"
+],
+[
+"epson-businesspj",
+"Epson",
+"Business Projectors",
+"Projector Epson",
+0,
+"epsonpj"
+],
+[
+"ereca-stageracer",
+"Ereca",
+"Stage Racer II",
+"ereca stageracer",
+0,
+"stageracer"
+],
+[
+"esphome-api",
+"ESPHome",
+"API",
+"esphome",
+0,
+"esphome"
+],
+[
+"etcaudiovisuel-onlyview",
+"ETC Audiovisuel",
+"Onlyview",
+"Media Server",
+0,
+"Onlyview"
+],
+[
+"etc-echo",
+"ETC",
+"Echo Integration Interface",
+"Light Building",
+0,
+"etc-echo"
+],
+[
+"etc-eos",
+"ETC",
+"EOS",
+"Lighting",
+0,
+"etc-eos"
+],
+[
+"etc-paradigm",
+"ETC",
+"Paradigm",
+"Hardware ETC Lighting",
+0,
+"paradigm"
+],
+[
+"etl-rfmatrix",
+"ETL Systems",
+"ETL RF Matrix",
+"matrix routing rf etl victor",
+0,
+"etlrf"
+],
+[
+"eventapps-timer",
+"EventApps",
+"Countdown Timer",
+"timer countdown stage broadcast",
+0,
+"Countdown Timer"
+],
+[
+"eventapps-cueplayer",
+"EventApps",
+"CuePlayer",
+"audio playback cue jingle",
+0,
+"CuePlayer"
+],
+[
+"eventapps-screenfreeze",
+"EventApps",
+"ScreenFreeze",
+"display ndi presentation freeze video",
+0,
+"ScreenFreeze"
+],
+[
+"eventsync-server",
+"EventSync",
+"EventSync Server",
+"show-control cue osc event",
+0,
+"EventSync"
+],
+[
+"evertz-dreamcatcher",
+"Evertz",
+"DreamCatcher",
+"Replay JSON-RPC TCP",
+0,
+"DreamCatcher"
+],
+[
+"evertz-symphony",
+"Evertz",
+"MVP; VIP; NGI; Exhibit",
+"Multiviewer",
+0,
+"Symphony"
+],
+[
+"evertz-quartz",
+"Evertz",
+"Quartz Protocol Routers; MAGNUM",
+"router matrix crosspoint",
+0,
+"quartz"
+],
+[
+"evertz-vipx",
+"Evertz",
+"Vipx",
+"",
+0,
+"evertz-vipx"
+],
+[
+"evision-hd102",
+"Evision",
+"HD102",
+"brightness control freeze/blackout test patterns Evision HD102",
+0,
+"hd102"
+],
+[
+"extron-dxp",
+"Extron",
+"DXP Matrix",
+"Protocol Matrix",
+0,
+"DXP"
+],
+[
+"extron-in1604",
+"Extron",
+"IN1604",
+"Protocol Switcher",
+0,
+"IN1604"
+],
+[
+"extron-ipl250",
+"Extron",
+"IPL 250",
+"",
+0,
+"IPL 250"
+],
+[
+"extron-ipl-t-pcs4",
+"Extron",
+"IPL T PCS4",
+"Protocol Matrix",
+0,
+"Extron IPL T PCS4"
+],
+[
+"extron-mmx-tcp",
+"Extron",
+"MMX 42/62 Series",
+"Matrix Switcher",
+0,
+"extron-mmx"
+],
+[
+"extron-smp351",
+"Extron",
+"SMP 351",
+"Stream Recording",
+0,
+"SMP 351"
+],
+[
+"extron-smp111",
+"Extron",
+"SMP-111",
+"Stream Recording",
+0,
+"SMP 111"
+],
+[
+"extron-smx",
+"Extron",
+"SMX Matrix",
+"Protocol Matrix",
+0,
+"SMX"
+],
+[
+"extron-xtp-3200",
+"Extron",
+"XTP II Crosspoint 3200 Matrix",
+"Protocol Sis Matrix",
+0,
+"XTP 3200"
+],
+[
+"eyevinn-intercom",
+"Eyevinn",
+"Open Intercom",
+"eyevinn intercom",
+0,
+"Open Intercom"
+],
+[
+"ezcastpro-kvm",
+"EZCastPro",
+"KVM; POE IP KVM; ProAV KVM; DT214M; DT214M-IR-200M-KVM-POE; DT241M-IR-200M-KVM-POE; AM8270; ET01 ProAVTx; ER02 ProAVRx; PWAY DT214M; PWAYTek KVM",
+"EZCast Pro EZCast iKVM CMS PROAV PWAY PWAYTek ALIEXPRESS DT214M DT241M 150m hdmi poe kvm extender over ip many-to-many H",
+0,
+"EZCastPro KVM"
+],
+[
+"ezcoo-matrix",
+"EZCOO",
+"MX44-HAS2 4x4 HDMI Matrix; MX42HS 4x2 HDMI Matrix",
+"HDMI Matrix",
+0,
+"ezcoo-matrix"
+],
+[
+"faithchapel-videoplayoutserver",
+"Faith Chapel",
+"Video playback",
+"Software Media Server",
+0,
+"Video playback"
+],
+[
+"figure53-go-button",
+"Figure 53",
+"GoButton with feedback",
+"Software Media Server",
+0,
+"gobutton"
+],
+[
+"figure53-qlab-advance",
+"Figure 53",
+"QLab with feedback",
+"Software Media Server",
+0,
+"qlabfb"
+],
+[
+"figure53-qview",
+"Figure 53",
+"QView",
+"Software",
+0,
+"qview"
+],
+[
+"fivem-console",
+"FiveM",
+"FiveM Console",
+"",
+0,
+"FiveM"
+],
+[
+"fiverecords-tallyccupro",
+"Fiverecords",
+"TallyCCU Pro",
+"camera blackmagic ccu tally vmix sdi",
+0,
+"TallyCCU"
+],
+[
+"focusrite-clarett",
+"Focusrite",
+"Clarett 8PreX; Clarett 8Pre; Clarett 4Pre; Clarett 2Pre; Clarett+ 8Pre; Clarett+ 4Pre; Clarett+ 2Pre",
+"Audio Interface Focusrite Clarett Mixer Thunderbolt",
+0,
+"Clarett"
+],
+[
+"focusrite-mp8r",
+"Focusrite",
+"MP8R",
+"Dante Yamaha Focusrite Rednet",
+0,
+"MP8R"
+],
+[
+"foobar2000-foobar2000",
+"foobar2000",
+"foobar2000",
+"",
+0,
+"foobar2000"
+],
+[
+"fora-hvs",
+"For.A",
+"Hanabi Video Switchers",
+"Vision Mixer",
+0,
+"fora-hvs"
+],
+[
+"fora-mfr",
+"For.A",
+"MFR",
+"Switcher, Router, Matrix",
+0,
+"fora-mfr"
+],
+[
+"foscam-ptz",
+"foscam",
+"PTZ Camera",
+"Camera",
+0,
+"foscam"
+],
+[
+"fulldomepro-server",
+"Fulldome.pro",
+"Projection Server",
+"OSC Server Control",
+0,
+"fdp"
+],
+[
+"gallery-virtualvtrpro",
+"Gallery",
+"Virtual VTR",
+"VTR",
+0,
+"virtual-vtr"
+],
+[
+"gammacontrol-gmaestro",
+"Gamma Control",
+"GMaestro",
+"Graphics",
+0,
+"gmaestro"
+],
+[
+"gefen-dvimatrix",
+"Gefen",
+"DVI Matrix",
+"Matrix",
+0,
+"dvi-matrix"
+],
+[
+"genelec-smart-ip",
+"Genelec",
+"Smart IP",
+"Installation Speakers Monitors Audio",
+0,
+"genelec"
+],
+[
+"generic-snmp",
+"",
+"Generic SNMP",
+"Protocol Generic",
+0,
+"snmp"
+],
+[
+"generic-artnet",
+"Generic",
+"Art-Net",
+"Protocol Lighting Generic",
+0,
+"artnet"
+],
+[
+"generic-bridge",
+"Generic",
+"Bridge",
+"Generic Bridge WebSocket Client Server State Transmit",
+0,
+"bridge"
+],
+[
+"generic-blink",
+"Generic",
+"Button Blinker",
+"Blink",
+1,
+"generic-blink"
+],
+[
+"generic-dataentry",
+"Generic",
+"Data Entry",
+"Data Variables Keypad Numpad Keyboard format",
+0,
+"dataentry"
+],
+[
+"generic-ember",
+"Generic",
+"Ember",
+"ember glow",
+0,
+"ember"
+],
+[
+"generic-emberplus",
+"Generic",
+"Ember+",
+"ember emberplus",
+0,
+"emberplus"
+],
+[
+"generic-filereader",
+"Generic",
+"File Reader",
+"File",
+0,
+"generic-filereader"
+],
+[
+"generic-http",
+"Generic",
+"HTTP Requests",
+"Protocol Generic",
+0,
+"http"
+],
+[
+"generic-ical",
+"Generic",
+"iCal Scheduler",
+"Calendar Scheduling",
+0,
+"ical"
+],
+[
+"generic-midi",
+"Generic",
+"MIDI",
+"note control change program change sysex timecode",
+0,
+"generic-midi"
+],
+[
+"generic-modbus",
+"Generic",
+"Modbus TCP Relay; Modbus TCP I/O",
+"modbus relay digital-input tcp waveshare poe eth",
+0,
+"Modbus TCP"
+],
+[
+"generic-mqtt",
+"Generic",
+"MQTT",
+"Protocol Generic",
+0,
+"mqtt"
+],
+[
+"generic-mysql",
+"Generic",
+"MySQL; MariaDB",
+"SQL database",
+0,
+"mysql"
+],
+[
+"generic-onvif",
+"Generic",
+"ONVIF",
+"ptz camera",
+0,
+"onvif"
+],
+[
+"generic-osc",
+"Generic",
+"OSC",
+"Protocol Generic",
+0,
+"osc"
+],
+[
+"generic-ping",
+"Generic",
+"Ping",
+"Ping",
+0,
+"generic-ping"
+],
+[
+"generic-pingandwake",
+"Generic",
+"Ping and Wake",
+"Ping Wake On LAN ARP MAC",
+0,
+"generic-pingandwake"
+],
+[
+"generic-rss-client",
+"Generic",
+"RSS",
+"Really Simple Syndication",
+0,
+"RSS Client"
+],
+[
+"generic-smtp",
+"Generic",
+"SMTP",
+"Generic",
+0,
+"smtp"
+],
+[
+"generic-speedtest",
+"Generic",
+"Speedtest",
+"",
+0,
+"speedtest"
+],
+[
+"generic-ssh",
+"Generic",
+"SSH",
+"Protocol Generic",
+0,
+"ssh"
+],
+[
+"generic-stopwatch",
+"Generic",
+"Stopwatch",
+"time timer",
+0,
+"stopwatch"
+],
+[
+"generic-sacn",
+"Generic",
+"Streaming ACN",
+"Protocol Lighting Generic Net3 SACN",
+0,
+"SACN"
+],
+[
+"generic-swp02",
+"Generic",
+"SW-P-02; Probel Router SW P 02; Snell Router SW P 02",
+"Hardware Router Video SDI",
+0,
+"SW-P-02"
+],
+[
+"generic-syslog-client",
+"Generic",
+"Syslog Client",
+"RFC 3164 RFC 5424",
+0,
+"Syslog Client"
+],
+[
+"generic-tcp-udp",
+"Generic",
+"TCP and UDP Requests",
+"Protocol Generic",
+0,
+"tcp-udp"
+],
+[
+"generic-tcp-serial",
+"Generic",
+"TCP Serial Port",
+"TCP serial RS232 Generic",
+0,
+"tsp"
+],
+[
+"generic-timezone",
+"Generic",
+"Timezone",
+"time",
+0,
+"timezone"
+],
+[
+"generic-wakeonlan",
+"Generic",
+"Wake-on-LAN",
+"Protocol Generic",
+0,
+"Wake-on-LAN"
+],
+[
+"generic-webtable",
+"Generic",
+"Web-Table",
+"Browser Web Table",
+0,
+"table"
+],
+[
+"generic-websocket",
+"Generic",
+"WebSocket",
+"Protocol Generic WebSocket Hex Binary",
+0,
+"WebSocket"
+],
+[
+"getontime-ontime",
+"GetOntime",
+"Ontime",
+"ontime companion",
+0,
+"ontime"
+],
+[
+"glensound-divine",
+"",
+"Glensound Divine",
+"Audio Speaker Monitoring DANTE AES 67 Network Audio",
+0,
+"Divine"
+],
+[
+"glensound-gtmmobile",
+"GlenSound",
+"GTM Mobile",
+"gtm intercom mute audio",
+0,
+"GTM Mobile"
+],
+[
+"glensound-minferno",
+"Glensound",
+"Minferno",
+"Glensound Minferno",
+0,
+"gsminferno"
+],
+[
+"globalcache-itac-cc",
+"Global Cache",
+"iTach IP2CC",
+"Generic",
+0,
+"ip2cc"
+],
+[
+"globalcache-itac-ir",
+"Global Cache",
+"iTach IP2IR",
+"Generic",
+0,
+"ip2ir"
+],
+[
+"globalcache-itac-sl",
+"Global Cache",
+"iTach IP2SL",
+"Generic",
+0,
+"ip2sl"
+],
+[
+"gnuralnet-livetoair",
+"Gnural Net",
+"Live To Air",
+"Live Broadcast",
+0,
+"lta"
+],
+[
+"android-tv",
+"Google",
+"androidtv",
+"TV",
+0,
+"androidtv"
+],
+[
+"google-sheets",
+"Google",
+"Sheets",
+"Software Chat",
+0,
+"Google Sheets"
+],
+[
+"youtube-live",
+"Google",
+"YouTube",
+"Stream",
+0,
+"YT"
+],
+[
+"govee-lights",
+"Govee",
+"Lights",
+"lights lighting",
+0,
+"govee-lights"
+],
+[
+"grassvalley-amp",
+"Grass Valley",
+"AMP",
+"Protocol",
+0,
+"amp"
+],
+[
+"grassvalley-kframe",
+"GrassValley",
+"K-Frame",
+"grassvalley k-frame macro aux video broadcast",
+0,
+"kframe "
+],
+[
+"greenhippo-hippotizer",
+"Green Hippo",
+"Hippotizer",
+"Media Server",
+1,
+"Hippotizer"
+],
+[
+"greenhippo-hippotizer-rest",
+"Green Hippo",
+"Hippotizer",
+"REST Media Server Playback Video",
+0,
+"Hippotizer-REST"
+],
+[
+"greengo-intercom",
+"Green-GO",
+"Intercom Remote (OSC)",
+"Intercom",
+0,
+"GGO_Device"
+],
+[
+"gudesystems-smartpdu",
+"Gude Systems",
+"Smart PDU",
+"gude smartpdu pdu power device control power distribution unit",
+0,
+"smartpdu"
+],
+[
+"gdsys-muxkvmswitch",
+"Guntermann&Drunck",
+"DL-DVI-MUX4",
+"KVM KVM-Switch",
+0,
+"muxkvm"
+],
+[
+"haivision-connectdvr",
+"Haivision",
+"Connect DVR",
+"Video",
+0,
+"de"
+],
+[
+"haivision-kbencoder",
+"Haivision",
+"KB Encoder",
+"Encoder",
+0,
+"haivision-kbencoder"
+],
+[
+"haivision-makito-x4-decoder",
+"Haivision",
+"Makito X4 Decoder",
+"haivision makito makito x4 decoder video decoder streaming srt rtsp",
+0,
+"makito-x4-decoder"
+],
+[
+"haivision-makito-x4-encoder",
+"Haivision",
+"Makito X4 Encoder",
+"Haivision Makito Makito X4 encoder video streaming H.264 H.265 SRT RTSP RTP UDP",
+0,
+"makito-x4-encoder"
+],
+[
+"hdkatov-visca",
+"HDkatov",
+"VISCA",
+"VISCA VISCA over IP PTZ Camera hdkatov UDP",
+0,
+"hdkatov-visca"
+],
+[
+"hdtv-wolfpackgreen",
+"HDTV",
+"WolfPackGreen HDMI Matrix",
+"hdmi matrix hdmi matrix",
+0,
+"HDTV WolfPackGreen HDMI Matrix"
+],
+[
+"h2r-graphics",
+"Here to Record",
+"H2R Graphics",
+"Graphics Overlays",
+0,
+"H2R Graphics"
+],
+[
+"h2r-layouts",
+"Here to Record",
+"H2R Layouts",
+"H2R Layouts Here to Record",
+0,
+"H2R Layouts"
+],
+[
+"highcriteria-lhs",
+"High Criteria",
+"Liberty Helper Service",
+"Liberty Court Recorder LCR LHS",
+0,
+"Liberty Helper Service"
+],
+[
+"highend-hog4",
+"High End Systems",
+"Hog 4",
+"Lighting",
+0,
+"hog4"
+],
+[
+"highpass-accompaniment",
+"HighPass",
+"AcCompaniment",
+"AcCompaniment Cue OSC WING Mixer Audio",
+0,
+"accompaniment"
+],
+[
+"highpass-countdown",
+"Highpass",
+"Countdown",
+"Variables Countdown Web",
+0,
+"countdown"
+],
+[
+"highpass-upc",
+"HighPass",
+"UPC -Ultimate Presentation Control",
+"Keynote PowerPoint Presentation WebSocket Stream Deck",
+0,
+"UPC"
+],
+[
+"hive-beebox",
+"Hive",
+"Beeblade; Beebox",
+"Media Player Media Engine Player_1 Player_2 Player_3 Player_4 PLayer 1 Player 2 Player 3 Player 4",
+0,
+"beebox"
+],
+[
+"hollyland-solidcom",
+"Hollyland",
+"Solidcom",
+"solidcom hollyland http",
+0,
+"Solidcom"
+],
+[
+"hologfx-holographics",
+"hologfx.io",
+"Holographics",
+"Graphics Software",
+0,
+"hologfx"
+],
+[
+"homeassistant-server",
+"Home Assistant",
+"Server",
+"Generic",
+0,
+"homeassistant-server"
+],
+[
+"hopla-powerstudio",
+"HOPLA Productions",
+"Power Studio",
+"automation broadcast playout radio rest",
+0,
+"Power Studio"
+],
+[
+"hynamic-mediaserver",
+"Hynamic",
+"MD3 Pro",
+"Hynamic Media-Server MD3 Pro",
+0,
+"Hynamic-mediaserver"
+],
+[
+"ibm-watson",
+"IBM",
+"Watson",
+"Watson captioning",
+0,
+"watson"
+],
+[
+"iccms-sib",
+"IC Control Media & Sport AB",
+"Sport In The Box",
+"Sport In The Box sib",
+0,
+"sib"
+],
+[
+"ictag-easyvideo",
+"ICT AG",
+"easyVideo",
+"video player ffmpeg osc ictag",
+0,
+"easyVideo"
+],
+[
+"idk-fdx",
+"IDK",
+"FDX-S",
+"led processor",
+0,
+"idk-fdx"
+],
+[
+"idk-msd",
+"IDK",
+"MSD-V4; MSD-V6",
+"led processor",
+0,
+"idk-msd"
+],
+[
+"idk-ninjar",
+"IDK",
+"NINJAR",
+"led processor",
+0,
+"idk-ninjar"
+],
+[
+"ifelseware-avkey",
+"IEW Solutions (aka ifelseWare)",
+"AV-Key",
+"AV-Key Automation Remote Control Software",
+0,
+"avkey"
+],
+[
+"ifelseware-avplayback",
+"IEW Solutions (aka ifelseWare)",
+"AVP-Legion EC; AVP-Legion II",
+"Video Software playback media",
+0,
+"av-playback"
+],
+[
+"iiyama-prolite",
+"Iiyama",
+"Prolite",
+"iiyama monitor prolite",
+0,
+"prolite"
+],
+[
+"imagine-lrc",
+"Imagine Communications",
+"Logical Router Control",
+"Imagine Communications Logical Router Control Video Router",
+0,
+"lrc"
+],
+[
+"imimot-mitti",
+"Imimot",
+"Mitti",
+"Software Video",
+0,
+"mitti"
+],
+[
+"libreoffice-impress",
+"",
+"Impress",
+"The Document Foundation Presentation Impress",
+0,
+"impress"
+],
+[
+"influxdb-apiv2",
+"InfluxDB",
+"InfluxDB v2",
+"Logging InfluxDB Time Series Database",
+0,
+"influxdb"
+],
+[
+"ipl-ocp",
+"Inkling Performance Labs",
+"Overlay Control Panel",
+"ipl ocp Inkling Performance Labs Overlay Control Panel",
+0,
+"ocp"
+],
+[
+"innosonix-maxx",
+"Innosonix",
+"Maxx",
+"Amplifier Innosonix Maxx Audio Amp",
+0,
+"innosonix-maxx"
+],
+[
+"intel-ipmi",
+"Intel",
+"IPMI",
+"IPMI BMC Power RMCP Pixera AV Stumpfl Media Server",
+0,
+"IPMI"
+],
+[
+"intelix-matrix",
+"Intelix",
+"INT-44HDX; INT-66HDX; INT-88HDX",
+"Hardware Matrix",
+0,
+"intelix"
+],
+[
+"interactivetechnologies-cueserver",
+"Interactive Technologies",
+"CueServer",
+"Lighting",
+0,
+"cueserver"
+],
+[
+"interspace-cueether",
+"Interspace Industries",
+"CueEther",
+"Cue Ether Interspace Industries",
+0,
+"CueEther"
+],
+[
+"interspace-globalcue-live",
+"Interspace Industries",
+"GlobalCue Live",
+"GlobalCue Cue Presenter Interspace Clicker Cue Light",
+0,
+"GlobalCue Live"
+],
+[
+"interspace-mastercuev7",
+"Interspace Industries",
+"MasterCue V7",
+"MasterCue Cue V7 Interspace",
+0,
+"MasterCueV7"
+],
+[
+"iobroker-ws",
+"ioBroker",
+"WebSockets",
+"ioBroker",
+0,
+"iobroker-ws"
+],
+[
+"ioversal-vertex",
+"ioversal",
+"Vertex",
+"Media Server Software Video Multi System Playout Interactive Show Control",
+0,
+"Vertex"
+],
+[
+"irisdown-countdowntimer",
+"Irisdown",
+"Countdown Timer",
+"Software Timing",
+0,
+"countdown"
+],
+[
+"irisdown-remoteshowcontrol",
+"Irisdown",
+"Remote Show Control",
+"Software",
+0,
+"rsc"
+],
+[
+"generic-pjlink",
+"JBMIA",
+"Projector; PJLink",
+"Projector Protocol",
+0,
+"pjlink"
+],
+[
+"josephadams-gamepadio",
+"Joseph Adams",
+"gamepad-io",
+"gamepad controller",
+0,
+"gamepad-io"
+],
+[
+"josephadams-ptzpilot",
+"Joseph Adams",
+"PTZ Pilot",
+"PTZ VISCA Camera Joystick Gamepad",
+0,
+"ptzpilot"
+],
+[
+"josephadams-scriptlauncher",
+"Joseph Adams",
+"Script Launcher",
+"script remote execute",
+0,
+"scriptlauncher"
+],
+[
+"joy-playdeck",
+"JOY event & media",
+"Playdeck",
+"",
+0,
+"Playdeck"
+],
+[
+"jozeemedia-jcounter",
+"Jozee Media Solutions",
+"J-Counter",
+"",
+0,
+""
+],
+[
+"julusian-test",
+"Julusian",
+"Test",
+"",
+1,
+"julusian-test"
+],
+[
+"justmacros-lua",
+"JustMacros",
+"LUA",
+"Show Control Software",
+0,
+"justmacros"
+],
+[
+"jvc-ptz",
+"JVC",
+"Camera; KZ100; PZ510",
+"Camera PTZ",
+0,
+"JVC ptz"
+],
+[
+"kenku-fm",
+"KenkuFM",
+"API Controller",
+"",
+0,
+"kenkufm"
+],
+[
+"kiloview-cuber1",
+"Kiloview",
+"CUBE R1",
+"NDI Recorder Recording Multiview Video",
+0,
+"CUBE R1"
+],
+[
+"kiloview-cubex1",
+"Kiloview",
+"CUBE X1",
+"NDI Matrix Router Video Distribution",
+0,
+"CUBE X1"
+],
+[
+"kiloview-decoder",
+"Kiloview",
+"D350; D260; RD350; RD260",
+"Kiloview Decoder NDI Multiview Video D350",
+0,
+"KV-Decoder"
+],
+[
+"kiloview-encoder",
+"Kiloview",
+"E1; E2; E3; G1; G2",
+"Kiloview Encoder",
+0,
+"kiloview"
+],
+[
+"kiloview-ndi",
+"Kiloview",
+"N40; N50; N60; N5; N6",
+"NDI Video",
+0,
+"kiloview"
+],
+[
+"kiloview-4kconverter",
+"Kiloview",
+"N50; N60; FN-50; FN-60",
+"Kiloview 4K Converter NDI Video Encoder Decoder",
+0,
+"Kiloview"
+],
+[
+"kissbox-gpio",
+"KISSBOX",
+"IO3CC; IO8CC",
+"kissbox gpio relay digital analog io input output",
+0,
+"kissbox-gpio"
+],
+[
+"klang-immersive",
+"Klang",
+"Immersive; Konductor; Vokal; DMI-Klang",
+"Klang audio immersive Konductor Vokal DMI-Klang",
+0,
+"Klang"
+],
+[
+"klang-app",
+"",
+"KLANG:app",
+"Klang audio immersive Konductor Vokal DMI-Klang KLANG:1",
+0,
+"KLANG:app"
+],
+[
+"klvr-chargerpro",
+"KLVR",
+"Charger Pro",
+"charging battery batteries",
+0,
+"klvr-chargerpro"
+],
+[
+"knowcore-checkin",
+"KnowCore",
+"Check-In Platform",
+"church check-in nfc knowcore giving",
+0,
+"knowcore"
+],
+[
+"kramer-matrix",
+"Kramer",
+"Matrix (Generic)",
+"Matrix",
+0,
+"kramer-matrix"
+],
+[
+"kramer-vp734",
+"Kramer",
+"VP-734",
+"Image Processing",
+0,
+"vp734"
+],
+[
+"kramer-vp727",
+"Kramer",
+"VP-747",
+"Image Processing",
+0,
+"vp747"
+],
+[
+"kramer-vp773a",
+"Kramer",
+"VP-773A",
+"Image Processing",
+0,
+"vp773a"
+],
+[
+"kramer-vs41h",
+"Kramer",
+"VS-41H",
+"Image Processing",
+0,
+"kramer-vs41h"
+],
+[
+"kxwell-ptz",
+"KXWell",
+"PTZ Camera",
+"ptz camera control",
+0,
+"kxwell-ptz"
+],
+[
+"lacoustics-amplifiers",
+"",
+"L'Acoustics Amplifiers",
+"AES67 AVB Milan",
+0,
+"L'A Amps"
+],
+[
+"lanternbird-cuecapture",
+"Lantern Bird",
+"CueCapture",
+"theatre recording playback lighting osc eos tech rehearsal video cue cuecapture",
+0,
+"CueCapture"
+],
+[
+"lea-amplifier",
+"LEA",
+"Amplifier",
+"amplifier audio",
+0,
+"lea-amp"
+],
+[
+"leadled-clockotron",
+"LEAD LED",
+"Clockotron",
+"Vmix, Clock, Timer",
+0,
+"Clockotron"
+],
+[
+"leaderphabrix-lpx-qx",
+"LeaderPhabrix",
+"LPX500; Qx; QxL; QxP",
+"Waveform Monitor Rasterizer",
+0,
+"LPX-Qx-QxL-QxP"
+],
+[
+"leafcoders-titler",
+"LeafCoders",
+"Titler",
+"Streaming Title",
+0,
+"titler"
+],
+[
+"lectrosonics-aspen",
+"Lectrosonics",
+"ASPEN",
+"Aspen Audio Processor",
+0,
+"ASPEN"
+],
+[
+"dalite-scb",
+"LegendAV",
+"Da-Lite Screen Control Board",
+"Projector Screen",
+0,
+"SCB"
+],
+[
+"leolabs-ableset",
+"Leolabs",
+"AbleSet",
+"Ableton Live Setlist",
+0,
+"AbleSet"
+],
+[
+"leonreucher-vstopowerpoint",
+"Leon Reucher",
+"PowerPoint Remote VSTO WebSocket",
+"PowerPoint Microsoft",
+0,
+"vstopowerpoint"
+],
+[
+"lgtv-display",
+"LG Electronics",
+"LG Display",
+"Tv Display",
+0,
+"LGTV"
+],
+[
+"lgtv-prodisplay",
+"LG",
+"Pro Display",
+"tv lgtv prodisplay lg display monitor",
+0,
+"lgprodisplay"
+],
+[
+"equipson-lightshark",
+"LightShark",
+"LS1; LS-Core",
+"OSC",
+0,
+"equipson-lightshark"
+],
+[
+"lightware-lw2",
+"Lightware",
+"LW2",
+"Protocol Matrix",
+0,
+"lightwareLW2"
+],
+[
+"lightware-lw3",
+"Lightware",
+"LW3",
+"Protocol Matrix",
+0,
+"lightwareLW3"
+],
+[
+"lilliput-monitor",
+"Lilliput",
+"Monitor; Q18",
+"Lilliput Monitor",
+0,
+"lilliput-monitor"
+],
+[
+"limagiran-holyrics",
+"Lima Giran Ltda.",
+"Holyrics",
+"lyrics bible verses presentation",
+0,
+"holyrics"
+],
+[
+"linkbox-remote",
+"linkbox",
+"Web API and Controller",
+"linkbox",
+0,
+"linkbox-remote"
+],
+[
+"livemind-recorder",
+"Livemind",
+"Recorder",
+"Livemind Recorder Recording NDI",
+0,
+"recorder"
+],
+[
+"lofas-ndistudioclock",
+"Lofas AB",
+"NDI Studio Clock",
+"Software NDI Studio Clock Clock",
+0,
+"ndistudioclock"
+],
+[
+"logos-proclaim",
+"Logos",
+"Proclaim",
+"",
+0,
+"Proclaim"
+],
+[
+"lost-cause-photographic-controlroom",
+"Lost Cause Photographic",
+"ControlRoom",
+"GPI FSI SmallHD",
+0,
+"ControlRoom"
+],
+[
+"ltn-schedule",
+"LTN",
+"Schedule",
+"Schedule Playout",
+0,
+"Schedule"
+],
+[
+"lumens-mediaprocessor",
+"Lumens",
+"Media Processor",
+"Lumens Encode",
+0,
+"MediaProcessor"
+],
+[
+"lumens-visca",
+"Lumens",
+"PTZ Camera; Box Camera; Tracking Camera",
+"Camera Lumens",
+0,
+"Camera"
+],
+[
+"luminex-gigacore",
+"Luminex",
+"GigaCore",
+"Switch Luminex GigaCore",
+0,
+"GigaCore"
+],
+[
+"luminex-luminode",
+"Luminex",
+"LumiNode; LumiCore",
+"Lighting Luminex",
+0,
+"LumiNode"
+],
+[
+"lutron-caseta",
+"Lutron",
+"Caseta",
+"",
+0,
+"lutron-caseta"
+],
+[
+"lyntec-rpc-breaker",
+"LynTec",
+"LynTec RPC",
+"Electrical Sequencer",
+0,
+"LynTec"
+],
+[
+"malighting-msc",
+"MA Lighting",
+"dot2 MSC; grandMA2 MSC",
+"Lighting Show Control",
+0,
+"mamsc"
+],
+[
+"malighting-grandma2",
+"MA Lighting",
+"GrandMA2",
+"Lighting",
+0,
+"grandma2"
+],
+[
+"malighting-grandma3",
+"MA Lighting",
+"GrandMA3",
+"Lighting",
+0,
+"GrandMA3"
+],
+[
+"mackie-dlzcreator",
+"Mackie",
+"DLZ Creator; DLZ Creator XS",
+"Audio Mixer Podcast Streaming",
+0,
+"dlzcreator"
+],
+[
+"madrix-aura",
+"Madrix",
+"Aura 2/8/12/32",
+"madrix aura lighting http",
+0,
+"madrix-aura"
+],
+[
+"magewell-director",
+"Magewell",
+"Director Mini",
+"Magewell Director Mini Mini",
+0,
+"Director Mini"
+],
+[
+"magewell-proconvert-decoder",
+"Magewell",
+"Pro Convert Decoder",
+"Decoder NDI HX SRT RTMP RTSP MPEG-TS UDP RTP HLS H.264 H.265 HEVC SDI HDMI",
+0,
+"Pro Convert Decoder"
+],
+[
+"magewell-ultrastream",
+"Magewell",
+"Ultra Stream HDMI; Ultra Stream SDI; Ultra Encode HDMI; Ultra Encode SDI; Ultra Encode HDMI Plus; Ultra Encode SDI Plus; Ultra Encode AIO",
+"Stream",
+0,
+"ultrastream"
+],
+[
+"magichome-bulb",
+"Magic Home",
+"Bulb",
+"bulb magic home",
+0,
+"magichome-bulb"
+],
+[
+"magicsoft-recorder",
+"MagicSoft",
+"Recorder",
+"Video Audio Recording",
+0,
+"MagicSoft Recorder"
+],
+[
+"magnimage-mig-ec",
+"Magnimage",
+"MIG-EC90; MIG-EC80",
+"magnimage ec90 ec-90 mig690 mig-690 mig-ec90 ec80 ec-80 mig680 mig-680 mig-ec80",
+0,
+"mig-ec"
+],
+[
+"makeprox-glue",
+"MakeProX",
+"Glue",
+"controller makeproaudio makepro-x makeprox glue",
+0,
+"Glue"
+],
+[
+"manhattanbeachstudios-streamgraphicspro",
+"Manhattan Beach Studios",
+"StreamGraphics Pro",
+"Graphics Scoreboard Timer Lower third Teleprompter Prompter OBS vMix",
+0,
+"streamgraphicspro"
+],
+[
+"mrmoco-mhc",
+"Mark Roberts Motion Control",
+"MHC",
+"MRMC Robotics Polymotion Chat PTZ",
+0,
+"MHC"
+],
+[
+"marshall-ipcamera",
+"Marshall",
+"CV355; CV420; CV420e; CV620; CV630; CV730",
+"Marshall IP Camera",
+0,
+"m-cam"
+],
+[
+"massimo-callegari-qlcplus",
+"massimo-callegari",
+"qlcplus; qlc+",
+"light console",
+0,
+"qlcplus"
+],
+[
+"matrox-conductip",
+"Matrox",
+"ConductIP",
+"SMTPE 2110 NMOS KVM",
+0,
+"conductip"
+],
+[
+"matrox-monarch",
+"Matrox",
+"Monarch HD/HDX/LCS",
+"Stream Encode Recording Matrox Datavideo",
+0,
+"Monarch"
+],
+[
+"mvr-helios",
+"Megapixel",
+"Helios",
+"MVR Megapixel VR Megapixel Helios LED Screen LED Processor",
+0,
+"Helios"
+],
+[
+"meld-studio",
+"Meld Studio",
+"Meld Studio",
+"streaming scenes audio effects meld webchannel",
+0,
+"meldstudio"
+],
+[
+"metus-ingest",
+"Metus Technology",
+"Ingest",
+"Protocol Software",
+0,
+"Metus Ingest"
+],
+[
+"metus-player",
+"Metus Technology",
+"Player Controller",
+"",
+0,
+"metus-player"
+],
+[
+"groupme-webhooks",
+"Microsoft",
+"GroupMe",
+"Webhooks",
+0,
+"groupme"
+],
+[
+"microsoft-teams",
+"Microsoft",
+"Teams",
+"Teams MS Teams Microsoft",
+0,
+"teams"
+],
+[
+"microsoft-vscode",
+"Microsoft",
+"VSCode",
+"Code Visual Studio Code",
+0,
+"VSCode"
+],
+[
+"middlethings-middlecontrol",
+"Middle Things",
+"Middle Control; APC-R; APC-R Mini; APC-R Mini Lite; Middle Remote",
+"PTZ RS2 RS3 RS4 DJI APC-R APC ATEM Middle Remote Middle Control Blackmagic OBSBOT Lumix Panasonic Visca Sony Canon Gimba",
+0,
+"middlecontrol"
+],
+[
+"middleatlantic-racklink",
+"MiddleAtlantic",
+"Racklink",
+"MiddleAtlantic Racklink",
+0,
+"racklink"
+],
+[
+"middleman-adit",
+"Middleman Software",
+"AdIT",
+"SCTE SCTE 104 SCTE 35 Middleman DAI Dynamic Ad Insertion",
+0,
+"AdIT"
+],
+[
+"middleman-breaktime",
+"Middleman Software",
+"BreakTime",
+"SCTE SCTE 104",
+0,
+"BreakTime"
+],
+[
+"middleman-scte104proxy",
+"Middleman Software",
+"SCTE 104 Proxy",
+"SCTE-104 SCTE 104 SCTE104 Proxy Middleman Software",
+0,
+"SCTE 104 Proxy"
+],
+[
+"turtleav-mineola",
+"",
+"Mineola Dante Bridge",
+"Dante",
+0,
+"Mineola"
+],
+[
+"miniontoby-midi-multicammixer",
+"Miniontoby",
+"MultiCamMixer",
+"vrchat switcher camera loopmidi unity",
+0,
+"miniontoby-multicammixer"
+],
+[
+"devcore-mixingstation",
+"Mixing Station GmbH",
+"Mixing Station",
+"Audio Mixer",
+0,
+"ms"
+],
+[
+"mixtech-theatremix",
+"Mixing Technology",
+"TheatreMix",
+"Show Control Audio",
+0,
+"theatremix"
+],
+[
+"modelighting-edin",
+"MODE Lighting",
+"eDin NPU",
+"Lighting",
+0,
+"eDin"
+],
+[
+"modulopi-moduloplayer",
+"Modulo Pi",
+"Modulo Player",
+"Software Media Server",
+0,
+"Modulo Player"
+],
+[
+"monnit-sensors",
+"Monnit",
+"Sensors",
+"temperature sensors",
+0,
+"monnit"
+],
+[
+"monospace-lightkey",
+"Monospace",
+"Lightkey",
+"lightkey lighting dmx",
+0,
+"Lightkey"
+],
+[
+"monteiro-cronosdown",
+"Monteiro",
+"CronosDown",
+"Software Timer",
+0,
+"cronosdown"
+],
+[
+"monteiro-pptvideo",
+"Monteiro",
+"PPT-VIDEO",
+"PPT PPTX PowerPoint",
+0,
+"pptvideo"
+],
+[
+"motu-avb",
+"MOTU",
+"AVB",
+"Audio",
+0,
+"motu"
+],
+[
+"moxa-iologik-e1200",
+"Moxa",
+"E1210; E1211; E1212; E1213; E1214",
+"DIO DI DO GPIO GPI GPO Relay ioLogik",
+0,
+"ioLogik E1200 Series"
+],
+[
+"moxa-e2200series",
+"Moxa",
+"e2210; e2212; e2214; e2242; e2260; e2262",
+"DIO DI DO GPIO GPI GPO ioLogik",
+0,
+"ioLogik e2200 Series"
+],
+[
+"media-player-classic",
+"MPC-HC",
+"Media Player Classic",
+"Video Media",
+0,
+"MPC"
+],
+[
+"msc-router",
+"MSC",
+"Router",
+"Protocol Matrix",
+0,
+"MSC Router"
+],
+[
+"mt-viki-matrix",
+"MT VIKI",
+"MT-HD0808 8x8 HDMI Matrix",
+"HDMI Matrix",
+0,
+"mt-viki-matrix"
+],
+[
+"multicamsystems-multicamsuite",
+"Multicam Systems",
+"Multicam Suite",
+"Vision Mixer ptz Video",
+0,
+"mcs"
+],
+[
+"multicam-systems-rcp",
+"Multicam Systems",
+"RCP",
+"camera broadcast ptz tally rcp control",
+0,
+"Multicam RCP"
+],
+[
+"mutedeck-mutedeck",
+"",
+"MuteDeck",
+"mute unmute microphone camera video conferencing meeting push-to-talk zoom teams webex google meet discord streamyard",
+0,
+"MuteDeck"
+],
+[
+"muxlab-kvm",
+"Muxlab",
+"KVM",
+"KVM",
+0,
+"muxlab-kvm"
+],
+[
+"nanoleaf-shapes",
+"Nanoleaf",
+"Shapes; Aurora; Canvas; Elements",
+"",
+0,
+"nanoleaf-shapes"
+],
+[
+"nws-api",
+"National Weather Service",
+"Weather Alerts",
+"weather alerts national weather service",
+0,
+"nws-api"
+],
+[
+"nec-display",
+"NEC",
+"Display",
+"monitor",
+0,
+"nec-display"
+],
+[
+"nec-projectors",
+"NEC",
+"Projectors",
+"projector NEC Sharp NEC display AV HTTP NP-PA NP-PX NP-PH NP-P NP-M NP-ME NP-U NP-UM NP-V NP-VE NP4100 PA550W",
+0,
+"NEC Projectors"
+],
+[
+"neodarque-stagetimer2",
+"Neodarque",
+"StageTimer2",
+"Timing Clock",
+0,
+"stagetimer"
+],
+[
+"neol-epowerswitch",
+"NeoL",
+"ePowerSwitch 4",
+"power pdu relay outlet http power-switch remote-power",
+0,
+"ePower4"
+],
+[
+"netgear-avline",
+"Netgear",
+"AV Line; M4250; M4300; M4350; M4500",
+"network switch avoip poe",
+0,
+"avline"
+],
+[
+"netio-powerbox",
+"NETIO",
+"PowerBOX",
+"Power Electric",
+0,
+"PowerBOX"
+],
+[
+"netron-en",
+"Netron",
+"EN; EN-12",
+"Lighting",
+0,
+"netron"
+],
+[
+"neumannmueller-stageflow",
+"Neumann&Müller GmbH & Co. KG",
+"Stageflow",
+"Software Timing Timer StagePreview DSM",
+0,
+"Stageflow"
+],
+[
+"neutrik-dpro",
+"Neutrik",
+"NA-2-IO-DPRO",
+"Dante Yamaha Neutrik RCP",
+0,
+"DPRO"
+],
+[
+"nevion-mrp",
+"Nevion",
+"MRP / Multicon",
+"Router Matrix SDI",
+0,
+"mrp"
+],
+[
+"newblue-captivate",
+"NewBlue",
+"Captivate",
+"Graphics",
+0,
+"Captivate"
+],
+[
+"newbluefx-titler",
+"NewBlue",
+"Titler Live",
+"Graphics",
+0,
+"Titler"
+],
+[
+"newtek-ndistudiomonitor",
+"NewTek",
+"NDI Studio Monitor",
+"Video Software",
+0,
+"NDIMonitor"
+],
+[
+"newtek-tricaster",
+"Newtek",
+"Tricaster",
+"Switcher",
+0,
+"tricaster"
+],
+[
+"nexo-nxamp",
+"NEXO",
+"NXAMP",
+"Amplifier Audio",
+0,
+"NXAMP"
+],
+[
+"nextologies-nextotalk",
+"Nextologies Limited",
+"NextoTalk",
+"mic mute push to talk conferencing Google Meet Mic Controller",
+0,
+"nextologies-nextotalk"
+],
+[
+"nobe-omniscope",
+"Nobe",
+"Omniscope",
+"Video",
+0,
+"NobeScope"
+],
+[
+"noctavoxfilms-tallycomm",
+"Noctavox",
+"TallyComm",
+"tally broadcast camera intercom smartphone",
+0,
+"TallyComm"
+],
+[
+"nohassleav-videowallprocessor",
+"NoHassleAV",
+"HDP MXB44VW; Video Wall Processor 4x4",
+"",
+0,
+"nohassleav-vidwallproc"
+],
+[
+"nohassleav-matrix",
+"NoHassleAV",
+"Matrix",
+"matrix hdmi 4x4 NoHassleAV",
+0,
+"nohassleav-matrix"
+],
+[
+"noiseproductions-vvd",
+"Noise Productions",
+"Virtual Video Director",
+"vvd video director broadcast",
+0,
+"VVD"
+],
+[
+"nortek-bluebolt",
+"Nortek",
+"Bluebolt",
+"Furman Panamax Nortek Bluebolt",
+0,
+"bluebolt"
+],
+[
+"notion-timestamp",
+"Notion",
+"Timestamp",
+"Timestamp Notion",
+0,
+"timestamp"
+],
+[
+"novastar-broadcastswitcher",
+"",
+"NovaStar Broadcast Switcher",
+"NovaStar Broadcast Switcher DB4K",
+0,
+"novastar-broadcastswitcher"
+],
+[
+"novastar-coex",
+"NovaStar Coex",
+"MX40 Pro; CX80 Pro; KU20",
+"",
+0,
+"novastar-coex"
+],
+[
+"novastar-d12",
+"Novastar",
+"D12",
+"Presentation Switcher",
+0,
+"novastar"
+],
+[
+"novastar-h-series",
+"Novastar",
+"H-Series",
+"Novastar H-Series H2 H5 H9 H15",
+0,
+"novastar-h-series"
+],
+[
+"novastar-controller",
+"Novastar",
+"MCTRL4K; VX4S; VX6S; NovaPro HD; NovaPro UHD Jr; VX1000; VX600; VX16S; J6",
+"LED Processing",
+0,
+"novastar"
+],
+[
+"novastar-mxreal3",
+"NovaStar",
+"MxReal 3",
+"NovaStar XR MxReal 3",
+0,
+"MxReal 3"
+],
+[
+"novastar-switcher",
+"NovaStar",
+"N10; N20; D32",
+"video switcher led",
+0,
+"novastar-switcher"
+],
+[
+"novastar-mediaserver",
+"Novastar",
+"RX6; FX3 Pro",
+"Novastar Media-Server RX6 FX3 Pro",
+0,
+"Novastar-mediaserver"
+],
+[
+"novastar-splicer",
+"Novastar",
+"Splicer",
+"Splicer Novastar H-series H2 H5 H9 H15",
+0,
+"novastar-splicer"
+],
+[
+"nrk-sofie-chef",
+"NRK",
+"Sofie Chef",
+"Sofie Chef Websocket Video Software Graphics",
+0,
+"sofie-chef"
+],
+[
+"ntp-technology-dot",
+"NTP Technology",
+"635-800A; 600 Series; Penta Series",
+"Hardware Audio Router Dante",
+0,
+"DOT Protocol"
+],
+[
+"osctimer-osctimer",
+"O:S:C Timer",
+"O:S:C Timer",
+"Timer Countdown OSC",
+0,
+"O:S:C Timer"
+],
+[
+"obs-studio",
+"OBS",
+"Studio",
+"Stream Live Broadcast Streaming Switcher",
+0,
+"obs"
+],
+[
+"obsbot-osc",
+"OBSBOT",
+"Center App; Tail 2; Tail Air; Tiny; Tiny 4K; Tiny 2; Tiny 2 Lite; Tiny 3; Tiny 3 Lite; Tiny SE; Meet; Meet 4K; Meet 2; Meet SE",
+"camera ptz webcam osc",
+0,
+"obsbot"
+],
+[
+"obsidiancontrol-onyx-osc",
+"Obsidian Control Systems",
+"ONYX",
+"",
+0,
+"onyx-osc"
+],
+[
+"obsidiancontrol-onyx",
+"Obsidian",
+"ONYX",
+"onyx lighting control",
+0,
+"onyx"
+],
+[
+"octava-pro-dsx",
+"Octava",
+"Pro DSX",
+"Video NDI",
+0,
+"Octava Pro"
+],
+[
+"noismada-octopuslistener",
+"Octopus",
+"App",
+"Software",
+0,
+"octopus"
+],
+[
+"noismada-octopusshowcontrol",
+"Octopus",
+"Listener",
+"Software Keyboard emulator",
+0,
+"octopuslistener"
+],
+[
+"odyssey-insight",
+"Odyssey Development",
+"Insight",
+"",
+0,
+"insight"
+],
+[
+"olzzon-ndicontroller",
+"Olzzon",
+"NDI Controller",
+"ndi",
+0,
+"ndi-controller"
+],
+[
+"oncue-oncue",
+"OnCue",
+"OnCue",
+"timer teleprompter player countdown events",
+0,
+"oncue"
+],
+[
+"openlp-http",
+"OpenLP",
+"HTTP API",
+"Presentation Songs Lyrics",
+0,
+"openlp"
+],
+[
+"openrgb-sdk",
+"OpenRGB",
+"OpenRGB",
+"",
+0,
+"openrgb-sdk"
+],
+[
+"opensong-api",
+"OpenSong",
+"API",
+"Software",
+0,
+"OpenSong"
+],
+[
+"openweather-rest",
+"OpenWeather",
+"Current Weather API",
+"weather temperature",
+0,
+"ow"
+],
+[
+"opticis-omm-1000",
+"Opticis",
+"OMM 1000 Matrix",
+"Protocol Matrix",
+0,
+"OMM 1000"
+],
+[
+"optimalaudio-zone",
+"Optimal Audio",
+"Zone",
+"optimalaudio zone oa",
+0,
+"zone"
+],
+[
+"optisigns-digitalsignage",
+"OptiSigns",
+"Digital Signage",
+"digital signage screens displays",
+0,
+"OptiSigns"
+],
+[
+"optoma-z28s",
+"Optoma",
+"Z28S; ZH400UST",
+"Projector",
+0,
+"optoma-z28s"
+],
+[
+"orei-matrix",
+"Orei",
+"HDMI MATRIX EXTENDER",
+"",
+0,
+"orei-matrix"
+],
+[
+"orfast-ndi",
+"Orfast",
+"NDI Viewer",
+"NDI",
+0,
+"orfast-ndi"
+],
+[
+"osee-gostream",
+"OSEE",
+"GoStream",
+"GoStream companion",
+1,
+"gostream"
+],
+[
+"osee-gostream-series",
+"OSEE",
+"GoStream_Series",
+"GoStream_Series",
+0,
+"gostream-series"
+],
+[
+"outline-newton",
+"Outline",
+"Newton",
+"audio matrix signal-routing hub",
+0,
+"Newton"
+],
+[
+"panasonic-ak-hrp1000",
+"Panasonic",
+"AK-HRP1000; AK-HRP1005",
+"ROP Camera",
+0,
+"Panasonic AK-HRP1000"
+],
+[
+"panasonic-avhs",
+"Panasonic",
+"AV-HS50 / AV-HS410 / AV-UHS500",
+"Vision Mixer Video Switcher",
+0,
+"av-hs"
+],
+[
+"panasonic-av-hs6000",
+"panasonic",
+"AV-HS6000",
+"Video Mixer",
+0,
+"AV-HS6000"
+],
+[
+"panasonic-av-hsw10",
+"Panasonic",
+"AV-HSW10",
+"Switcher",
+0,
+"AV-HSW10"
+],
+[
+"panasonic-ptz",
+"Panasonic",
+"AW-HE2; AW-HE35; AW-HE38; AW-HE40; AW-HE42; AW-HE48; AW-HE50; AW-HE58; AW-HE60; AW-HE65; AW-HE68; AW-HE70; AW-HE75; AW-HE120; AW-HE130; AW HEF5; AW-HN38; AW-HN40; AW-HN65; AW-HN70; AW-HR140; AW-SFU01; AK-UB300; AW-UE4; AW-UE63; AW-UE65; AW-UE70; AW-UE100; AW-UE150; AW-UE155; AW-UN70; AW-UN145",
+"ptz Camera",
+1,
+"Panasonic-PTZ"
+],
+[
+"panasonic-cameras",
+"Panasonic",
+"Cameras; AW-HE2; AW-HE20; AW-HE35; AW-HE38; AW-HE40; AW-HE42; AW-HE48; AW-HE50; AW-HE58; AW-HE60; AW-HE65; AW-HE68; AW-HE70; AW-HE75; AW-HE120; AW-HE130; AW-HE145; AW-HN38; AW-HN40; AW-HN65; AW-HN130; AW-HR140; AW-UE4; AW-UE5; AW-UE20; AW-UE30; AW-UE40; AW-UE50; AW-UE63; AW-UE65; AW-UE70; AW-UE80; AW-UE100; AW-UR100; AW-UE150; AW-UE150A; AW-UE155; AW-UE160; AW-UN70; AW-UN145; AK-UB10; AK-UB50; AK-UB300; AK-UBX100; AG-CX350; AG-CX200; AJ-UPX360; AJ-CX4000; AJ-UPX900; AG-UCK20; AG-MDC20",
+"Camera PTZ AW AJ AG AK CX UPX UB UE UN UR HE HN HR POVCAM UCK MDC",
+0,
+"Cameras"
+],
+[
+"panasonic-kairos",
+"Panasonic",
+"Kairos",
+"Software Vision Mixer",
+0,
+"kairos"
+],
+[
+"panasonic-lumix",
+"Panasonic",
+"Lumix",
+"Camera",
+0,
+"panasonic-lumix"
+],
+[
+"panasonic-mediaproductionsuite",
+"Panasonic",
+"Media Production Suite; Auto Framing Plugin; Auto Tracking Plugin; Video Mixer Plugin",
+"panasonic auto framing auto tracking video mixer camera tracking media production suite",
+0,
+"MPS"
+],
+[
+"panasonic-p2",
+"Panasonic",
+"P2; CX350; HC-X2; HC-X20",
+"Panasonic P2",
+0,
+"Panasonic-P2"
+],
+[
+"panasonic-projector",
+"Panasonic",
+"Projector",
+"Projector",
+0,
+"projector"
+],
+[
+"panasonic-camera-controller",
+"Panasonic",
+"Remote Camera Controller; AW-RP50; AW-RP60; AW-RP120; AW-RP150; AW-RP200",
+"PTZ Remote Camera Controller",
+0,
+"Remote Camera Controller"
+],
+[
+"panasonic-tv-th",
+"Panasonic",
+"TH-84EF1U; TH-75EF1U; TH-85EF1W; TH-75EF1W; TH-98SQ2HW; TH-86EQ2W; TH-86SQ2HW; TH-75EQ2W; TH-75SQ2HW; TH-65EQ2W; TH-65SQ2HW; TH-55EQ2W; TH-55SQ2HW; TH-50EQ2W; TH-50SQ2HW; TH-43EQ2W; TH-43SQ2HW; TH-86CQ1W; TH-75CQ1W; TH-65CQ1W; TH-55CQ1W; TH-50CQ1W; TH-43CQ1W; TH-49CQE1W",
+"Monitor TV Display",
+0,
+"panasonic-tv-th"
+],
+[
+"pangolin-beyond",
+"Pangolin",
+"Beyond",
+"OSC Laser Protocol",
+0,
+"Beyond"
+],
+[
+"pastebin-api",
+"Pastebin",
+"API",
+"",
+0,
+"Pastebin"
+],
+[
+"smokotnin-opensoundmeter",
+"Pavel Smokotnin",
+"Open Sound Meter",
+"",
+0,
+"Open Sound Meter"
+],
+[
+"peavy-ratc",
+"Peavy",
+"NION n3; NION n6; NION nE; NION nX",
+"Audio DSP Cobranet Dante",
+0,
+"RATCv1 / RATCv2"
+],
+[
+"phabrix-qx",
+"Phabrix",
+"QX12G",
+"",
+0,
+"phabrix-qx"
+],
+[
+"pharos-designer",
+"Pharos",
+"Designer Controller",
+"Pharos Designer Pharoscontrols",
+0,
+"designer"
+],
+[
+"binwiederhier-ntfy",
+"Philipp C. Heckel",
+"Ntfy",
+"notification push",
+0,
+"ntfy"
+],
+[
+"philips-hue",
+"Philips",
+"Philips Hue",
+"Philips Hue",
+0,
+"hue"
+],
+[
+"philips-sicp",
+"Philips",
+"SICProtocol",
+"Remote SICP Protocol",
+0,
+"philips sicp"
+],
+[
+"philips-wiz-bulbs",
+"Philips",
+"Wiz Bulbs",
+"philips wiz bulbs lighting",
+0,
+"philips-wiz-bulbs"
+],
+[
+"pixap-pixtimerpro",
+"piXap",
+"piXtimer Pro",
+"Software Timing",
+0,
+"piXtimer Pro"
+],
+[
+"pixelhue-liveproductionswitcher",
+"",
+"Pixelhue Live Production Switcher",
+"Pixelhue Production Switcher S16",
+0,
+"pixelhue-liveproductionswitcher"
+],
+[
+"pixelhue-f-series",
+"Pixelhue",
+"F4; F4Lite; F8",
+"Pixelhue F Series",
+0,
+"pixelhue-f-series"
+],
+[
+"pixelhue-mediaserver",
+"Pixelhue",
+"MS3; MS3 Pro",
+"Pixelhue Media-Server MS3 MS3 Pro",
+0,
+"Pixelhue-mediaserver"
+],
+[
+"pixelhue-switcher",
+"Pixelhue",
+"P10; P20; Q8; P80",
+"Pixelhue",
+0,
+"pixelhue"
+],
+[
+"pixotope-gateway",
+"Pixotope",
+"Pixotope",
+"virtual production AR broadcast graphics compositing",
+0,
+"Pixotope"
+],
+[
+"pkinc-trucue",
+"PK Inc",
+"TRUCUE",
+"Video Playout Playback OSC",
+0,
+"trucue"
+],
+[
+"pltech-kumatimer",
+"PL Tech",
+"KUMA Timer",
+"timer countdown http live broadcast kuma presenter",
+0,
+"KUMA Timer"
+],
+[
+"planningcenter-serviceslive",
+"Planning Center Online",
+"Services Live",
+"Show Control PCO",
+0,
+"services-live"
+],
+[
+"polecam-autopod",
+"Polecam",
+"Autopod+; Panapod",
+"camera elevation motor",
+0,
+"autopodplus"
+],
+[
+"PosiStageNet-protocol",
+"PosiStageNet",
+"PosiStageNet Protocol",
+"tracking position stage psn motion realtime",
+0,
+"psn"
+],
+[
+"powersoft-amplifiers",
+"Powersoft",
+"Amplifier",
+"audio amplifier powersoft pro-audio",
+0,
+"Powersoft"
+],
+[
+"presentationtools-aps",
+"PresentationTools",
+"Auto Presentation Switcher",
+"Presentation Show Control Software",
+0,
+"aps"
+],
+[
+"presentationtools-cuetimer",
+"PresentationTools",
+"CueTimer",
+"Presentation Timer Software",
+0,
+"cuetimer"
+],
+[
+"prinsvision-server",
+"",
+"Prins Vision Server",
+"grading color broadcast",
+0,
+"PV Server"
+],
+[
+"generic-swp08",
+"",
+"ProBel SW-P-08",
+"Router Matrix Broadcast Production SWP-08 SW-P08 SWP08 Pro-Bel",
+0,
+"SW-P-08"
+],
+[
+"prodlink-comms",
+"ProdLink",
+"Comms",
+"intercom comms production ptt push-to-talk prodlink",
+0,
+"ProdLink Comms"
+],
+[
+"prodlink-draw-on-slides",
+"ProdLink",
+"Draw on Slides",
+"drawing propresenter slides ndi overlay prodlink",
+0,
+"Draw on Slides"
+],
+[
+"protopie-bridge",
+"ProtoPie",
+"Bridge",
+"ProtoPie",
+0,
+"protopie-bridge"
+],
+[
+"prsi-ipower",
+"PRSI",
+"iPower PDU",
+"Power Control",
+0,
+"iPower"
+],
+[
+"generic-ptpv2-client",
+"",
+"PTP Monitor",
+"Precision Time Protocol IEEE 1588-2008 IEEE 1588-2019 IEEE 1588-2002 Dante",
+0,
+"PTPv2"
+],
+[
+"ptzoptics-superjoy",
+"PTZ Optics",
+"SuperJoy",
+"SuperJoy PTZ",
+0,
+"superjoy"
+],
+[
+"ptzoptics-visca",
+"PTZoptics",
+"VISCA",
+"Protocol Camera",
+0,
+"visca"
+],
+[
+"connect-webcaster",
+"Public-i",
+"Connect Webcaster",
+"Software",
+0,
+"webcaster"
+],
+[
+"purelink-pt-ma-hd44m",
+"purelink",
+"PT-MA-HD44M",
+"Video Matrix",
+0,
+"PT-MA-HD44M"
+],
+[
+"pushover-api",
+"Pushover",
+"Pushover",
+"Notifications",
+0,
+"Pushover"
+],
+[
+"pynch-nexa",
+"Pynch",
+"Nexa; EVS; XT; XS; LSM; Hyperdeck",
+"audioVideo EVS Server AV Hyperdeck",
+0,
+"nexa"
+],
+[
+"qsys-remote-control",
+"Q-SYS",
+"Q-Sys",
+"QSC QSYS QRC",
+0,
+"Q-SYS"
+],
+[
+"radiodj-rest",
+"RadioDJ",
+"REST API",
+"Software",
+0,
+"radiodj"
+],
+[
+"raspberry-gpio",
+"Raspberry Pi foundation",
+"RPi GPIO",
+"Raspberry Pi GPIO",
+0,
+"RPi GPIO"
+],
+[
+"rationalacoustics-smaart4",
+"Rational Acoustics",
+"Smaart Suite V9; Smaart LE V9; Smaart RT V9",
+"Audio",
+0,
+"Smaart-V4"
+],
+[
+"rationalacoustics-smaart3",
+"Rational Acoustics",
+"Smaart V8.3 - V8.5; Smaart Di 2.1 and newer",
+"Audio",
+0,
+"Smaart-V3"
+],
+[
+"reddotlogics-hdmimatrix",
+"Red Dot Logics",
+"RDL-MX4k",
+"HDMI matrix matrix 16x16 8x8 RDL red dot logics",
+0,
+"MX1616/MX88"
+],
+[
+"red-rcp2",
+"RED",
+"RCP2 Camera Control",
+"websocket Raptor R3D",
+0,
+"RCP2-Control"
+],
+[
+"renewedvision-propresenter",
+"Renewed Vision",
+"ProPresenter",
+"Software Presentation",
+1,
+"propresenter"
+],
+[
+"renewedvision-propresenter-api",
+"Renewed Vision",
+"ProPresenter API",
+"",
+0,
+"Propresenter-API"
+],
+[
+"renewedvision-pvp",
+"Renewed Vision",
+"PVP 3",
+"Software",
+0,
+"pvp"
+],
+[
+"resi-decoders",
+"Resi",
+"Decoder",
+"Protocol Software",
+0,
+"decoder"
+],
+[
+"resi-studio",
+"Resi",
+"Studio",
+"encoder living as one live streaming pushpay",
+0,
+"resi-studio"
+],
+[
+"resolume-arena",
+"Resolume",
+"Arena",
+"Video Software Graphics",
+0,
+"arena"
+],
+[
+"restream-api",
+"Restream",
+"API",
+"",
+0,
+"restream"
+],
+[
+"rgblink-mini",
+"RGBlink",
+"mini/mini+",
+"",
+0,
+"mini"
+],
+[
+"rgblink-x3",
+"RGBlink",
+"Venus X3",
+"rgblink X3 Venus",
+0,
+"X3"
+],
+[
+"rgblink-vsp628pro",
+"RGBlink",
+"VSP 628pro",
+"",
+0,
+"VSP 628pro"
+],
+[
+"riedel-smartpanel",
+"Riedel Communications",
+"Smart Panel",
+"intercom broadcast audio communications ptp nmos",
+0,
+"smartpanel"
+],
+[
+"riedel-mediornet",
+"Riedel",
+"Mediornet",
+"riedel mediornet mediorworks ember emberplus",
+0,
+"mediornet"
+],
+[
+"riedel-rrcs",
+"Riedel",
+"RRCS",
+"Intercom Artist Riedel Router Control System",
+0,
+"Riedel Router Control Software"
+],
+[
+"rme-totalmix",
+"",
+"RME TotalMix FX",
+"Audio Mixer OSC",
+0,
+"TotalMix"
+],
+[
+"rocosoft-ptzjoy",
+"Rocosoft",
+"PTZJoy",
+"Camera PTZ",
+0,
+"PTZJoy"
+],
+[
+"rogueamoeba-farrago",
+"Rogue Amoeba",
+"Farrago",
+"Audio",
+0,
+"farrago"
+],
+[
+"roku-tv",
+"Roku",
+"TV",
+"TV",
+0,
+"roku-tv"
+],
+[
+"roland-m5000",
+"Roland",
+"M-5000; M-200i (via serial bridge); M-300 (via serial bridge); M-380 (via serial bridge); M-400 (via serial bridge); M-480 (via serial bridge)",
+"Audio Console V-Mixer",
+0,
+"m5000"
+],
+[
+"roland-p20hd",
+"Roland",
+"P-20HD",
+"Video Replay",
+0,
+"p20"
+],
+[
+"roland-v1200hd",
+"Roland",
+"V-1200HD",
+"Video Switcher Vision Mixer",
+0,
+"v-1200hd"
+],
+[
+"roland-v160hd",
+"Roland",
+"V-160HD",
+"Vision Mixer Video Switcher",
+0,
+"v160hd"
+],
+[
+"roland-v600uhd",
+"Roland",
+"V-600UHD",
+"Vision Mixer",
+0,
+"v-600uhd"
+],
+[
+"roland-v60hd",
+"Roland",
+"V-60HD",
+"Vision Mixer Video Switcher",
+0,
+"v-60hd"
+],
+[
+"roland-v80hd",
+"Roland",
+"V-80HD",
+"Video Switcher Vision Mixer Streaming",
+0,
+"v80hd"
+],
+[
+"roland-vp42h",
+"Roland",
+"VP-42H",
+"Image Processing",
+0,
+"VP-42H"
+],
+[
+"roland-vr120hd",
+"Roland",
+"VR-120HD",
+"Video Switcher",
+0,
+"vr120hd"
+],
+[
+"roland-vr400uhd",
+"Roland",
+"VR-400UHD",
+"Vision Mixer",
+0,
+"vr-400uhd"
+],
+[
+"roland-vr50hd-mk2",
+"Roland",
+"VR-50HD MK II",
+"Vision Mixer",
+0,
+"vr50hd"
+],
+[
+"roland-xs42h",
+"Roland",
+"XS-42H",
+"Vision Mixer Matrix",
+0,
+"XS-42H"
+],
+[
+"roland-xs62s",
+"Roland",
+"XS-62S",
+"Vision Mixer Matrix",
+0,
+"xs-62s"
+],
+[
+"roland-xs84h",
+"Roland",
+"XS-82H; XS-83H; XS-84H",
+"Vision Mixer Video Switcher Matrix",
+0,
+"XS-84H"
+],
+[
+"rossvideo-caprica",
+"Ross Video",
+"Caprica",
+"Protocol Software",
+0,
+"Caprica"
+],
+[
+"rossvideo-nkrouter",
+"Ross Video",
+"NK Router",
+"Protocol Video Router Software",
+0,
+"nkrouter"
+],
+[
+"rossvideo-rosstalk",
+"Ross Video",
+"Rosstalk",
+"Protocol Vision Mixer Software",
+0,
+"rosstalk"
+],
+[
+"rossvideo-videoserver",
+"Ross Video",
+"Video Server",
+"mira tria kiva video server",
+0,
+"rossvideo-videoserver"
+],
+[
+"rossvideo-xpression",
+"Ross Video",
+"Xpression",
+"Graphics",
+0,
+"xpression"
+],
+[
+"rtw-touchmonitor",
+"RTW",
+"TMxCore; TouchControl 5; TouchMonitor 5",
+"",
+0,
+"TouchMonitor"
+],
+[
+"rundown-studio",
+"Rundown Studio",
+"Rundown Studio",
+"",
+0,
+"rundown-studio"
+],
+[
+"rode-rcv",
+"RØDE",
+"RØDECaster Video (RCV)",
+"Rode RØDE Rodecaster RØDECaster Rodecaster Video RØDECaster Video RCV",
+0,
+"RCV"
+],
+[
+"sain-smart-relay",
+"Sain Smart Relay",
+"4CH; 8CH; 16Ch",
+"Relay",
+0,
+"Sain Relay"
+],
+[
+"samsung-display",
+"Samsung",
+"MD Display",
+"Samsung Display MDC",
+0,
+"Samsung Display"
+],
+[
+"samsung-smarttv",
+"Samsung",
+"Smart TV",
+"",
+0,
+"samsung-smarttv"
+],
+[
+"samsung-tizenos",
+"Samsung",
+"TizenOS",
+"Samsung TizenOS TV Smart TV Webservices API",
+0,
+"samsung-tizenos"
+],
+[
+"sardiusmedia-sardiuslive",
+"",
+"Sardius Live",
+"live streaming events broadcast",
+0,
+"Sardius"
+],
+[
+"screencloud-controller",
+"Screencloud",
+"Controller",
+"screencloud channels screens controller",
+0,
+"Screencloud"
+],
+[
+"seervision-suite",
+"Seervision",
+"Suite",
+"seervision",
+0,
+"seervision"
+],
+[
+"sennheiser-digital6000",
+"Sennheiser",
+"EM 6000; EM 6000 Dante; L 6000",
+"RF Radio Microphone",
+0,
+"Digital 6000"
+],
+[
+"sennheiser-ewdx",
+"Sennheiser",
+"EM2; EM2 Dante; EM4; CHG70N; CHG70N-C",
+"EW DX EWDX",
+0,
+"sennheiser-ewdx"
+],
+[
+"sennheiser-spectera",
+"Sennheiser",
+"Spectera",
+"Audio Wireless RF Transmitter Receiver Dante MADI AoIp Microphone IEM",
+0,
+"spectera"
+],
+[
+"sevenpointtechnologies-7pointaudio",
+"Seven Point Technologies, LLC",
+"7 Point Audio",
+"Remote 7 Point Audio Sports DJ",
+0,
+"7PointAudio"
+],
+[
+"sgl-dct",
+"SGL",
+"DCT",
+"Slow Motion ATOMOne Dream Chip",
+0,
+"sgl-dct"
+],
+[
+"sharp-tv",
+"Sharp",
+"TV; PN-LE901",
+"Monitor TV Display",
+0,
+"Sharp-TV"
+],
+[
+"shelly-http",
+"Shelly",
+"Shelly 1; Shelly 2.5; Shelly Dimmer1/2; Shelly RGBW2",
+"Shelly Relay",
+0,
+"shelly"
+],
+[
+"shelly-ws",
+"Shelly",
+"Shelly Plus 1; Shelly Plus 1PM; Shelly Plus 2PM; Shelly Pro 1; Shelly Pro 2; Shelly Pro 2PM; Shelly Pro 3; Shelly Pro 4PM; Shelly Pro Dual Cover PM; Shelly Plus I4",
+"Shelly Relay",
+0,
+"shelly"
+],
+[
+"showcuesystems-scs",
+"Show Cue Systems",
+"SCS",
+"Software Show Control Video MIDI Lighting",
+0,
+"scs"
+],
+[
+"showtrak-server",
+"ShowTrak",
+"ShowTrak Server",
+"showtrak show control monitoring wake-on-lan",
+0,
+"ShowTrak"
+],
+[
+"shure-ani4in",
+"Shure",
+"ANI4IN; ANI4IN-BLOCK; ANI4IN-XLR",
+"Shure ANI4IN Dante Audio Network Interface",
+0,
+"ANI4IN"
+],
+[
+"shure-dca901",
+"Shure",
+"DCA901",
+"Mixer",
+0,
+"shure-dca901"
+],
+[
+"shure-dis-ccu",
+"Shure",
+"DIS CCU",
+"Microphone Audio",
+0,
+"dis-ccu"
+],
+[
+"shure-mxw",
+"Shure",
+"Microflex (MXW)",
+"Wireless Microphone",
+0,
+"shure-mxw"
+],
+[
+"shure-mxcw",
+"Shure",
+"Microflex Complete Wireless (MXCW)",
+"Wireless Discussion",
+0,
+"shure-mxcw"
+],
+[
+"shure-mxa910",
+"Shure",
+"MXA910; MXA920",
+"Shure Audio Intellimix Conference Microphone",
+0,
+"mxa"
+],
+[
+"shure-mxn5",
+"Shure",
+"MXN-5",
+"Shure Audio Intellimix Conference Speaker Dante",
+0,
+"mxn5"
+],
+[
+"shure-p300",
+"Shure",
+"P300",
+"Shure Audio Intellimix Conference DSP",
+0,
+"p300"
+],
+[
+"shure-psm1000",
+"Shure",
+"PSM1000",
+"Wireless IEM",
+0,
+"shure-psm1000"
+],
+[
+"shure-chargers",
+"Shure",
+"SBRC; SBC220; SBC240; SBC441; SBC840M",
+"Rack Charger Battery Charger Charger Chargers",
+0,
+"shure-chargers"
+],
+[
+"shure-scm820",
+"Shure",
+"SCM820",
+"Mixer",
+0,
+"shure-scm820"
+],
+[
+"shure-wireless",
+"Shure",
+"ULX-D; QLX-D; SLX-D; Axient Digital (AD)",
+"Wireless Microphone",
+0,
+"shure-wx"
+],
+[
+"sienna-ndimonitor",
+"Sienna",
+"NDI Monitor",
+"NDI Routing",
+0,
+"ndimonitor"
+],
+[
+"sikn-kerkomroep",
+"sikn",
+"kerkomroep",
+"sikn kerkomroep church",
+0,
+"sikn-kerkomroep"
+],
+[
+"simonhyde-piclock",
+"Simon Hyde",
+"PiClock",
+"Clock Software",
+0,
+"simonhyde-piclock"
+],
+[
+"singularlive-studio",
+"Singular.Live",
+"Studio",
+"Graphics",
+0,
+"singular"
+],
+[
+"skaarhoj-rawpanel",
+"SKAARHOJ",
+"Raw Panel",
+"Controller Unisketch Bluepill",
+0,
+"Raw Panel"
+],
+[
+"slack-webhooks",
+"Slack",
+"Webhooks",
+"messaging dm webhook workflow business",
+0,
+"slack"
+],
+[
+"stramatel-slvideosystem",
+"",
+"SLVideoSystem",
+"slvideo tcp shortcuts streamdeck",
+0,
+"slvideo"
+],
+[
+"smartavi-ipmatrix",
+"Smart-AVI",
+"MU-88; MXU-88; MXCORE",
+"Protocol Matrix",
+0,
+"matrix"
+],
+[
+"smartpi-eye",
+"",
+"SmartPi Eye",
+"",
+0,
+"smartpi-eye"
+],
+[
+"smodetech-smodelive",
+"Smode",
+"Smode Live",
+"Software Media Server",
+0,
+"Smode Live"
+],
+[
+"snapav-wattbox",
+"Snapav",
+"Wattbox",
+"snapav power wattbox",
+0,
+"snapav-wattbox"
+],
+[
+"snellwilcox-kahuna",
+"Snell & Wilcox",
+"Kahuna",
+"Production Switcher",
+0,
+"Snell & Wilcox Kahuna"
+],
+[
+"socialstream-ninja",
+"Social Stream",
+"Ninja",
+"Video Social Stream Chat",
+0,
+"socialstream"
+],
+[
+"softouch-easyworship",
+"Softouch Development Inc",
+"EasyWorship",
+"",
+0,
+"softouch-easyworship"
+],
+[
+"softron-movierecorder",
+"Softron",
+"MovieRecorder",
+"Recording Video",
+0,
+"MovieRecorder"
+],
+[
+"softron-multicamlogger",
+"Softron",
+"Multicam Logger",
+"Logging Multicam Production Vision Mixer",
+0,
+"MulticamLogger"
+],
+[
+"softron-mreplay",
+"Softron",
+"M|Replay",
+"Replay Video",
+0,
+"M|Replay"
+],
+[
+"softron-ontheairvideo",
+"Softron",
+"OnTheAir Video",
+"Playback Video Media",
+0,
+"otav"
+],
+[
+"softvelum-nimble-streamer",
+"Softvelum",
+"Nimble Streamer",
+"Streaming Server SRT RTMP",
+0,
+"nimble-streamer"
+],
+[
+"softvelum-wmspanel",
+"Softvelum",
+"WMSPanel",
+"",
+0,
+"wmspanel"
+],
+[
+"songbeamer-osc",
+"Songbeamer",
+"OSC",
+"Protocol OSC Songbeamer",
+0,
+"songbeamer-osc"
+],
+[
+"sononum-horae",
+"Sononum",
+"Horae",
+"Software Timecode",
+0,
+"horae"
+],
+[
+"sonoran-coyote",
+"Sonoran",
+"Coyote",
+"Vision Mixer Matrix",
+0,
+"coyote"
+],
+[
+"sonos-speakers",
+"Sonos",
+"Speakers",
+"Audio Media",
+0,
+"sonos-speakers"
+],
+[
+"sony-bravia",
+"Sony",
+"Bravia",
+"TV",
+0,
+"sony-bravia"
+],
+[
+"sony-bravia-simpleip",
+"Sony",
+"Bravia Simple IP",
+"Simple IP TV Television",
+0,
+"sony-bravia-simpleip"
+],
+[
+"sony-ptz",
+"Sony",
+"BRC-AM7; SRG-A40; SRG-A12; ILME-FR7",
+"sony camera ptz imaging video broadcast live auto framing tracking",
+0,
+"sony-ptz"
+],
+[
+"sony-broadcastmonitor",
+"Sony",
+"Professional Video Monitor",
+"Video Monitor Broadcast Production",
+0,
+"SonyMonitor"
+],
+[
+"sony-srg-a12",
+"Sony",
+"SRG-A12",
+"sony camera ptz visca broadcast streaming tracking",
+0,
+"SRG-A12"
+],
+[
+"sony-visca",
+"Sony",
+"VISCA",
+"Protocol Camera VISCA PTZ",
+0,
+"VISCA"
+],
+[
+"sony-serialtally",
+"Sony",
+"XVS 9000/8000/7000/6000; XVS-G1; MLS-X1",
+"vision mixer video switcher sony serial tally",
+0,
+"sony-switcher"
+],
+[
+"sony-cled",
+"Sony",
+"ZRCT-300",
+"Sony Crystal LED CLED ADCP dvLED",
+0,
+"ZRCT LED Controller"
+],
+[
+"sounddevices-pixnet",
+"Sound Devices",
+"PIXNET",
+"Recording",
+0,
+"pixnet"
+],
+[
+"soundcraft-ui",
+"Soundcraft",
+"Ui12; Ui16; Ui24R",
+"Audio",
+0,
+"soundcraftui"
+],
+[
+"soundtrack-remote",
+"Soundtrack Your Brand",
+"Remote",
+"Soundtrack Music Spotify",
+0,
+"soundtrack"
+],
+[
+"spacecommz-intercom",
+"Spacecommz.io",
+"SpaceCommz",
+"",
+0,
+"SpaceCommz"
+],
+[
+"itsblue-scstw",
+"",
+"Speedclimbing Stopwatch",
+"speed climbing stopwatch timer climbing scstw",
+0,
+"ScStw"
+],
+[
+"sportsmodule-rundown",
+"Sports Module",
+"Rundown",
+"rundown broadcast sportsmodule",
+0,
+"SM Rundown"
+],
+[
+"spotify-remote",
+"Spotify",
+"Web API and Controller",
+"Spotify",
+0,
+"Spotify"
+],
+[
+"spx-graphics-controller",
+"spx",
+"gc",
+"",
+0,
+"spx"
+],
+[
+"squared-powerlink",
+"Square D",
+"NF3500G4; NF3000G3; NF2000G3",
+"Powerlink G3 G4",
+0,
+"powerlink"
+],
+[
+"stageaudioworks-obs-multisite",
+"Stage Audio Works",
+"obs-multisite",
+"obs multisite church broadcast video stream",
+0,
+"obs-multisite"
+],
+[
+"stagetec-emberplus-avatus",
+"STAGETEC Official",
+"Ember+ Avatus",
+"ember emberplus avatus",
+0,
+"Ember+ Avatus"
+],
+[
+"stagetec-emberplus-nxct",
+"STAGETEC Official",
+"Ember+ NEXUS compact",
+"ember emberplus nexus compact",
+0,
+"Ember+ NEXUS compact"
+],
+[
+"stagetec-xci",
+"Stagetec",
+"XCI03",
+"Nexus Router SNMP Audio",
+0,
+"Stagetec XCI"
+],
+[
+"stagetec-rcp",
+"StageTec",
+"XDIP; NXC-T",
+"Dante Yamaha Nexus RCP",
+0,
+"stagetec-rcp"
+],
+[
+"stagetimerio-api",
+"stagetimer.io",
+"Stagetimer API",
+"Stagetimer stagetimer.io Timer Companion",
+0,
+"stagetimer"
+],
+[
+"streamlabs-desktop",
+"Streamlabs",
+"Desktop",
+"streaming recording scenes live",
+0,
+"slobs"
+],
+[
+"studiotech-dante",
+"Studio Technologies",
+"ST Dante Products",
+"Intercom Beltpack Party-Line IFB Talkback",
+0,
+"ST Dante"
+],
+[
+"studiocoast-vmix",
+"StudioCoast",
+"vMix",
+"Software Vision Mixer",
+0,
+"vmix"
+],
+[
+"stype-realline",
+"Stype",
+"RealLine",
+"Stype RealLine Tracking Camera Broadcast WebSocket Recording",
+0,
+"RealLine"
+],
+[
+"svt-bridge",
+"SVT",
+"Bridge",
+"",
+0,
+"svt-bridge"
+],
+[
+"symetrix-dsp",
+"Symetrix",
+"DSP",
+"Symetrix DSP Audio",
+0,
+"symetrix"
+],
+[
+"synq-dbt44",
+"Synq",
+"DBT-44",
+"audio dante osc matrix mute gain",
+0,
+"dbt44"
+],
+[
+"tagvs-mcs",
+"TAG Video Systems",
+"MCS",
+"",
+0,
+"tagvs-mcs"
+],
+[
+"talktome-intercom",
+"talktome",
+"talktome intercom",
+"intercom ptt companion talktome",
+0,
+"talktome"
+],
+[
+"tallyma-wirelesstally",
+"Tally-MA",
+"Wireless Tally",
+"wireless tally tally-ma",
+0,
+"Wireless Tally"
+],
+[
+"tascam-bdmp1",
+"Tascam",
+"BD-MP1",
+"Media",
+0,
+"bdmp1"
+],
+[
+"tascam-cd400u",
+"Tascam",
+"CD-400U; CD-400U DAB",
+"Hardware Audio CD Bluetooth USB Radio AM FM DAB SD",
+0,
+"CD-400U"
+],
+[
+"tascam-da-6400",
+"Tascam",
+"DA-6400; DA-6400dp",
+"Hardware Audio Recorder Dante MADI",
+0,
+"DA-6400"
+],
+[
+"tascam-cd",
+"Tascam",
+"SS-CDR250N; SS-R250N",
+"Hardware Audio CD Recorder SD USB",
+0,
+"SS-CDR250N"
+],
+[
+"tasmota-http",
+"Tasmota",
+"HTTP",
+"",
+0,
+"tasmota-http"
+],
+[
+"tcast-tcast",
+"TCast",
+"TCast",
+"broadcast playout video media",
+0,
+"TCast"
+],
+[
+"techministry-beacon",
+"Tech Ministry",
+"Beacon",
+"beacon notification",
+0,
+"beacon"
+],
+[
+"techministry-midirelay",
+"Tech Ministry",
+"MIDI Relay",
+"MIDI Relay",
+0,
+"midi-relay"
+],
+[
+"techministry-spotifycontroller",
+"Tech Ministry",
+"Spotify Controller",
+"Spotify Mac",
+0,
+"spotify-controller"
+],
+[
+"techministry-tallyarbiter",
+"Tech Ministry",
+"Tally Arbiter",
+"Tally Arbiter",
+0,
+"tallyarbiter"
+],
+[
+"techministry-timekeeper",
+"Tech Ministry",
+"TimeKeeper",
+"clock countdown timer",
+0,
+"timekeeper"
+],
+[
+"telegram-bot",
+"Telegram",
+"Bot",
+"Telegram Bot",
+0,
+"telegram"
+],
+[
+"telestream-prism",
+"Telestream",
+"Prism; MPI2; MPX2; MPD; MPP; MPS",
+"SDI 2110 Waveform Monitor",
+0,
+"Prism"
+],
+[
+"televic-dcerno",
+"Televic",
+"D-CERNO",
+"Microphone Audio",
+0,
+"d-cerno"
+],
+[
+"televic-confero",
+"Televic",
+"Plixus MME; Plixus AE-R; Plixus WAP; D-Cerno AE",
+"televic conferencing",
+0,
+"confero"
+],
+[
+"tellyo-streamstudio",
+"Tellyo",
+"Stream Studio",
+"Software Vision Mixer Cloud",
+0,
+"streamstudio"
+],
+[
+"telos-25-seven-program-delay-manager",
+"Telos",
+"25-Seven PDM/PDM II Broadcast Delay",
+"PDM PDM II Broadcast Delay TCP",
+0,
+"pdm"
+],
+[
+"telycam-ptz-ip-camera",
+"",
+"Telycam PTZ IP Camera",
+"camera ptz visca http",
+0,
+"Telycam PTZ"
+],
+[
+"teracom-tcw181b",
+"Teracom",
+"TCW181b Relay",
+"Relay",
+0,
+"TCW181b"
+],
+[
+"teradek-prism",
+"Teradek",
+"Prism; Prism Flex",
+"prism flex encoder",
+0,
+"prism"
+],
+[
+"teradek-vidiu",
+"Teradek",
+"VidiU",
+"Stream",
+0,
+"vidiu"
+],
+[
+"teradek-vidiux",
+"Teradek",
+"VidiU X",
+"vidiu encoder",
+0,
+"teradek-vidiux"
+],
+[
+"tesla-smart",
+"Tesla",
+"smart 8>1",
+"Matrix",
+0,
+"Tesla kvm"
+],
+[
+"tesmart-hdmimatrix",
+"TESMART",
+"HDMI Matrix (multiple variants)",
+"tesmart hdmi matrix",
+0,
+"tesmart"
+],
+[
+"textmebot-whatsappapi",
+"TextMeBot",
+"WhatsAppApi",
+"",
+0,
+"textmebot-whatsappapi"
+],
+[
+"theatrixx-xpresscue",
+"Theatrixx",
+"xPressCue",
+"Player Playback MediaPlayer Media Player xPressCue Theatrixx",
+0,
+"xPressCue"
+],
+[
+"thelightingcontroller",
+"thelightingcontroller.com, Chauvet, Showtec, Sweetlight",
+"QuickDMX, ShowXPress",
+"Lighting",
+0,
+"QuickDMX"
+],
+[
+"thingm-blink1",
+"ThingM",
+"Blink(1)",
+"LED Tally",
+0,
+"Blink-1"
+],
+[
+"tieline-gateway",
+"Tieline",
+"Gateway; Via",
+"",
+0,
+"Tieline"
+],
+[
+"trms-cablecast",
+"Tightrope Media Systems",
+"Cablecast",
+"",
+0,
+"Cablecast"
+],
+[
+"trms-mediascribe",
+"Tightrope Media Systems",
+"MediaScribe",
+"transcription captioning recording accessibility mediascribe trms",
+0,
+"MediaScribe"
+],
+[
+"timemachines-clock",
+"TimeMachines",
+"Clock",
+"clock timer",
+0,
+"tm-clock"
+],
+[
+"tinkerlist-cuez-automator",
+"TinkerList",
+"Cuez - Automator",
+"Running Order",
+0,
+"cuez-automator"
+],
+[
+"toggl-track",
+"Toggl",
+"Track",
+"Logging Timer Task Tracking Time Tracking Project Management",
+0,
+"toggl-track"
+],
+[
+"toolsonair-justincapture",
+"ToolsOnAir",
+"just:in Capture Solutions",
+"video capture ingest broadcast recording iso live postproduction aja blackmagic design rest api macos ndi baseband sdi s",
+0,
+"justin"
+],
+[
+"tplink-kasasmartbulb",
+"TP-Link",
+"Kasa Smart Bulb",
+"bulb kasa",
+0,
+"tplink-kasasmartbulb"
+],
+[
+"tplink-kasasmartdimmer",
+"TP-Link",
+"Kasa Smart Dimmer",
+"dimmer kasa",
+0,
+"tplink-kasasmartdimmer"
+],
+[
+"tplink-kasasmartplug",
+"TP-Link",
+"Kasa Smart Plug",
+"plug kasa",
+0,
+"tplink-kasasmartplug"
+],
+[
+"tplink-kasasmartstrip",
+"TP-Link",
+"Kasa Smart Strip",
+"strip led kasa",
+0,
+"tplink-kasasmartstrip"
+],
+[
+"tplink-taposmartplug",
+"TP-Link",
+"Tapo Smart Plug",
+"plug tapo outlet",
+0,
+"tplink-taposmartplug"
+],
+[
+"tractus-ndirouter",
+"Tractus Events",
+"Tractus Router for NDI",
+"NDI",
+0,
+"Router for NDI"
+],
+[
+"tslproducts-umdlistener",
+"TSL Products",
+"UMD Listener",
+"UMD Tally",
+0,
+"tslumd-listener"
+],
+[
+"tslproducts-umd",
+"TSL Products",
+"UMD protocol",
+"Protocol",
+0,
+"tsl-umd"
+],
+[
+"tslproducts-usp3",
+"TSL Products",
+"Universal Switch Panel",
+"DNF Controls GPIO GPI GPO Contact Closure",
+0,
+"usp"
+],
+[
+"tvone-calico",
+"tvONE",
+"CALICO",
+"",
+0,
+"CALICO Control"
+],
+[
+"tvone-corio",
+"TVOne",
+"Corio C2",
+"Video Scaler Video Converter Video Processing Format Conversion Video",
+0,
+"Corio"
+],
+[
+"twitch-api",
+"Twitch",
+"Twitch Chat & API",
+"Software Chat Stream",
+0,
+"Twitch"
+],
+[
+"twoloox-pandorasbox",
+"twoloox",
+"Pandoras Box",
+"pandoras box twoloox coolux",
+0,
+"pandorasbox"
+],
+[
+"ubiquiti-unifi",
+"Ubiquiti",
+"Unifi; USW",
+"Networking",
+0,
+"unifi"
+],
+[
+"uniliga-cg",
+"Uniliga",
+"Uniliga CG",
+"Uniliga, CG Software, Overlay Control, HTML Graphics",
+0,
+"Uniliga CG"
+],
+[
+"utahscientific-bpspanel",
+"Utah Scientific",
+"Routers; Controllers",
+"Router BPS BPS Panel RCP3 SCP4",
+0,
+"utah-scientific"
+],
+[
+"uts-remotevolume",
+"UTS",
+"Remote Volume",
+"Volume Loudness Speaker",
+0,
+"Remote Volume"
+],
+[
+"vaddio-ptz",
+"Vaddio",
+"PTZ Camera",
+"Camera",
+0,
+"vaddio-ptz"
+],
+[
+"vbaudio-voicemeeter",
+"VBAudio",
+"Voicemeeter",
+"voicemeeter audio",
+0,
+"Voicemeeter"
+],
+[
+"vdo-ninja",
+"VDO",
+"Ninja",
+"Video",
+0,
+"VDO.Ninja"
+],
+[
+"vdwall-lvp615",
+"VDWall",
+"LVP",
+"VDWall LVP615 Switch",
+0,
+"vdwall-lvp615"
+],
+[
+"ventuz-director",
+"Ventuz Technology",
+"Director",
+"Media Server Template Graphics",
+0,
+"Director"
+],
+[
+"vicreo-broadcast-titles",
+"VICREO",
+"Broadcast Titles",
+"broadcast graphics titles ndi excel",
+0,
+"vicreo-titles"
+],
+[
+"vicreo-colorboxcontrol",
+"VICREO",
+"ColorBox Control API",
+"fsi boxio color grading websocket",
+0,
+"ColorBox"
+],
+[
+"vicreo-display",
+"VICREO",
+"Display",
+"",
+0,
+"VICREO-Display"
+],
+[
+"vicreo-hotkey",
+"VICREO",
+"Listener",
+"Keyboard emulator",
+0,
+"VICREO-Listener"
+],
+[
+"vicreo-timer",
+"VICREO",
+"Timer",
+"timer countdown clock qlab pixera watchout sse rest",
+0,
+"vicreo-timer"
+],
+[
+"videopeople-podcastpilot",
+"Video People",
+"PodcastPilot",
+"podcast recording multicam switcher mac ndi decklink",
+0,
+"podcastpilot"
+],
+[
+"videowalrus-hyperremote",
+"Video Walrus",
+"HyperRemote",
+"hyperdeck blackmagic recording gang multi-deck",
+0,
+"HyperRemote"
+],
+[
+"videowalrus-simpleclock",
+"Video Walrus",
+"SimpleClock",
+"timer countdown clock presentation speaker",
+0,
+"SimpleClock"
+],
+[
+"videocom-zoom-bridge",
+"videocom",
+"Zoom Bridge",
+"NDI zoom",
+0,
+"zoombridge"
+],
+[
+"videolan-vlc",
+"VideoLAN",
+"VLC",
+"Video Software",
+0,
+"vlc"
+],
+[
+"videopathe-qmonitor",
+"Videopathe",
+"QMonitor",
+"video monitoring multiview clone ndi omt srt recording vu scopes waveform vectorscope diamond gamut tally lut",
+0,
+"QMonitor"
+],
+[
+"videopathe-qtimer",
+"Videopathe",
+"QTimer",
+"timer countdown chrono playlist show-control",
+0,
+"QTimer"
+],
+[
+"vimeo-livestreamstudio6",
+"Vimeo Livestream",
+"Studio 6",
+"Vinmeo Livestream Studio 6 Software Production Switcher",
+0,
+"studio"
+],
+[
+"vioso-exaplay",
+"vioso",
+"exaplay",
+"Timeline Control",
+0,
+"vioso-exaplay"
+],
+[
+"visionmill-nextnote",
+"Visionmill",
+"NextNote Display",
+"nextnote presentation osc teleprompter slides",
+0,
+"NextNote"
+],
+[
+"vislink-ulrx-ld",
+"Vislink",
+"ULRX-LD",
+"hcam ulrx",
+0,
+"ulrx"
+],
+[
+"vistream-online",
+"ViStream",
+"online",
+"ViStream streaming conference platform",
+0,
+"vistream"
+],
+[
+"visualproductions-bstation2",
+"Visual Productions",
+"B-Station",
+"Buttons",
+0,
+"B-Station 2"
+],
+[
+"visualproductions-cuety",
+"Visual Productions",
+"Cuety",
+"Cuety",
+0,
+"cuety"
+],
+[
+"visualproductions-iocore",
+"Visual Productions",
+"IoCore2",
+"GPIO relay tally",
+0,
+"iocore"
+],
+[
+"visualproductions-timecore",
+"Visual Productions",
+"Timecore",
+"timecode timer clock",
+0,
+"timecore"
+],
+[
+"vitec-avediaplayer9300-series",
+"Vitec",
+"AvediaPlayer r9300; AvediaPlayer r9310; AvediaPlayer m9305; AvediaPlayer m9325; AvediaPlayer m9325 Wi-Fi",
+"IPTV Digital Signage Exterity",
+0,
+"AvediaPlayer 9300 series"
+],
+[
+"vivitek-projector",
+"Vivitek",
+"Projector",
+"Projector Protocol",
+0,
+"vivitek"
+],
+[
+"vizio-smartcast",
+"VIZIO",
+"SmartCast",
+"TV",
+0,
+"smartcast"
+],
+[
+"vizrt-mosart",
+"Vizrt",
+"Mosart",
+"",
+0,
+"mosart"
+],
+[
+"vizrt-tcp-engine-trio",
+"vizRT",
+"Send Command Line",
+"Video Software Graphics TCP Command Line",
+0,
+"Viz Send CL"
+],
+[
+"voicemod-api",
+"Voicemod",
+"Voicemod",
+"Audio",
+0,
+"Voicemod"
+],
+[
+"vrowllabs-vrsync",
+"VR Owl Labs",
+"VR Sync",
+"VR Sync synchronized vr virtual reality",
+0,
+"VR Sync"
+],
+[
+"vyv-photon",
+"VYV",
+"Photon",
+"Media Server",
+0,
+"photon"
+],
+[
+"wakemedia-stagetime",
+"",
+"Wake Media StageTime",
+"timer countdown stopwatch clock stage speaker stagetime wake media",
+0,
+"StageTime"
+],
+[
+"waves-lv1",
+"Waves Audio",
+"LV1",
+"mixer audio lv1 waves osc myfoh mymon soundgrid",
+0,
+"LV1"
+],
+[
+"wearefalcon-falconplay",
+"We Are Falcon",
+"Falcon Play",
+"play playout vision mixer graphics",
+0,
+"FalconPlay"
+],
+[
+"webcomms-panel",
+"Web Comms",
+"Web Comms Panel",
+"Intercom Comms",
+0,
+"Web Comms"
+],
+[
+"wheatstone-wheatnet",
+"Wheatstone",
+"WheatNet IP",
+"ACI Blade UMIX IP-88a IP-88d IP-88ad IP-88e",
+0,
+"wheatstone-wheatnet"
+],
+[
+"wisycom-mat",
+"Wisycom",
+"MAT244; MAT288",
+"RF Radio Microphone",
+0,
+"Wisycom MAT"
+],
+[
+"wled-websocket",
+"WLED",
+"WLED",
+"WLED",
+0,
+"wled"
+],
+[
+"wordnik-api",
+"Wordnik",
+"API",
+"WOTD",
+0,
+"Wordnik"
+],
+[
+"workflownetwork-livetime",
+"Workflow Network",
+"LiveTime",
+"clock timer",
+0,
+"LiveTime"
+],
+[
+"wtav-watchout-director-control",
+"WTAV",
+"Watchout Director Control",
+"Dataton playback timeline cue scheduler media server show control",
+0,
+"WATCHOUT Director"
+],
+[
+"wyrestorm-matrix",
+"Wyrestorm",
+"Matrix Switcher",
+"hdmi matrix switcher",
+0,
+"wyrestorm-matrix"
+],
+[
+"wyrestorm-sw0402mv",
+"Wyrestorm",
+"SW-0402-MV",
+"Multiviewer",
+0,
+"wyrestorm"
+],
+[
+"xiamen-sprolink-vd-series",
+"Xiamen SPROLINK",
+"VD Series",
+"LED Processing",
+0,
+"sprolink-vd"
+],
+[
+"yamaha-rcp",
+"Yamaha",
+"RCP",
+"Yamaha Mixer CL QL PM TF DM RSio",
+0,
+"yamaha-rcp"
+],
+[
+"simedia-yesapi",
+"",
+"yes-api-gateway",
+"",
+0,
+"YAG"
+],
+[
+"yunxi-yolobox",
+"YoloLiv",
+"YoloBox",
+"streaming broadcast video switcher yolodeck",
+0,
+"YoloBox"
+],
+[
+"zenvideo-ndirouter",
+"ZEN",
+"NDIRouter",
+"Protocol Matrix",
+0,
+"NDIRouter"
+],
+[
+"zerodensity-realityhub",
+"Zerodensity",
+"RealityHub 1.3",
+"Zerodensity RealityHub",
+0,
+"RealityHub"
+],
+[
+"zinc-oscpoint",
+"Zinc",
+"OSCPoint",
+"PowerPoint OSC Open Sound Control",
+0,
+"OSCPoint"
+],
+[
+"zipsolutions-zipcaptions",
+"Zip Solutions",
+"Zip Captions",
+"captions accessibility zip captions text browser websocket",
+0,
+"Zip Captions"
+],
+[
+"zoom-cavzrc",
+"Zoom",
+"Custom AV for Zoom Rooms Controller",
+"zoom Zoom Rooms CAVZRC OSC",
+0,
+"cavzrc"
+],
+[
+"zoom-osc-iso",
+"Zoom",
+"OSC/ISO",
+"zoom ZoomOSC ZoomISO Zoom OSC Zoom ISO",
+0,
+"Zoom OSC / ISO module"
+],
+[
+"zoom-tiles",
+"Zoom",
+"Tiles",
+"ZoomTiles",
+0,
+"Zoom Tiles"
+],
+[
+"zowietek-api",
+"Zowietek",
+"ZowieBox; ZowiePTZ; ZowieCam",
+"Zowietek ZowieBox ZowiePTZ ZowieCam",
+0,
+"Zowietek API"
+],
+[
+"syncer-live",
+"Zusor",
+"Syncer.live",
+"sync",
+0,
+"syncer-live"
+]
+]

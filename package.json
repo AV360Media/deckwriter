@@ -1,0 +1,15 @@
+{
+  "name": "deckwright",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Design Stream Deck pages for Bitfocus Companion and export them as ready-to-import page files.",
+  "type": "module",
+  "scripts": {
+    "build": "node build.mjs",
+    "dev": "node build.mjs --watch",
+    "test": "node test/check.mjs",
+    "promote": "node build.mjs && node test/check.mjs && node build.mjs --prod && node test/check.mjs --prod",
+    "artifact": "node build.mjs --artifact"
+  },
+  "engines": { "node": ">=18" }
+}
