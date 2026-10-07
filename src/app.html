@@ -2482,14 +2482,15 @@ async function liveSync(force){
 // A drag in DeckWriter is mirrored in Companion as a swap (a move onto an empty key, a trade onto a full one),
 // or a copy for Option-drag, and the bookkeeping moves with it so the key isn't sent again.
 function liveMoved(pg,from,to,copy){
-  const c=S.live;if(!c?.on||pg.boot||!liveRT.status?.companion||!c.base?.[pg.id])return;
-  const num=livePageNum(pg),cp=liveRT.status.pages.find(p=>p.number===num);if(!cp)return;
-  const occ=new Set(cp.keys.map(([r,cc])=>r+","+cc)),owned=(c.owned[pg.id]??={}),base=c.base[pg.id];
-  const tracked=k=>owned[k]!=null||base[k]!=null;
-  // only mirror when Companion's keys are ones DeckWriter knows about, so an unrelated Companion button never moves
-  if(occ.has(from)&&!tracked(from))return;
-  if(occ.has(to)&&!tracked(to)&&!copy){/* a swap would carry an unknown button: let the normal update ask instead */return}
-  if(copy&&occ.has(to))return;
+  const c=S.live;if(!c?.on||pg.boot)return;
+  const why=m=>{liveRT.lastMsg=m;toast(m);renderLive()};
+  if(!liveRT.status?.companion)return why("Live: move not sent, the relay or Companion isn't connected");
+  const num=livePageNum(pg),cp=liveRT.status.pages.find(p=>p.number===num);if(!cp)return why(`Live: Companion has no page ${num}`);
+  const occ=new Set(cp.keys.map(([r,cc])=>r+","+cc)),owned=(c.owned[pg.id]??={}),base=(c.base[pg.id]??={});
+  // the dragged key is the same button in both apps; only a Companion button DeckWriter never had at the target stays put
+  const hadTo=copy?false:!!pg.buttons[from];
+  if(occ.has(to)&&!hadTo&&owned[to]==null&&base[to]==null)return why(`Live: ${keyCodeK(to)} has a different button in Companion, so it wasn't moved there`);
+  if(copy&&occ.has(to))return why(`Live: ${keyCodeK(to)} already has a button in Companion, so it wasn't copied`);
   const swapRec=(m)=>{const a=m[from],b=m[to];if(b!=null)m[from]=b;else delete m[from];if(a!=null)m[to]=a;else delete m[to]};
   const copyRec=(m)=>{if(m[from]!=null)m[to]=m[from];else delete m[to]};
   (copy?copyRec:swapRec)(owned);(copy?copyRec:swapRec)(base);
