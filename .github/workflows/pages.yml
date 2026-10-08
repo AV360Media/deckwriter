@@ -28,7 +28,7 @@ jobs:
       - name: Stage the site
         run: |
           mkdir _site
-          cp index.html index.test.html _site/
+          cp index.html index.test.html sw.js _site/
           touch _site/.nojekyll
       - uses: actions/upload-pages-artifact@v3
         if: github.ref == 'refs/heads/main'

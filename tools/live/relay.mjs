@@ -36,14 +36,15 @@ if (IDLE_EXIT > 0)
 		log(`DeckWriter hasn't checked in for ${Math.round(IDLE_EXIT / 60000)} min, stopping until Live is clicked again`)
 		process.exit(0)
 	}, 15000)
-const ALLOWED = [/^https:\/\/bryanchorton\.github\.io$/, /^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/, /^null$/]
-const VERSION = '1.8.0'
+const ALLOWED = [/^https:\/\/bryanchorton\.github\.io$/, /^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/]
+const VERSION = '1.9.0'
 
 const log = (...a) => console.log(new Date().toLocaleTimeString(), ...a)
 
 /* ---------- Companion connection ---------- */
 let ws = null
 let connected = false
+let pagesReady = false // Companion's page list has arrived since (re)connecting: until then nothing is changed
 let nextId = 1
 const pending = new Map()
 const subs = new Map()
@@ -58,6 +59,7 @@ function reconnectSoon(sock) {
 	if (sock !== ws) return // an old socket: its replacement is already in charge
 	if (connected) log('lost Companion, retrying…')
 	connected = false
+	pagesReady = false
 	for (const p of pending.values()) p.reject(new Error('Companion connection closed'))
 	pending.clear()
 	subs.clear()
@@ -113,12 +115,22 @@ function connect() {
 		else p.resolve(msg.result?.data)
 	}
 }
+// send to Companion only on an open socket (a closing one throws)
+function wsSend(obj) {
+	if (!ws || ws.readyState !== 1) throw new Error('Not connected to Companion')
+	ws.send(JSON.stringify(obj))
+}
 function call(path, input, method = 'mutation') {
 	return new Promise((resolve, reject) => {
 		if (!connected) return reject(new Error('Not connected to Companion'))
 		const id = nextId++
 		pending.set(id, { resolve, reject })
-		ws.send(JSON.stringify({ id, jsonrpc: '2.0', method, params: { path, input } }))
+		try {
+			wsSend({ id, jsonrpc: '2.0', method, params: { path, input } })
+		} catch (e) {
+			pending.delete(id)
+			return reject(e)
+		}
 		setTimeout(() => pending.has(id) && (pending.delete(id), reject(new Error(path + ' timed out'))), 10000)
 	})
 }
@@ -126,11 +138,16 @@ function call(path, input, method = 'mutation') {
 function subscribeStoppable(path, input, onData) {
 	const id = nextId++
 	subs.set(id, onData)
-	ws.send(JSON.stringify({ id, jsonrpc: '2.0', method: 'subscription', params: { path, input } }))
+	try {
+		wsSend({ id, jsonrpc: '2.0', method: 'subscription', params: { path, input } })
+	} catch (e) {
+		subs.delete(id)
+		throw e
+	}
 	return () => {
 		subs.delete(id)
 		try {
-			ws.send(JSON.stringify({ id, jsonrpc: '2.0', method: 'subscription.stop' }))
+			wsSend({ id, jsonrpc: '2.0', method: 'subscription.stop' })
 		} catch {}
 	}
 }
@@ -141,13 +158,18 @@ function streamPage(req, res, page, rows, cols) {
 	res.writeHead(200, { 'Content-Type': 'text/event-stream', 'Cache-Control': 'no-cache', Connection: 'keep-alive' })
 	res.write(': hello\n\n')
 	const stops = []
-	for (let r = 0; r < rows; r++)
-		for (let c = 0; c < cols; c++)
-			stops.push(
-				subscribeStoppable('preview.graphics.location', { location: { pageNumber: page, row: r, column: c } }, (d) => {
-					if (d && d.image) res.write(`data: ${JSON.stringify({ k: `${r},${c}`, img: d.image, used: !!d.isUsed })}\n\n`)
-				}),
-			)
+	try {
+		for (let r = 0; r < rows; r++)
+			for (let c = 0; c < cols; c++)
+				stops.push(
+					subscribeStoppable('preview.graphics.location', { location: { pageNumber: page, row: r, column: c } }, (d) => {
+						if (d && d.image) res.write(`data: ${JSON.stringify({ k: `${r},${c}`, img: d.image, used: !!d.isUsed })}\n\n`)
+					}),
+				)
+	} catch {
+		for (const stop of stops) stop()
+		return res.end() // Companion went away mid-way: the browser reconnects by itself
+	}
 	const ping = setInterval(() => res.write(': ping\n\n'), 15000)
 	const end = () => {
 		if (!liveStreams.has(end)) return
@@ -163,6 +185,7 @@ function streamPage(req, res, page, rows, cols) {
 }
 // a tap on DeckWriter's show-mode deck: press (down) and release (up), as Companion's own web buttons do
 async function pressKey(page, row, column, down) {
+	if (!pagesReady) throw new Error('Companion is still starting up')
 	if (!pages.order[page - 1]) throw new Error(`Companion has no page ${page}`)
 	await call('controls.hotPressControl', { location: { pageNumber: page, row, column }, direction: !!down, surfaceId: 'deckwriter' })
 }
@@ -179,7 +202,7 @@ async function restyleKey(page, row, column, bgcolor, color) {
 function subscribe(path, input, onData) {
 	const id = nextId++
 	subs.set(id, onData)
-	ws.send(JSON.stringify({ id, jsonrpc: '2.0', method: 'subscription', params: { path, input } }))
+	wsSend({ id, jsonrpc: '2.0', method: 'subscription', params: { path, input } })
 }
 // one-shot read: subscribe, keep the first "init", stop
 function readOnce(path, input, what) {
@@ -188,7 +211,7 @@ function readOnce(path, input, what) {
 		const done = (fn, v) => {
 			subs.delete(id)
 			try {
-				ws.send(JSON.stringify({ id, jsonrpc: '2.0', method: 'subscription.stop' }))
+				wsSend({ id, jsonrpc: '2.0', method: 'subscription.stop' })
 			} catch {}
 			fn(v)
 		}
@@ -196,7 +219,11 @@ function readOnce(path, input, what) {
 			const init = Array.isArray(d) ? d.find((x) => x?.type === 'init') : d?.type === 'init' ? d : null
 			if (init) done(resolve, init)
 		})
-		ws.send(JSON.stringify({ id, jsonrpc: '2.0', method: 'subscription', params: { path, input } }))
+		try {
+			wsSend({ id, jsonrpc: '2.0', method: 'subscription', params: { path, input } })
+		} catch (e) {
+			return done(reject, e)
+		}
 		setTimeout(() => subs.has(id) && done(reject, new Error(`reading ${what} timed out`)), 5000)
 	})
 }
@@ -206,6 +233,7 @@ function onPages(d) {
 	if (d.type === 'init') {
 		pages.order = d.order
 		pages.byId = structuredClone(d.pages)
+		pagesReady = true
 		return
 	}
 	if (d.updatedOrder) pages.order = d.updatedOrder
@@ -223,6 +251,7 @@ function onPages(d) {
 }
 // the boot screen page is never edited live, whatever DeckWriter asks
 function guardPage(page) {
+	if (!pagesReady) throw new Error('Companion is still starting up, try again in a moment')
 	const id = pages.order[page - 1]
 	if (!id) throw new Error(`Companion has no page ${page}`)
 	if (/^boot$/i.test(pages.byId[id]?.name || '')) throw new Error(`Companion page ${page} is the boot screen, which Live never changes`)
@@ -463,7 +492,9 @@ async function showPage(page) {
 	const pageId = pages.order[page - 1]
 	if (!pageId) throw new Error(`Companion has no page ${page}`)
 	const { info } = await readOnce('surfaces.watchSurfaces', undefined, 'the surfaces')
-	const groups = Object.values(info || {}).filter((g) => g?.surfaces?.some((x) => x.isConnected && x.enabled !== false))
+	// real decks only: Companion's on-screen emulators keep their own page
+	const physical = (x) => x.isConnected && x.enabled !== false && !/emulator/i.test(`${x.integrationType || ''} ${x.id || ''} ${x.type || ''}`)
+	const groups = Object.values(info || {}).filter((g) => g?.surfaces?.some(physical))
 	for (const g of groups) await call('surfaces.groupSetConfigKey', { groupId: g.id, key: 'last_page_id', value: pageId })
 	return groups.length
 }
@@ -473,9 +504,9 @@ async function showPage(page) {
 // Everything on the remote port needs the secret in the path; it can only show keys and press them.
 const REMOTE_PORT = Number(arg('--remote-port', 8791))
 const REMOTE_FILE = path.join(os.homedir(), 'Library', 'Application Support', 'DeckWriter', 'remote.json')
-const remote = { on: false, token: '', rows: 4, cols: 8, server: null }
+const remote = { on: false, token: '', rows: 4, cols: 8, server: null, error: '' }
 try {
-	Object.assign(remote, JSON.parse(fs.readFileSync(REMOTE_FILE, 'utf8')), { server: null })
+	Object.assign(remote, JSON.parse(fs.readFileSync(REMOTE_FILE, 'utf8')), { server: null, error: '' })
 } catch {}
 const saveRemote = () => {
 	try {
@@ -490,7 +521,7 @@ const lanAddresses = () =>
 		.flatMap(([name, list]) => (list || []).filter((a) => a.family === 'IPv4' && !a.internal).map((a) => ({ name, address: a.address })))
 		.sort((a, b) => (a.name === 'en0' ? -1 : b.name === 'en0' ? 1 : a.name.localeCompare(b.name)))
 const remoteUrls = () => lanAddresses().map((a) => `http://${a.address}:${REMOTE_PORT}/r/${remote.token}/`)
-const remoteInfo = () => ({ on: remote.on, urls: remote.on ? remoteUrls() : [], port: REMOTE_PORT })
+const remoteInfo = () => ({ on: remote.on, urls: remote.on && remote.server ? remoteUrls() : [], port: REMOTE_PORT, error: remote.error })
 function navKinds(controls) {
 	// page up / page down keys, so the remote pages itself instead of pressing them
 	const out = {}
@@ -531,15 +562,16 @@ function startRemoteServer() {
 				return res.end(REMOTE_HTML)
 			}
 			if (req.method === 'GET' && sub === '/pages') {
-				if (!connected) throw new Error('Companion is not running')
+				if (!connected || !pagesReady) throw new Error('Companion is not running')
 				return send(res, 200, { ok: true, rows: remote.rows, cols: remote.cols, pages: await serial(() => remotePages()) })
 			}
 			if (req.method === 'GET' && sub === '/live') {
-				if (!connected) throw new Error('Companion is not running')
+				if (!connected || !pagesReady) throw new Error('Companion is not running')
 				return streamPage(req, res, Number(u.searchParams.get('page')), remote.rows, remote.cols)
 			}
 			if (req.method === 'POST' && sub === '/press') {
 				const b = await body(req)
+				if (!connected || !pagesReady) throw new Error('Companion is not running')
 				await pressKey(Number(b.page), Number(b.row), Number(b.column), b.down)
 				return send(res, 200, { ok: true })
 			}
@@ -548,8 +580,10 @@ function startRemoteServer() {
 			send(res, 500, { ok: false, error: e.message })
 		}
 	})
+	remote.error = ''
 	remote.server.on('error', (e) => {
 		log('iPad remote could not start:', e.message)
+		remote.error = e.code === 'EADDRINUSE' ? `Port ${REMOTE_PORT} is already in use on this Mac` : e.message
 		remote.server = null
 	})
 	remote.server.listen(REMOTE_PORT, '0.0.0.0', () => log(`iPad remote on ${remoteUrls()[0] || 'port ' + REMOTE_PORT}`))
@@ -566,7 +600,7 @@ function setRemote({ on, reset, rows, cols }) {
 		remote.token = crypto.randomBytes(18).toString('base64url')
 		for (const end of liveStreams) end() // old link: drop anyone using it
 	}
-	remote.on = !!on
+	if (on !== undefined) remote.on = !!on
 	saveRemote()
 	if (remote.on) startRemoteServer()
 	else stopRemoteServer()
@@ -611,7 +645,7 @@ async function load(){try{const r=await fetch(base+"/pages",{cache:"no-store"}).
   const cur=pages[at]?.number;pages=r.pages;at=Math.max(0,pages.findIndex(p=>p.number===cur));stream()}
   catch(e){status(false,"Can't reach Companion ("+e.message+"). Retrying…");setTimeout(load,3000)}}
 function go(step){if(!pages.length)return;at=(at+step+pages.length)%pages.length;stream()}
-const press=(key,down)=>{const p=pages[at];const[r,c]=key.split(",").map(Number);fetch(base+"/press",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({page:p.number,row:r,column:c,down})}).catch(()=>{})};
+const press=(key,down)=>{const p=pages[at];if(!p)return;const[r,c]=key.split(",").map(Number);fetch(base+"/press",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({page:p.number,row:r,column:c,down})}).catch(()=>{})};
 let held=null;
 document.addEventListener("pointerdown",e=>{const t=e.target.closest(".k");if(!t)return;e.preventDefault();const key=t.dataset.k,kind=pages[at]?.nav?.[key];t.classList.add("down");
   if(kind){held={t,nav:1};go(kind==="pageup"?1:-1);return}held={t,key};press(key,true)},{passive:false});
@@ -627,7 +661,10 @@ load();
 let queue = Promise.resolve() // one change at a time, in order
 const serial = (fn) => (queue = queue.then(fn, fn))
 
+const HOST_OK = new RegExp(`^(127\\.0\\.0\\.1|localhost):${PORT}$`)
 function cors(req, res) {
+	// a web page that points its own name at 127.0.0.1 (DNS rebinding) still sends its own Host: refuse anything not addressed to this Mac
+	if (!HOST_OK.test(String(req.headers.host || ''))) return false
 	const origin = req.headers.origin
 	if (origin && !ALLOWED.some((re) => re.test(origin))) return false
 	if (origin) {
@@ -648,7 +685,10 @@ const body = (req) =>
 		let data = ''
 		req.on('data', (c) => {
 			data += c
-			if (data.length > 8e6) reject(new Error('too large'))
+			if (data.length > 8e6) {
+				reject(new Error('too large'))
+				req.destroy()
+			}
 		})
 		req.on('end', () => {
 			try {
@@ -670,7 +710,7 @@ http
 				return send(res, 200, {
 					ok: true,
 					relay: VERSION,
-					companion: connected,
+					companion: connected && pagesReady,
 					companionUrl: COMPANION,
 					remote: remoteInfo(),
 					pages: pages.order.map((id, i) => {
@@ -682,7 +722,7 @@ http
 				})
 			}
 			if (req.method === 'GET' && path === '/live') {
-				if (!connected) throw new Error('Not connected to Companion')
+				if (!connected || !pagesReady) throw new Error('Not connected to Companion')
 				const q = new URL(req.url, 'http://x').searchParams
 				return streamPage(req, res, Number(q.get('page')), Math.min(8, Number(q.get('rows')) || 4), Math.min(16, Number(q.get('cols')) || 8))
 			}
@@ -703,7 +743,7 @@ http
 				return send(res, 200, { ok: true, done })
 			}
 			if (req.method === 'GET' && path === '/pull') {
-				if (!connected) throw new Error('Not connected to Companion')
+				if (!connected || !pagesReady) throw new Error('Not connected to Companion')
 				const all = await serial(() => readAll())
 				return send(res, 200, { ok: true, ...all })
 			}

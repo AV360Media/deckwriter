@@ -311,6 +311,8 @@ dialog.drawer .pgrid{grid-template-columns:repeat(auto-fill,minmax(82px,1fr))}
 /* live mirror: Companion's own picture of each key, laid over DeckWriter's */
 .mirror-img{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:3;image-rendering:auto}
 .mirror-chip{display:inline-flex;align-items:center;gap:6px}
+.multi-win{position:fixed;top:12px;left:50%;transform:translateX(-50%);z-index:600;display:flex;gap:12px;align-items:center;max-width:min(720px,calc(100vw - 32px));background:#4a1015;color:#fff;border:1px solid #e5484d;border-radius:12px;padding:10px 14px;font-size:13px;box-shadow:0 8px 30px rgba(0,0,0,.5)}
+.multi-win[hidden]{display:none}
 .remote-box{border:1px solid var(--stroke);border-radius:12px;padding:8px 12px;margin:6px 0}
 .remote-box summary{cursor:pointer;font-weight:600}
 .remote-qr{display:flex;gap:14px;align-items:center;margin-top:8px}
@@ -576,6 +578,7 @@ dialog.live-panel{position:fixed;inset:64px 16px auto auto;margin:0;width:min(42
   <div class="field"><span class="label">Apply to</span><div class="seg" id="themeScope"><button data-v="page" aria-pressed="true">This page</button><button data-v="all" aria-pressed="false">All pages</button></div></div>
   <div class="dlg-foot"><button class="btn ghost" data-close>Cancel</button><button class="btn ghost" id="themeReset">Default colours</button><button class="btn primary" id="themeApply">Colour keys</button></div>
 </div></dialog>
+<div id="multiWin" class="multi-win" hidden><span>DeckWriter is also open in another window or tab. Whichever saves last replaces the other's work, and with Live on both send to Companion. Keep one editor open.</span><button class="btn sm" id="multiWinOk">OK</button></div>
 <div id="showMode" hidden><div class="sm-bar"><button id="smPrev" aria-label="Previous page">◀</button><span class="grow" id="smTitle"></span><button id="smNext" aria-label="Next page">▶</button><button id="smFull">Full screen</button><button id="smExit">Exit</button></div><div class="sm-grid" id="smGrid"></div><div class="sm-note" id="smNote"></div></div>
 <dialog id="bootDlg" class="wide"><div class="dlg">
   <h3>Boot screen</h3>
@@ -696,6 +699,12 @@ function sanitizeSvgInner(src){
 }
 
 /* ---------- state ---------- */
+// the separate Show window (?show=1) only shows and presses keys: it never saves over the editor's project
+const SHOW_ONLY=new URLSearchParams(location.search).has("show");
+let saveWarnAt=0;
+function saveNow(){if(SHOW_ONLY||!S)return true;
+  try{localStorage.setItem("deckwright.v1",JSON.stringify(S));return true}
+  catch(e){if(Date.now()-saveWarnAt>60000){saveWarnAt=Date.now();toast("Couldn't save: this browser's storage for DeckWriter is full. Use Save project to keep a copy, and remove large uploaded images.")}return false}}
 // Every new page starts with the owner's layout: page up, the page's title, page down, stacked in the first column
 // (B1, C1, D1 on an XL). The title key follows the page name when it's renamed.
 function starterKeys(name,d=dev()){const out={},nav={bg:"#1d2226",color:"#ffffff"};
@@ -740,12 +749,43 @@ function sampleProject(){
 
 let S; let selected=null; const multi=new Set(); const undoStack=[]; const redoStack=[]; let clipboard=null; let tab="look"; let stepIdx=0;
 // Live always starts off: it's switched on by hand, and then loads Companion before sending anything
-function load(){try{const raw=localStorage.getItem("deckwright.v1");if(raw){const s=JSON.parse(raw);if(s&&s.pages){fixTitleKeys(s);if(s.live)s.live.on=false;return s}}}catch(e){}return blankProject()}
+function load(){try{const raw=localStorage.getItem("deckwright.v1");if(raw){const s=normState(JSON.parse(raw));if(s){if(s.live)s.live.on=false;return s}}}catch(e){}return blankProject()}
+// make any saved or opened project safe to use: every page, key, step and feedback has the shape the app expects
+function normButton(b){
+  if(!b||typeof b!=="object")return null;
+  const d=newButton(),o={...d,...b};
+  if(!["button","pageup","pagedown","pagenum"].includes(o.kind))o.kind="button";
+  o.text=typeof o.text==="string"?o.text:String(o.text??"");
+  o.size=SIZES.includes(String(o.size))?String(o.size):"auto";
+  o.color=normHex(o.color)||"#ffffff";o.bg=normHex(o.bg)||"#000000";
+  o.align=/^(left|center|right):(top|center|bottom)$/.test(o.align)?o.align:"center:center";
+  o.image={...d.image,...(b.image&&typeof b.image==="object"?b.image:{})};
+  const L=x=>Array.isArray(x)?x.filter(a=>a&&typeof a==="object").map(a=>({...a,connection:String(a.connection??"internal"),action:String(a.action??""),options:a.options&&typeof a.options==="object"?a.options:{}})):[];
+  o.steps=(Array.isArray(b.steps)&&b.steps.length?b.steps:[{}]).map(st=>({down:L(st?.down),up:L(st?.up),rotL:L(st?.rotL),rotR:L(st?.rotR)}));
+  o.feedbacks=(Array.isArray(b.feedbacks)?b.feedbacks:[]).filter(f=>f&&typeof f==="object").map(f=>({...f,connection:String(f.connection??"internal"),type:String(f.type??""),options:f.options&&typeof f.options==="object"?f.options:{},style:f.style&&typeof f.style==="object"?f.style:{},inverted:!!f.inverted}));
+  return o;
+}
+function normState(s){
+  if(!s||typeof s!=="object"||!Array.isArray(s.pages))return null;
+  s.pages=s.pages.filter(p=>p&&typeof p==="object").map(p=>{const buttons={};
+    for(const[k,b]of Object.entries(p.buttons&&typeof p.buttons==="object"?p.buttons:{})){if(!/^\d+,\d+$/.test(k))continue;const nb=normButton(b);if(nb)buttons[k]=nb}
+    return{...p,id:String(p.id||uid()),name:typeof p.name==="string"?p.name:"Page",buttons}});
+  if(!s.pages.length)s.pages=[{id:uid(),name:"Page 1",buttons:{}}];
+  if(!DEVICES[s.device])s.device="xl";
+  s.pageIdx=Math.min(Math.max(0,s.pageIdx|0),s.pages.length-1);
+  s.connections=(Array.isArray(s.connections)?s.connections:[]).filter(c=>c&&c.id&&c.module).map(c=>({...c,id:String(c.id),label:String(c.label||c.module)}));
+  s.learned=s.learned&&typeof s.learned==="object"?s.learned:{};
+  fixTitleKeys(s);return s;
+}
 // a first visit starts empty (just the page keys every new page gets), not with example buttons
 function blankProject(){return{v:1,device:"xl",pageIdx:0,example:false,pages:[{id:uid(),name:"Page 1",buttons:starterKeys("Page 1",DEVICES.xl)}],connections:[],learned:{}}}
 // page title keys used to be auto-sized, which Companion blows up to fill the key: give them the nav keys' size
 function fixTitleKeys(s){for(const p of s.pages||[])for(const b of Object.values(p.buttons||{}))if(b?.pageTitle&&b.size==="auto")b.size="14"}
-function persist(){clearTimeout(persist.t);persist.t=setTimeout(()=>{try{localStorage.setItem("deckwright.v1",JSON.stringify(S))}catch(e){}},250);if(typeof scheduleLive==="function")scheduleLive()}
+function persist(){clearTimeout(persist.t);persist.t=setTimeout(()=>{persist.t=0;saveNow()},250);if(typeof scheduleLive==="function")scheduleLive()}
+// closing the tab inside the quarter-second save delay must not lose the last change
+addEventListener("storage",e=>{if(e.key!=="deckwright.v1"||SHOW_ONLY)return;const el=$("#multiWin");if(el)el.hidden=false});
+addEventListener("pagehide",()=>{if(persist.t){clearTimeout(persist.t);persist.t=0;saveNow()}});
+addEventListener("beforeunload",()=>{if(persist.t){clearTimeout(persist.t);persist.t=0;saveNow()}});
 function commit(fn,{renderArtFor}={}){undoStack.push(JSON.stringify(S));if(undoStack.length>80)undoStack.shift();redoStack.length=0;fn();persist();
   if(renderArtFor){refreshArt(renderArtFor).then(render)}else render()}
 // Live's record of what is on the Stream Deck is never rolled back: undo changes DeckWriter and Live sends the difference
@@ -899,6 +939,7 @@ function renderInspector(){
   if(!b){el.innerHTML=`<div class="insp-head"><h2>Empty ${dial?"dial":"key"}</h2><span class="pos">${posLabel}</span></div><div class="panel">
     <p class="empty-note">Describe what this ${dial?"dial":"key"} should do in the box above, or start it by hand.</p>
     <div style="display:flex;gap:6px;flex-wrap:wrap"><button class="btn primary" id="mkBtn">New ${dial?"dial":"button"}</button>${dial?"":`<button class="btn" id="presetsHere">${ico("layout-grid")}Browse presets</button>`}${dial?"":`<button class="btn" data-mk="pageup">Page up</button><button class="btn" data-mk="pagedown">Page down</button><button class="btn" data-mk="pagenum">Page number</button>`}${clipboard?`<button class="btn" id="pasteHere">Paste</button>`:""}</div></div>`;return}
+  if(stepIdx>=b.steps.length)stepIdx=0;
   const nActs=b.steps.reduce((n,s)=>n+s.down.length+s.up.length+s.rotL.length+s.rotR.length,0);
   let h=`<div class="insp-head"><h2>${esc(b.kind!=="button"?{pageup:"Page up",pagedown:"Page down",pagenum:"Page number"}[b.kind]:(showVars(b.text).replace(/\n/g," ")||"Untitled"))}</h2><span class="pos">${posLabel}</span></div>`;
   if(b.kind!=="button"){el.innerHTML=h+`<div class="panel"><p class="empty-note">Companion draws this navigation key itself. It switches pages on the surface it's pressed on.</p><div><button class="btn danger" id="clearKey">Clear key</button></div></div>`;return}
@@ -1060,7 +1101,7 @@ document.addEventListener("click",e=>{
   if(t.id==="dismissExample"){S.example=false;persist();render();return}
   if(t.id==="clearExample"){commit(()=>{S.pages=[{id:uid(),name:"Page 1",buttons:{}}];S.pageIdx=0;S.example=false;selected=null});return}
 });
-$("#newProject").onclick=e=>{const t=e.currentTarget;if(t.dataset.armed){commit(()=>{S={v:1,device:S.device,pageIdx:0,example:false,pages:[{id:uid(),name:"Page 1",buttons:starterKeys("Page 1")}],connections:[],learned:{}};selected=null});delete t.dataset.armed;t.textContent="Start over"}
+$("#newProject").onclick=e=>{const t=e.currentTarget;if(t.dataset.armed){if(S.live?.on){liveRT.pulled=false;toast("Started over. Live is now off: switch it on to load Companion again.")}commit(()=>{S={v:1,device:S.device,pageIdx:0,example:false,pages:[{id:uid(),name:"Page 1",buttons:starterKeys("Page 1")}],connections:[],learned:{}};selected=null});delete t.dataset.armed;t.textContent="Start over"}
   else{t.dataset.armed="1";t.textContent="Click again to wipe";setTimeout(()=>{delete t.dataset.armed;t.textContent="Start over"},2500)}};
 
 /* inspector inputs */
@@ -1624,8 +1665,9 @@ $("#saveProject").onclick=async()=>{const d=new Date(),p=n=>String(n).padStart(2
   const name=`${projectName().replace(/[^\w\- ]+/g,"").trim()||"DeckWriter project"} ${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())} ${p(d.getHours())}${p(d.getMinutes())}.json`;
   try{const r=await saveFile(name,projectData());toast(`Project saved as “${r==="renamed"?name+".json":name}”. Open it on any computer with Open project.`)}catch(e){if(e?.code!=="declined")toast("Couldn't save the project")}};
 function openProject(o,fileName){
-  const st=o?.deckwriter==="project"?o.state:o; // older saves were the bare project
-  if(!st||!Array.isArray(st.pages)||!st.pages.length||!st.pages.every(p=>p&&typeof p.buttons==="object"))throw new Error("not a project");
+  const raw=o?.deckwriter==="project"?o.state:o; // older saves were the bare project
+  if(!raw||!Array.isArray(raw.pages)||!raw.pages.length||!raw.pages.every(p=>p&&typeof p.buttons==="object"))throw new Error("not a project");
+  const st=normState(raw);
   if(!DEVICES[st.device])st.device=S.device;fixTitleKeys(st);
   st.connections??=[];st.learned??={};st.pageIdx=Math.min(Math.max(0,st.pageIdx|0),st.pages.length-1);delete st.live;
   if(fileName)st.projectName=fileName.replace(/(\.json)+$/i,"").replace(/\s+\d{4}-\d{2}-\d{2}( \d{4})?$/,"").trim();
@@ -2018,7 +2060,7 @@ async function liveWipe(pg){const c=liveCfg(),num=livePageNum(pg);if(!liveRT.pul
   try{for(const[r,col]of cp.keys){if(pg.buttons[r+","+col])continue;
       const res=await fetch(RELAY+"/clear",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({page:num,row:r,column:col})}).then(x=>x.json());
       if(!res.ok)throw new Error(res.error||"clear failed");n++}
-    c.owned[pg.id]={};c.base[pg.id]={};liveTarget(pg,num);try{localStorage.setItem("deckwright.v1",JSON.stringify(S))}catch(_){}
+    c.owned[pg.id]={};c.base[pg.id]={};liveTarget(pg,num);saveNow()
     liveRT.lastMsg=`Companion page ${num}: cleared ${n} key${n===1?"":"s"}`;toast(liveRT.lastMsg)}
   catch(e){liveRT.lastMsg="Live wipe failed: "+e.message;toast(liveRT.lastMsg)}
   finally{liveRT.busy=false;await relayStatus();render()}}
@@ -2597,7 +2639,6 @@ function renderShow(){
 }
 // Show mode opens as its own window (drag it to another screen, then Full screen). Must run straight from the click,
 // or the browser blocks the window; if it's blocked anyway, Show mode fills this window instead.
-const SHOW_ONLY=new URLSearchParams(location.search).has("show");
 function openShow(){
   const pg=page(),num=pg.boot?0:livePageNum(pg);
   const w=window.open(`${location.pathname}?show=1&page=${num}`,"deckwriter-show","popup=yes,width=1180,height=720");
@@ -2653,6 +2694,7 @@ async function renderRemote(){
   $("#remoteOn").checked=!!r?.on;$("#remoteOn").disabled=!liveRT.status;
   if(!liveRT.status){box.innerHTML=`<span class="empty-note">Needs the Live helper running.</span>`;return}
   if(!r?.on){box.innerHTML="";return}
+  if(r.error){box.innerHTML=`<span class="st-msg st-bad">The remote couldn't start: ${esc(r.error)}.</span>`;box.dataset.url="";return}
   if(!r.urls?.length){box.innerHTML=`<span class="empty-note">This Mac isn't on a network right now.</span>`;return}
   const url=r.urls[0];if(box.dataset.url===url)return;box.dataset.url=url;
   box.innerHTML=`<div class="remote-qr"><div class="qr" id="remoteQr"></div><div class="links"><span>Scan with the iPad camera, or type:</span>${r.urls.map(u=>`<code>${esc(u)}</code>`).join("")}
@@ -2669,6 +2711,7 @@ async function setRemote(body){
 }
 document.addEventListener("change",e=>{if(e.target.id==="remoteOn")setRemote({on:e.target.checked})});
 document.addEventListener("click",e=>{const t=e.target.closest("button")||e.target;
+  if(t.id==="multiWinOk"){$("#multiWin").hidden=true;return}
   if(t.id==="remoteCopy"){copyText(liveRT.status?.remote?.urls?.[0]||"","Remote link copied");return}
   if(t.id==="remoteReset"){setRemote({on:true,reset:true});return}
 });
@@ -2721,7 +2764,7 @@ async function liveTheme(changes){
       if(!res.ok)throw new Error(res.error||"restyle failed");
       const dw=(dwBy[pid]??=desiredControls(pi));const h=keyHash(dw[k]);
       if(res.done){owned[k]=h;delete base[k];n++}else skipped++}
-    try{localStorage.setItem("deckwright.v1",JSON.stringify(S))}catch(_){}
+    saveNow()
     liveRT.lastMsg=`Companion: recoloured ${n} key${n===1?"":"s"}`;if(n)toast(liveRT.lastMsg)}
   catch(e){liveRT.lastMsg="Live couldn't recolour: "+e.message;toast(liveRT.lastMsg)}
   finally{liveRT.busy=false;liveRT.dirty=false;scheduleLive()}
@@ -2746,11 +2789,14 @@ async function relayStatus(){
   try{const ctl=new AbortController();const t=setTimeout(()=>ctl.abort(),2500);
     const r=await fetch(RELAY+"/status",{signal:ctl.signal,cache:"no-store"});clearTimeout(t);
     liveRT.status=await r.json();liveRT.error=liveRT.status.companion?"":"The relay is running but can't reach Companion. Is Companion open?";
+    const p1=liveRT.status.companion&&liveRT.status.pages?.[0];if(p1)liveCfg().bootSeen=/^boot$/i.test(p1.name||"");
   }catch(_){liveRT.status=null;liveRT.error=window.claude?"Live can't run inside Claude. Open DeckWriter from bryanchorton.github.io/deckwriter.":liveRT.waking?"Starting the Live helper… (if Chrome asks, allow it to open DeckWriter Live)":"The Live helper isn't running on this Mac. If it's set up, click Live again; if not, set it up below."}
   renderLive();liveFollow();const w=$("#wipePage");if(w)w.disabled=!Object.keys(page().buttons).length&&!liveExtraKeys(page()).length;return liveRT.status;
 }
 // Live always follows the page you're on: DeckWriter's show pages line up with Companion's, in order, after the boot screen.
-const bootOnPage1=()=>!!((S.boot&&S.boot.mode!=="overlay")||S.pages.some(p=>p.boot)||/^boot$/i.test(liveRT.status?.pages?.find(p=>p.number===1)?.name||""));
+const bootOnPage1=()=>{const p1=liveRT.status?.pages?.length?liveRT.status.pages[0]:null;
+  const companionBoot=p1?/^boot$/i.test(p1.name||""):!!S.live?.bootSeen; // no page list right now: go by what was seen last
+  return !!((S.boot&&S.boot.mode!=="overlay")||S.pages.some(p=>p.boot)||companionBoot)};
 // Pages deleted or brought back (Cmd+Z) in DeckWriter are deleted or put back in Companion at the same number,
 // so DeckWriter's pages and Companion's keep lining up. Only for the same project: opening another one changes nothing here.
 const liveNames={}; // last known name of each page, so a deleted page can be matched to Companion's by name
@@ -2771,7 +2817,7 @@ async function livePagesChanged(before,after){
       if(num<=st.pages.length+1){await post("/insertpage",{page:num,name:pg?.name||""});done.push(`added page ${num}`);st=await relayStatus()}
       c.owned[id]={};c.base[id]={}}
     after.forEach((id,i)=>{c.at[id]=i+1+off}); // every page's Companion number after the shuffle
-    try{localStorage.setItem("deckwright.v1",JSON.stringify(S))}catch(_){}
+    saveNow()
     if(done.length){liveRT.lastMsg="Companion: "+done.join(", ");toast(liveRT.lastMsg)}}
   catch(e){liveRT.lastMsg="Live couldn't update Companion's pages: "+e.message;toast(liveRT.lastMsg)}
   finally{liveRT.busy=false;liveRT.shown=null;await relayStatus();scheduleLive();liveNavSync()}
@@ -2838,6 +2884,7 @@ async function livePull(why){
   liveRT.busy=true;let changed=0,pagesChanged=0;
   try{
     const r=await fetch(RELAY+"/pull",{cache:"no-store"}).then(x=>x.json());if(!r.ok)throw new Error(r.error||"no answer");
+    if(liveRT.dirty&&liveRT.pulled)return false; // you edited something while it loaded: your edit goes out first, the next load picks up the rest
     let conns=0;for(const[id,x]of Object.entries(r.connections||{}))if(!S.connections.some(k=>k.id===id)){S.connections.push({id,label:x.label,module:x.moduleId,fromCompanion:true});conns++}
     if(r.allConnections&&!live.list){live.list=r.allConnections} // Live knows Companion's connections even without linking them in Connections
     const cps=(r.pages||[]).filter(p=>!p.boot),boots=S.pages.filter(p=>p.boot),shows=S.pages.filter(p=>!p.boot),next=[],cpAt={};
@@ -2855,16 +2902,18 @@ async function livePull(why){
     // a page up/down key whose page number in Companion is out of date is left out, so liveNavSync re-sends it
     const inSync=()=>{S.pages.filter(p=>!p.boot).forEach((p,si)=>{const pi=S.pages.indexOf(p);c.at[p.id]=livePageNum(p);c.owned[p.id]={};
       c.base[p.id]=Object.fromEntries(Object.entries(desiredControls(pi)).filter(([k,ctl])=>cpAt[si+"|"+k]&&!((p.buttons[k]?.kind==="pageup"||p.buttons[k]?.kind==="pagedown")&&navTarget(ctl)!==navTarget(cpAt[si+"|"+k]))).map(([k,ctl])=>[k,keyHash(ctl)]))});
-      try{localStorage.setItem("deckwright.v1",JSON.stringify(S))}catch(_){}};
+      saveNow()};
     liveRT.pulled=true;
     if(!pagesChanged){inSync();if(conns)persist();liveRT.lastMsg="DeckWriter matches Companion";return false}
     commit(()=>{const cur=page()?.id;S.pages=[...boots,...next];if(!S.pages.length)S.pages=[{id:uid(),name:"Page 1",buttons:{}}];
       const i=S.pages.findIndex(p=>p.id===cur);S.pageIdx=Math.max(0,i>=0?i:Math.min(S.pageIdx,S.pages.length-1));S.example=false;
       if(selected&&!page().buttons[selected])selected=null});
     inSync(); // everything now matches Companion: nothing to send
+    // Undo can't go back past a load from Companion: it would send the old buttons back over what changed there
+    undoStack.length=0;redoStack.length=0;render();
     clearTimeout(liveRT.timer);liveRT.dirty=false;liveRT.shown=null;
     liveRT.lastMsg=`Loaded from Companion: ${changed} key${changed===1?"":"s"} on ${pagesChanged} page${pagesChanged===1?"":"s"}`;
-    toast(why==="focus"?`Updated from Companion (${changed} key${changed===1?"":"s"} changed there). ⌘Z to undo.`:liveRT.lastMsg+". ⌘Z to undo.");
+    toast(why==="focus"?`Updated from Companion: ${changed} key${changed===1?"":"s"} changed there.`:liveRT.lastMsg+".");
     return true;
   }catch(e){liveRT.lastMsg="Couldn't load from Companion: "+e.message;if(why!=="focus")toast(liveRT.lastMsg);return false}
   finally{liveRT.busy=false;renderLive();liveFollow();liveNavSync()}
@@ -2882,7 +2931,7 @@ async function liveNavSync(){
         const[r,col]=parseKey(k);
         const res=await fetch(RELAY+"/push",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({page:num,row:r,column:col,control:ctl})}).then(x=>x.json());
         if(!res.ok)throw new Error(res.error||"push failed");owned[k]=h;n++}}
-    try{localStorage.setItem("deckwright.v1",JSON.stringify(S))}catch(_){}
+    saveNow()
     if(n){liveRT.lastMsg=`Updated ${n} page up/down key${n===1?"":"s"} in Companion`;toast(liveRT.lastMsg)}}
   catch(e){liveRT.lastMsg="Live couldn't update page up/down keys: "+e.message;toast(liveRT.lastMsg)}
   finally{liveRT.busy=false;renderLive()}
@@ -2899,7 +2948,8 @@ function desiredControls(pi){
 }
 const ctlConnections=ctl=>{const ids=new Set();for(const st of Object.values(ctl.steps||{}))for(const set of Object.values(st.action_sets||{}))for(const a of set||[])if(a.instance!=="internal")ids.add(a.instance);for(const f of ctl.feedbacks||[])if(f.instance_id!=="internal")ids.add(f.instance_id);return[...ids]};
 async function liveSync(force){
-  const c=liveCfg();if(!c.on&&!force)return;if(!liveRT.pulled&&!force)return; // nothing goes out until Companion has been loadedif(liveRT.busy){liveRT.pending=true;return}
+  const c=liveCfg();if(!c.on&&!force)return;if(!liveRT.pulled&&!force)return; // nothing goes out until Companion has been loaded
+  if(liveRT.busy){liveRT.pending=true;return}
   const pg=page(),pi=S.pageIdx;if(pg.boot){liveRT.lastMsg="The boot page isn't sent live.";renderLive();return}
   const st=await relayStatus();if(!st?.companion){renderLive();return} // always fresh: Companion may have changed since the last poll
   if(liveRT.busy){liveRT.pending=true;return} // a move started while we were asking
@@ -2916,7 +2966,8 @@ async function liveSync(force){
     if(liveRT.busy){liveRT.pending=true;return}
   }
   {const b=liveBlocked(num,cp);if(b){liveRT.lastMsg=b;toast(b);renderLive();return}}
-  if(pg.name.trim()&&cp.name!==pg.name.trim())fetch(RELAY+"/pagename",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({page:num,name:pg.name.trim()})}).catch(()=>{});
+  if(/^boot$/i.test(pg.name.trim())){if(!liveRT.bootNameWarned){liveRT.bootNameWarned=true;toast("“Boot” is kept for the boot screen, so this page's name isn't sent to Companion. Pick another name.")}}
+  else if(pg.name.trim()&&cp.name!==pg.name.trim())fetch(RELAY+"/pagename",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({page:num,name:pg.name.trim()})}).catch(()=>{});
   liveTarget(pg,num);
   if(live.list){const known=new Set(live.list.map(x=>x.id)),ids=new Set();for(const ctl of Object.values(desiredControls(pi)))for(const id of ctlConnections(ctl))if(!known.has(id))ids.add(id);
     if(ids.size){const{done}=liveAutoLink([...ids]);if(done.length)toast("Linked "+done.join(", "))}}
@@ -2926,7 +2977,7 @@ async function liveSync(force){
     const want=desiredControls(pi),owned=(c.owned[pg.id]??={}),occupied=new Set(cp.keys.map(([r,cc])=>r+","+cc));
     // first time Live sees this page: remember what's already here and send nothing. Only later changes go out.
     if(!force&&!c.base[pg.id]&&!Object.keys(owned).length){c.base[pg.id]=Object.fromEntries(Object.entries(want).filter(([k])=>occupied.has(k)).map(([k,ctl])=>[k,keyHash(ctl)])); // keys Companion lacks still get sent
-      try{localStorage.setItem("deckwright.v1",JSON.stringify(S))}catch(_){}
+      saveNow()
       liveRT.lastMsg=`Watching this page. Keys you add or change go to Companion page ${num}.`;return}
     const base=force?{}:(c.base[pg.id]||{});
     const skip=(liveRT.skip[pg.id]??=new Set()),conflicts=[],problems=[];let sent=0,cleared=0;
@@ -2947,7 +2998,7 @@ async function liveSync(force){
       const[r,col]=parseKey(k);
       const res=await fetch(RELAY+"/clear",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({page:num,row:r,column:col})}).then(x=>x.json());
       if(!res.ok)throw new Error(res.error||"clear failed");delete owned[k];delete c.base[pg.id]?.[k];cleared++}
-    try{localStorage.setItem("deckwright.v1",JSON.stringify(S))}catch(_){}
+    saveNow()
     const parts=[];if(sent)parts.push(`sent ${sent} key${sent===1?"":"s"}`);if(cleared)parts.push(`cleared ${cleared}`);
     liveRT.lastMsg=parts.length?`Companion page ${num}: ${parts.join(", ")}`:"Up to date";
     if(problems.length)toast(problems[0]+(problems.length>1?` (+${problems.length-1} more)`:""));else if(sent||cleared)toast(liveRT.lastMsg);
@@ -2977,7 +3028,7 @@ async function liveMoved(pg,from,to,copy){
     const swapRec=(m)=>{const a=m[from],b=m[to];if(b!=null)m[from]=b;else delete m[from];if(a!=null)m[to]=a;else delete m[to]};
     const copyRec=(m)=>{if(m[from]!=null)m[to]=m[from];else delete m[to]};
     (copy?copyRec:swapRec)(owned);(copy?copyRec:swapRec)(base);
-    try{localStorage.setItem("deckwright.v1",JSON.stringify(S))}catch(_){}
+    saveNow()
     const[fr,fc]=parseKey(from),[tr,tc]=parseKey(to);
     const res=await fetch(RELAY+"/transfer",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({page:num,op:copy?"copy":"swap",from:{row:fr,column:fc},to:{row:tr,column:tc}})}).then(r=>r.json());
     if(!res.ok)throw new Error(res.error);
@@ -3095,5 +3146,7 @@ setTimeout(startCompanionLink,300);
 render();
 // wait for lucide (it loads before this script, but art for the sample needs it)
 refreshAllArt();
+// keep a copy of DeckWriter on this computer so it opens at a venue without internet (see sw.js)
+if("serviceWorker"in navigator&&!window.claude&&(location.protocol==="https:"||location.hostname==="localhost"))navigator.serviceWorker.register("./sw.js").catch(()=>{});
 })();
 </script>
