@@ -36,8 +36,8 @@ if (IDLE_EXIT > 0)
 		log(`DeckWriter hasn't checked in for ${Math.round(IDLE_EXIT / 60000)} min, stopping until Live is clicked again`)
 		process.exit(0)
 	}, 15000)
-const ALLOWED = [/^https:\/\/bryanchorton\.github\.io$/, /^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/]
-const VERSION = '1.9.0'
+const ALLOWED = [/^https:\/\/av360media\.github\.io$/, /^https:\/\/bryanchorton\.github\.io$/, /^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/] // old address kept only during the move to AV360Media
+const VERSION = '1.9.1'
 
 const log = (...a) => console.log(new Date().toLocaleTimeString(), ...a)
 

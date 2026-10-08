@@ -65,7 +65,7 @@ check('boot trigger cannot overlap itself', () => scripts[0].includes('condition
 
 import { execFileSync } from 'node:child_process'
 check('live relay script parses', () => execFileSync(process.execPath, ['--check', join(root, 'tools/live/relay.mjs')]) !== undefined)
-check('live relay only accepts DeckWriter origins', () => readFileSync(join(root, 'tools/live/relay.mjs'), 'utf8').includes("const ALLOWED = [/^https:\\/\\/bryanchorton\\.github\\.io$/"))
+check('live relay only accepts DeckWriter origins', () => readFileSync(join(root, 'tools/live/relay.mjs'), 'utf8').includes("const ALLOWED = [/^https:\\/\\/av360media\\.github\\.io$/"))
 check('live moves never use the deleting moveControl', () => !readFileSync(join(root, 'tools/live/relay.mjs'), 'utf8').includes("call('controls.moveControl'"))
 check('live never sends to the boot screen page', () => scripts[0].includes('{const b=liveBlocked(num,cp);if(b){liveRT.lastMsg=b') && scripts[0].includes('{const b=liveBlocked(num,cp);if(b)return why(b)}'))
 check('undo never rolls back what Live sent', () => scripts[0].includes('S=JSON.parse(json);if(live)S.live=live'))
