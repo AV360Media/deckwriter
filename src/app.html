@@ -311,6 +311,13 @@ dialog.drawer .pgrid{grid-template-columns:repeat(auto-fill,minmax(82px,1fr))}
 /* live mirror: Companion's own picture of each key, laid over DeckWriter's */
 .mirror-img{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:3;image-rendering:auto}
 .mirror-chip{display:inline-flex;align-items:center;gap:6px}
+.remote-box{border:1px solid var(--stroke);border-radius:12px;padding:8px 12px;margin:6px 0}
+.remote-box summary{cursor:pointer;font-weight:600}
+.remote-qr{display:flex;gap:14px;align-items:center;margin-top:8px}
+.remote-qr .qr{background:#fff;padding:8px;border-radius:10px;line-height:0}
+.remote-qr .qr svg{width:150px;height:150px}
+.remote-qr .links{display:flex;flex-direction:column;gap:6px;min-width:0;font-size:12px}
+.remote-qr .links code{word-break:break-all}
 .mirror-chip .live-dot{width:7px;height:7px;border-radius:50%;background:#e5484d;box-shadow:0 0 0 3px rgba(229,72,77,.25)}
 /* show mode: a full-screen deck that presses keys in Companion */
 #showMode{position:fixed;inset:0;z-index:500;background:#050607;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;padding:16px;touch-action:none;user-select:none;-webkit-user-select:none}
@@ -546,6 +553,11 @@ dialog.live-panel{position:fixed;inset:64px 16px auto auto;margin:0;width:min(42
   <div class="live-status" id="liveStatus"></div>
   <div id="liveSetup"></div>
   <div class="live-row"><span class="label">This page goes to</span><b id="liveTargetInfo"></b></div>
+  <details class="remote-box" id="remoteBox"><summary>iPad remote</summary>
+    <p class="empty-note" style="margin:6px 0">Press your buttons from an iPad or phone on the same network. Scan the code with the iPad's camera, then Share › Add to Home Screen for a full-screen remote. The link is secret and can only show and press keys.</p>
+    <label class="check live-switch"><input type="checkbox" id="remoteOn"> iPad remote on</label>
+    <div id="remoteInfo"></div>
+  </details>
   <label class="check live-switch"><input type="checkbox" id="liveOn"> Live updates on</label>
   <ul class="live-rules">
     <li>DeckWriter loads your pages from Companion when Live starts, and again whenever you come back to this window, so edits made in Companion show up here.</li>
@@ -2633,6 +2645,34 @@ document.addEventListener("click",e=>{const t=e.target.closest("button")||e.targ
   if(t.id==="smNext"){showPage(1);return}
 });
 
+/* ---------- iPad remote (served by the relay on the local network) ---------- */
+let qrLib=null;
+const loadQR=()=>qrLib||(qrLib=new Promise((ok,no)=>{const sc=document.createElement("script");sc.src="https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js";sc.onload=()=>ok(window.qrcode);sc.onerror=no;document.head.appendChild(sc)}));
+async function renderRemote(){
+  const box=$("#remoteInfo");if(!box)return;const r=liveRT.status?.remote;
+  $("#remoteOn").checked=!!r?.on;$("#remoteOn").disabled=!liveRT.status;
+  if(!liveRT.status){box.innerHTML=`<span class="empty-note">Needs the Live helper running.</span>`;return}
+  if(!r?.on){box.innerHTML="";return}
+  if(!r.urls?.length){box.innerHTML=`<span class="empty-note">This Mac isn't on a network right now.</span>`;return}
+  const url=r.urls[0];if(box.dataset.url===url)return;box.dataset.url=url;
+  box.innerHTML=`<div class="remote-qr"><div class="qr" id="remoteQr"></div><div class="links"><span>Scan with the iPad camera, or type:</span>${r.urls.map(u=>`<code>${esc(u)}</code>`).join("")}
+    <span class="empty-note">If two addresses show, use the one on the same Wi-Fi as the iPad. The Mac may ask to allow incoming connections: allow it.</span>
+    <div><button class="btn sm" id="remoteCopy">Copy link</button> <button class="btn sm ghost" id="remoteReset" title="Makes a new secret link; devices using the old one stop working">New link</button></div></div></div>`;
+  try{const q=(await loadQR())(0,"M");q.addData(url);q.make();$("#remoteQr").innerHTML=q.createSvgTag({cellSize:4,margin:0,scalable:true})}catch(_){$("#remoteQr").textContent="(QR code unavailable: type the link)"}
+}
+async function setRemote(body){
+  const d=dev();
+  try{const r=await fetch(RELAY+"/remote",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({rows:d.rows,cols:d.cols,...body})}).then(x=>x.json());if(!r.ok)throw new Error(r.error);
+    if(liveRT.status)liveRT.status.remote={on:r.on,urls:r.urls,port:r.port};$("#remoteInfo").dataset.url="";renderRemote();
+    toast(r.on?(body.reset?"New remote link made: scan the new code":"iPad remote on: scan the code with your iPad"):"iPad remote off")}
+  catch(e){toast("Couldn't change the iPad remote: "+e.message)}
+}
+document.addEventListener("change",e=>{if(e.target.id==="remoteOn")setRemote({on:e.target.checked})});
+document.addEventListener("click",e=>{const t=e.target.closest("button")||e.target;
+  if(t.id==="remoteCopy"){copyText(liveRT.status?.remote?.urls?.[0]||"","Remote link copied");return}
+  if(t.id==="remoteReset"){setRemote({on:true,reset:true});return}
+});
+
 /* ---------- colour by app ---------- */
 const THEME_DEFAULTS={"bmd-atem":"#b3261e","resolume-arena":"#6b2fb3","studiocoast-vmix":"#1f5fbf","zinc-oscpoint":"#c4501b","imimot-mitti":"#0f8a7e","obs-studio":"#3d4bb8",internal:"#3a3f47"};
 const THEME_SPARE=["#8a6d1a","#1d7a46","#9b2f6e","#2f6f8f","#7a4b2a","#4f5b16"];
@@ -2750,7 +2790,7 @@ function liveAutoLink(ids){const done=[],unsure=[];
   return{done,unsure}}
 const BUILD="dev";
 function renderLive(){
-  const bs=$("#buildStamp");if(bs)bs.textContent="Build "+BUILD;
+  const bs=$("#buildStamp");if(bs)bs.textContent="Build "+BUILD;if($("#liveDlg")?.open)renderRemote();
   const c=liveCfg(),st=liveRT.status,ok=!!(st&&st.companion),pg=page();
   const btn=$("#liveBtn");if(btn){btn.classList.toggle("on",c.on&&ok);btn.classList.toggle("ready",!c.on&&ok);btn.classList.toggle("problem",c.on&&!ok);
     $("#liveLabel").textContent=c.on?(ok?`Live · page ${livePageNum(pg)}`:"Live · offline"):"Live"}

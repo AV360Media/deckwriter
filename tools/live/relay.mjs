@@ -15,6 +15,10 @@
 // Built against Companion 5.0.x's internal API (controls.resetControl, controls.styles.*,
 // controls.entities.*, controls.steps.add, pages.watch). Companion may change these between versions.
 import http from 'node:http'
+import os from 'node:os'
+import fs from 'node:fs'
+import path from 'node:path'
+import crypto from 'node:crypto'
 
 const arg = (name, def) => {
 	const i = process.argv.indexOf(name)
@@ -27,12 +31,13 @@ const IDLE_EXIT = Number(arg('--idle-exit', 0)) * 1000
 let lastHeardFromDeckWriter = Date.now()
 if (IDLE_EXIT > 0)
 	setInterval(() => {
+		if (remote.on) return // the iPad remote is switched on: stay up for it
 		if (Date.now() - lastHeardFromDeckWriter < IDLE_EXIT) return
 		log(`DeckWriter hasn't checked in for ${Math.round(IDLE_EXIT / 60000)} min, stopping until Live is clicked again`)
 		process.exit(0)
 	}, 15000)
 const ALLOWED = [/^https:\/\/bryanchorton\.github\.io$/, /^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/, /^null$/]
-const VERSION = '1.7.1'
+const VERSION = '1.8.0'
 
 const log = (...a) => console.log(new Date().toLocaleTimeString(), ...a)
 
@@ -463,6 +468,161 @@ async function showPage(page) {
 	return groups.length
 }
 
+/* ---------- iPad remote: a page served to the local network, behind a secret link ---------- */
+// DeckWriter (an https site) can't reach this Mac from another device, so the relay serves the remote page itself.
+// Everything on the remote port needs the secret in the path; it can only show keys and press them.
+const REMOTE_PORT = Number(arg('--remote-port', 8791))
+const REMOTE_FILE = path.join(os.homedir(), 'Library', 'Application Support', 'DeckWriter', 'remote.json')
+const remote = { on: false, token: '', rows: 4, cols: 8, server: null }
+try {
+	Object.assign(remote, JSON.parse(fs.readFileSync(REMOTE_FILE, 'utf8')), { server: null })
+} catch {}
+const saveRemote = () => {
+	try {
+		fs.mkdirSync(path.dirname(REMOTE_FILE), { recursive: true })
+		fs.writeFileSync(REMOTE_FILE, JSON.stringify({ on: remote.on, token: remote.token, rows: remote.rows, cols: remote.cols }))
+	} catch (e) {
+		log('could not save remote settings:', e.message)
+	}
+}
+const lanAddresses = () =>
+	Object.entries(os.networkInterfaces())
+		.flatMap(([name, list]) => (list || []).filter((a) => a.family === 'IPv4' && !a.internal).map((a) => ({ name, address: a.address })))
+		.sort((a, b) => (a.name === 'en0' ? -1 : b.name === 'en0' ? 1 : a.name.localeCompare(b.name)))
+const remoteUrls = () => lanAddresses().map((a) => `http://${a.address}:${REMOTE_PORT}/r/${remote.token}/`)
+const remoteInfo = () => ({ on: remote.on, urls: remote.on ? remoteUrls() : [], port: REMOTE_PORT })
+function navKinds(controls) {
+	// page up / page down keys, so the remote pages itself instead of pressing them
+	const out = {}
+	for (const [r, row] of Object.entries(controls || {}))
+		for (const [c, ctl] of Object.entries(row || {})) {
+			if (!ctl) continue
+			if (ctl.type === 'pageup' || ctl.type === 'pagedown') {
+				out[`${r},${c}`] = ctl.type
+				continue
+			}
+			const txt = (ctl.style?.layers || []).find((l) => l.type === 'text')?.text
+			const t = typeof txt === 'object' && txt ? txt.value : ctl.style?.text
+			const kind = { '▲\nPAGE UP': 'pageup', '▼\nPAGE DOWN': 'pagedown' }[t]
+			const acts = Object.values(ctl.steps || {}).flatMap((s) => s.action_sets?.down || [])
+			if (kind && acts.length === 1 && (acts[0].definitionId || acts[0].action) === 'set_page') out[`${r},${c}`] = kind
+		}
+	return out
+}
+async function remotePages() {
+	const all = await readAll()
+	return all.pages.filter((p) => !p.boot).map((p) => ({ number: p.number, name: p.name, nav: navKinds(p.controls) }))
+}
+function startRemoteServer() {
+	if (remote.server) return
+	remote.server = http.createServer(async (req, res) => {
+		lastHeardFromDeckWriter = Date.now()
+		const u = new URL(req.url, 'http://x')
+		const m = /^\/r\/([A-Za-z0-9_-]+)(\/.*)$/.exec(u.pathname)
+		const ok = m && m[1].length === remote.token.length && crypto.timingSafeEqual(Buffer.from(m[1]), Buffer.from(remote.token))
+		if (!remote.on || !ok) {
+			res.writeHead(404, { 'Content-Type': 'text/plain' })
+			return res.end('Not found')
+		}
+		const sub = m[2]
+		try {
+			if (req.method === 'GET' && sub === '/') {
+				res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' })
+				return res.end(REMOTE_HTML)
+			}
+			if (req.method === 'GET' && sub === '/pages') {
+				if (!connected) throw new Error('Companion is not running')
+				return send(res, 200, { ok: true, rows: remote.rows, cols: remote.cols, pages: await serial(() => remotePages()) })
+			}
+			if (req.method === 'GET' && sub === '/live') {
+				if (!connected) throw new Error('Companion is not running')
+				return streamPage(req, res, Number(u.searchParams.get('page')), remote.rows, remote.cols)
+			}
+			if (req.method === 'POST' && sub === '/press') {
+				const b = await body(req)
+				await pressKey(Number(b.page), Number(b.row), Number(b.column), b.down)
+				return send(res, 200, { ok: true })
+			}
+			send(res, 404, { ok: false, error: 'Not found' })
+		} catch (e) {
+			send(res, 500, { ok: false, error: e.message })
+		}
+	})
+	remote.server.on('error', (e) => {
+		log('iPad remote could not start:', e.message)
+		remote.server = null
+	})
+	remote.server.listen(REMOTE_PORT, '0.0.0.0', () => log(`iPad remote on ${remoteUrls()[0] || 'port ' + REMOTE_PORT}`))
+}
+function stopRemoteServer() {
+	remote.server?.close()
+	remote.server?.closeAllConnections?.()
+	remote.server = null
+}
+function setRemote({ on, reset, rows, cols }) {
+	if (rows) remote.rows = Math.min(8, Number(rows))
+	if (cols) remote.cols = Math.min(16, Number(cols))
+	if (reset || !remote.token) {
+		remote.token = crypto.randomBytes(18).toString('base64url')
+		for (const end of liveStreams) end() // old link: drop anyone using it
+	}
+	remote.on = !!on
+	saveRemote()
+	if (remote.on) startRemoteServer()
+	else stopRemoteServer()
+	return remoteInfo()
+}
+if (remote.on) setTimeout(startRemoteServer, 0)
+
+const REMOTE_HTML = `<!doctype html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes"><meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"><meta name="apple-mobile-web-app-title" content="DeckWriter">
+<meta name="theme-color" content="#050607"><title>DeckWriter Remote</title>
+<style>
+html,body{margin:0;height:100%;background:#050607;color:#cfd3d8;font:600 15px/1.2 -apple-system,system-ui,sans-serif;overflow:hidden;touch-action:none;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
+body{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;padding:max(12px,env(safe-area-inset-top)) max(12px,env(safe-area-inset-right)) max(12px,env(safe-area-inset-bottom)) max(12px,env(safe-area-inset-left));box-sizing:border-box}
+.bar{display:flex;align-items:center;gap:10px;width:var(--w)}
+.bar .t{flex:1;text-align:center;color:#fff;font-size:17px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.bar button{background:#1b1f24;color:#e8eaed;border:1px solid #2b3036;border-radius:12px;padding:12px 18px;font:600 16px -apple-system,system-ui,sans-serif}
+.grid{display:grid;grid-template-columns:repeat(var(--cols),var(--k));gap:calc(var(--k)*.1)}
+.k{width:var(--k);height:var(--k);border-radius:calc(var(--k)*.13);background:#111;overflow:hidden;transition:transform .05s}
+.k img{width:100%;height:100%;display:block;pointer-events:none}
+.k.down{transform:scale(.92);filter:brightness(1.4)}
+.note{color:#7d848c;font:500 13px -apple-system,system-ui,sans-serif;text-align:center}
+.dot{display:inline-block;width:8px;height:8px;border-radius:50%;background:#e5484d;margin-right:6px;vertical-align:1px}.dot.ok{background:#3ccb7f}
+</style></head><body>
+<div class="bar"><button id="prev">◀</button><div class="t" id="title">Connecting…</div><button id="next">▶</button></div>
+<div class="grid" id="grid"></div>
+<div class="note" id="note"><span class="dot" id="dot"></span><span id="msg">Connecting to the Companion Mac…</span></div>
+<script>
+const base=location.pathname.endsWith("/")?location.pathname.slice(0,-1):location.pathname;let rows=4,cols=8,pages=[],at=0,es=null,imgs={};
+const $=id=>document.getElementById(id);
+function size(){const k=Math.floor(Math.min((innerWidth-24-(cols-1)*8)/cols/1.02,(innerHeight-130)/rows/1.1));document.body.style.setProperty("--cols",cols);document.body.style.setProperty("--k",Math.max(44,k)+"px");document.body.style.setProperty("--w",(Math.max(44,k)*cols*1.1)+"px")}
+function draw(){size();let g="";for(let r=0;r<rows;r++)for(let c=0;c<cols;c++){const key=r+","+c,src=imgs[key];g+='<div class="k" data-k="'+key+'">'+(src?'<img src="'+src+'">':"")+"</div>"}$("grid").innerHTML=g;const p=pages[at];$("title").textContent=p?(p.name||"Page "+p.number):"No pages"}
+function paint(key){const t=document.querySelector('[data-k="'+key+'"]');if(t)t.innerHTML=imgs[key]?'<img src="'+imgs[key]+'">':""}
+function status(ok,msg){$("dot").className="dot"+(ok?" ok":"");$("msg").textContent=msg}
+function stream(){es&&es.close();imgs={};draw();const p=pages[at];if(!p)return;es=new EventSource(base+"/live?page="+p.number);
+  es.onopen=()=>status(true,"Connected · tap to press · hold to hold");
+  es.onmessage=e=>{const m=JSON.parse(e.data);imgs[m.k]=m.used?m.img:null;paint(m.k)};
+  es.onerror=()=>status(false,"Lost the Companion Mac, reconnecting…")}
+async function load(){try{const r=await fetch(base+"/pages",{cache:"no-store"}).then(x=>x.json());if(!r.ok)throw new Error(r.error);rows=r.rows;cols=r.cols;
+  const cur=pages[at]?.number;pages=r.pages;at=Math.max(0,pages.findIndex(p=>p.number===cur));stream()}
+  catch(e){status(false,"Can't reach Companion ("+e.message+"). Retrying…");setTimeout(load,3000)}}
+function go(step){if(!pages.length)return;at=(at+step+pages.length)%pages.length;stream()}
+const press=(key,down)=>{const p=pages[at];const[r,c]=key.split(",").map(Number);fetch(base+"/press",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({page:p.number,row:r,column:c,down})}).catch(()=>{})};
+let held=null;
+document.addEventListener("pointerdown",e=>{const t=e.target.closest(".k");if(!t)return;e.preventDefault();const key=t.dataset.k,kind=pages[at]?.nav?.[key];t.classList.add("down");
+  if(kind){held={t,nav:1};go(kind==="pageup"?1:-1);return}held={t,key};press(key,true)},{passive:false});
+const up=()=>{if(!held)return;const h=held;held=null;h.t.classList.remove("down");if(!h.nav)press(h.key,false)};
+document.addEventListener("pointerup",up);document.addEventListener("pointercancel",up);
+$("prev").onclick=()=>go(-1);$("next").onclick=()=>go(1);
+addEventListener("resize",draw);document.addEventListener("visibilitychange",()=>{if(!document.hidden)load()});
+setInterval(()=>fetch(base+"/pages",{cache:"no-store"}).then(x=>x.json()).then(r=>{if(r.ok&&JSON.stringify(r.pages.map(p=>[p.number,p.name]))!==JSON.stringify(pages.map(p=>[p.number,p.name]))){pages=r.pages;if(at>=pages.length)at=0;stream()}else if(r.ok)pages=r.pages}).catch(()=>{}),15000);
+load();
+</script></body></html>`
+
 /* ---------- HTTP API for DeckWriter ---------- */
 let queue = Promise.resolve() // one change at a time, in order
 const serial = (fn) => (queue = queue.then(fn, fn))
@@ -512,6 +672,7 @@ http
 					relay: VERSION,
 					companion: connected,
 					companionUrl: COMPANION,
+					remote: remoteInfo(),
 					pages: pages.order.map((id, i) => {
 						const p = pages.byId[id] || {}
 						const keys = []
@@ -524,6 +685,12 @@ http
 				if (!connected) throw new Error('Not connected to Companion')
 				const q = new URL(req.url, 'http://x').searchParams
 				return streamPage(req, res, Number(q.get('page')), Math.min(8, Number(q.get('rows')) || 4), Math.min(16, Number(q.get('cols')) || 8))
+			}
+			if (req.method === 'POST' && path === '/remote') {
+				const b = await body(req)
+				const info = setRemote(b)
+				log(`iPad remote ${info.on ? 'on' : 'off'}${b.reset ? ' (new link)' : ''}`)
+				return send(res, 200, { ok: true, ...info })
 			}
 			if (req.method === 'POST' && path === '/press') {
 				const b = await body(req)
