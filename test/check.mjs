@@ -85,6 +85,7 @@ check('saved projects are repaired on load', () => scripts[0].includes('const s=
 check('undo never steps back past a load from Companion', () => scripts[0].includes('undoStack.length=0;redoStack.length=0;render();'))
 check('relay only answers requests addressed to this Mac, from DeckWriter', () => { const r = readFileSync(join(root, 'tools/live/relay.mjs'), 'utf8'); return r.includes('if (!HOST_OK.test(') && !r.includes('/^null$/') })
 check('relay waits for Companion\'s page list before changing anything', () => readFileSync(join(root, 'tools/live/relay.mjs'), 'utf8').includes("if (!pagesReady) throw new Error('Companion is still starting up"))
+check('a second relay steps aside instead of crashing', () => readFileSync(join(root, 'tools/live/relay.mjs'), 'utf8').includes("DeckWriter Live is already running on port ${PORT}"))
 check('live follows the open page with no page picker', () => !scripts[0].includes('livePage"') && !app.includes('id="livePage"'))
 check('live only clears keys DeckWriter sent or had when Live started', () => scripts[0].includes('if(owned[k]==null&&!occupied.has(k)){delete c.base[pg.id]?.[k];continue}'))
 check('relay never edits the boot page', () => { const r = readFileSync(join(root, 'tools/live/relay.mjs'), 'utf8'); return (r.match(/\tguardPage\(page\)/g) || []).length >= 3 })

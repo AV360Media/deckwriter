@@ -803,6 +803,11 @@ http
 			send(res, 500, { ok: false, error: e.message })
 		}
 	})
+	.on('error', (e) => {
+		// another copy already answering (say a second Live click): this one just steps aside
+		log(e.code === 'EADDRINUSE' ? `DeckWriter Live is already running on port ${PORT}; this copy is not needed` : `could not start: ${e.message}`)
+		process.exit(0)
+	})
 	.listen(PORT, '127.0.0.1', () => {
 		log(`DeckWriter Live relay ${VERSION} on http://127.0.0.1:${PORT}`)
 		connect()

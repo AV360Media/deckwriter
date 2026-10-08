@@ -37,6 +37,13 @@ Design Stream Deck pages for Bitfocus Companion: lay out keys, label and colour 
 
 Files saved from this site are named `*.companionconfig` and import directly. Inside Claude they save as `*.companionconfig.json`; remove the `.json` first.
 
+## Reliability notes
+
+- **Works offline.** Once DeckWriter has been opened on a computer, it opens there again without internet (a small offline copy, `sw.js`). With internet it always loads the newest version.
+- **One editor at a time.** DeckWriter saves in the browser; two editor windows would overwrite each other, so a red banner warns when a second one saves. The separate Show window never saves.
+- **Saved work is checked on load.** A damaged or older saved project is repaired instead of stopping the app. If the browser's storage fills up, DeckWriter says so: use Save project.
+- **Live** sends nothing until it has loaded Companion, never edits Companion's boot page, waits for Companion's page list after a restart, and only accepts requests from DeckWriter on this Mac. Undo can't step back past a load from Companion (it would send old buttons back over changes made there).
+
 ## Moving between computers
 
 DeckWriter keeps your work in the browser of the computer you're on. To take it to another machine, click **Save project** in the bottom bar. You get one `.json` file with every page, button, image, connection and the boot screen. On the other computer, open DeckWriter and click **Open project** (or drop the file on Import). The file name becomes the project name, so rename it in Finder if you like. Live's record of what's on a Stream Deck stays on each computer.
