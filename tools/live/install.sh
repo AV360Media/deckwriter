@@ -3,8 +3,8 @@
 # deckwriter-live:// link, a tiny helper app ("DeckWriter Live" in ~/Applications) starts the relay as a background
 # service (no Terminal window), and the relay stops itself 10 minutes after DeckWriter stops checking in.
 # Each start fetches the latest relay from GitHub.
-#   install:    curl -fsSL https://raw.githubusercontent.com/bryanchorton/deckwriter/main/tools/live/install.sh | bash
-#   uninstall:  curl -fsSL https://raw.githubusercontent.com/bryanchorton/deckwriter/main/tools/live/install.sh | bash -s -- --uninstall
+#   install:    curl -fsSL https://raw.githubusercontent.com/AV360Media/deckwriter/main/tools/live/install.sh | bash
+#   uninstall:  curl -fsSL https://raw.githubusercontent.com/AV360Media/deckwriter/main/tools/live/install.sh | bash -s -- --uninstall
 set -euo pipefail
 
 LABEL="com.deckwriter.relay"
@@ -12,7 +12,7 @@ DIR="$HOME/Library/Application Support/DeckWriter"
 PLIST="$HOME/Library/LaunchAgents/$LABEL.plist"
 APP="$HOME/Applications/DeckWriter Live.app"
 LOG="$HOME/Library/Logs/DeckWriter-relay.log"
-URL="https://raw.githubusercontent.com/bryanchorton/deckwriter/main/tools/live/relay.mjs"
+URL="https://raw.githubusercontent.com/AV360Media/deckwriter/main/tools/live/relay.mjs"
 DOMAIN="gui/$(id -u)"
 LSREGISTER=/System/Library/Frameworks/CoreServices.framework/Frameworks/LaunchServices.framework/Support/lsregister
 

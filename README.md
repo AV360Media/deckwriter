@@ -2,8 +2,8 @@
 
 Design Stream Deck pages for Bitfocus Companion: lay out keys, label and colour them, give them icons, build their actions from real module definitions, then export a page file that Companion imports as a new page.
 
-- **Production:** https://bryanchorton.github.io/deckwriter/
-- **Test build:** https://bryanchorton.github.io/deckwriter/index.test.html
+- **Production:** https://av360media.github.io/deckwriter/
+- **Test build:** https://av360media.github.io/deckwriter/index.test.html
 
 (Both work once GitHub Pages is on: Settings > Pages > Source: GitHub Actions.) You can also download `index.html` and open it in Chrome or Edge; it is one file and works offline (fonts and icons load from a CDN when online).
 
@@ -55,10 +55,10 @@ Live sends each key you add, change, move or delete straight to Companion, one k
 1. Set up Live on the Companion Mac, once: paste this into Terminal. It installs the relay as an on-demand background service (a LaunchAgent using Companion's own Node) plus a tiny helper app, *DeckWriter Live*, that answers `deckwriter-live://` links. Nothing runs at login: clicking **Live** in DeckWriter opens that link (Chrome asks once; tick *Always allow*), the helper starts the relay with no window, and the relay stops itself 10 minutes after DeckWriter stops checking in. Each start fetches the latest relay:
 
    ```bash
-   curl -fsSL https://raw.githubusercontent.com/bryanchorton/deckwriter/main/tools/live/install.sh | bash
+   curl -fsSL https://raw.githubusercontent.com/AV360Media/deckwriter/main/tools/live/install.sh | bash
    ```
 
-   To remove it: `curl -fsSL https://raw.githubusercontent.com/bryanchorton/deckwriter/main/tools/live/install.sh | bash -s -- --uninstall`. Its log is `~/Library/Logs/DeckWriter-relay.log`.
+   To remove it: `curl -fsSL https://raw.githubusercontent.com/AV360Media/deckwriter/main/tools/live/install.sh | bash -s -- --uninstall`. Its log is `~/Library/Logs/DeckWriter-relay.log`.
 
 2. Open DeckWriter from this site in Chrome (Live can't run inside Claude). Link Companion in **Connections**.
 3. Click **Live** in the top bar and switch **Live updates on**. Live follows the page you have open: DeckWriter's pages line up with Companion's in order, the boot page is always Companion page 1, and Live never touches it.

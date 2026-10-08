@@ -2548,7 +2548,7 @@ async function pollCompanion(){
   }catch(e){
     live.list=null;
     const inClaude=!!window.claude;
-    live.error=inClaude?"Claude blocks pages from reaching your Mac. Open DeckWriter from bryanchorton.github.io/deckwriter to link it."
+    live.error=inClaude?"Claude blocks pages from reaching your Mac. Open DeckWriter from av360media.github.io/deckwriter to link it."
       :e.name==="AbortError"||e instanceof TypeError?`No answer from ${companionUrl()}. Check Companion is running, the address is right (Send to Companion → Companion address), and allow local network access if the browser asks.`:e.message;
   }finally{live.busy=false;renderRail()}
 }
@@ -2580,7 +2580,7 @@ document.addEventListener("visibilitychange",()=>{if(!document.hidden&&S.compani
 // asks before replacing a key that was already in Companion.
 const RELAY="http://127.0.0.1:8790";
 // one-time setup: installs the relay as a background service (no Terminal window, starts at login, updates itself)
-const RELAY_CMD='curl -fsSL https://raw.githubusercontent.com/bryanchorton/deckwriter/main/tools/live/install.sh | bash';
+const RELAY_CMD='curl -fsSL https://raw.githubusercontent.com/AV360Media/deckwriter/main/tools/live/install.sh | bash';
 const liveRT={status:null,error:"",busy:false,timer:0,pending:false,skip:{},asking:false,lastMsg:""};
 const liveCfg=()=>{const c=(S.live??={on:false,map:{},owned:{}});c.base??={};c.at??={};return c};
 // what Live sent is remembered per Companion page: when a DeckWriter page points somewhere new, start over there
@@ -2796,7 +2796,7 @@ async function relayStatus(){
     const r=await fetch(RELAY+"/status",{signal:ctl.signal,cache:"no-store"});clearTimeout(t);
     liveRT.status=await r.json();liveRT.error=liveRT.status.companion?"":"The relay is running but can't reach Companion. Is Companion open?";
     const p1=liveRT.status.companion&&liveRT.status.pages?.[0];if(p1)liveCfg().bootSeen=/^boot$/i.test(p1.name||"");
-  }catch(_){liveRT.status=null;liveRT.error=window.claude?"Live can't run inside Claude. Open DeckWriter from bryanchorton.github.io/deckwriter.":liveRT.waking?"Starting the Live helper… (if Chrome asks, allow it to open DeckWriter Live)":"The Live helper isn't running on this Mac. If it's set up, click Live again; if not, set it up below."}
+  }catch(_){liveRT.status=null;liveRT.error=window.claude?"Live can't run inside Claude. Open DeckWriter from av360media.github.io/deckwriter.":liveRT.waking?"Starting the Live helper… (if Chrome asks, allow it to open DeckWriter Live)":"The Live helper isn't running on this Mac. If it's set up, click Live again; if not, set it up below."}
   renderLive();liveFollow();const w=$("#wipePage");if(w)w.disabled=!Object.keys(page().buttons).length&&!liveExtraKeys(page()).length;return liveRT.status;
 }
 // Live always follows the page you're on: DeckWriter's show pages line up with Companion's, in order, after the boot screen.
