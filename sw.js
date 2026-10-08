@@ -2,7 +2,7 @@
 // before. Pages: newest from the network first (so updates always arrive), the saved copy when offline. The icon and
 // file libraries from CDNs: the saved copy first. Never touches DeckWriter Live (the relay on this Mac) or anything
 // that isn't a plain GET.
-const CACHE = 'deckwriter-v1'
+const CACHE = 'deckwriter-v2'
 const LIBS = [
 	'https://unpkg.com/lucide@0.460.0/dist/umd/lucide.min.js',
 	'https://cdnjs.cloudflare.com/ajax/libs/js-yaml/4.1.0/js-yaml.min.js',
@@ -42,7 +42,10 @@ self.addEventListener('fetch', (e) => {
 					const t = setTimeout(() => ctl.abort(), 3000)
 					const res = await fetch(req.url, { signal: ctl.signal, cache: 'no-store', credentials: 'same-origin' }) // by URL: a page-load request can't be re-sent with options
 					clearTimeout(t)
-					if (res.ok) cache.put(req, res.clone())
+					// a hotel/venue Wi-Fi sign-in page answers in place of DeckWriter: never keep or show that instead of the app
+					if (!res.ok || res.redirected || new URL(res.url).origin !== self.location.origin) throw new Error('not DeckWriter')
+					if (/\.html$|\/$/.test(u.pathname) && !(await res.clone().text()).includes('<title>DeckWriter')) throw new Error('not DeckWriter')
+					cache.put(req, res.clone())
 					return res
 				} catch (err) {
 					const hit = (await cache.match(req, { ignoreSearch: false })) || (await cache.match(req, { ignoreSearch: true }))

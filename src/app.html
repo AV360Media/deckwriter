@@ -2661,10 +2661,14 @@ async function openShowHere(){
   $("#showMode").hidden=false;renderShow();loadShowNav();try{await $("#showMode").requestFullscreen?.()}catch(_){}
 }
 function closeShow(){if(SHOW_ONLY){window.close();return}$("#showMode").hidden=true;mirrorStop(show);if(document.fullscreenElement)document.exitFullscreen().catch(()=>{})}
-function showPage(step){const nums=showPages();if(!nums.length)return;const i=nums.indexOf(show.num);show.num=nums[(i+step+nums.length)%nums.length];mirrorStop(show);renderShow()}
+function showPage(step){const nums=showPages();if(!nums.length)return;const i=nums.indexOf(show.num);show.num=nums[(i+step+nums.length)%nums.length];mirrorStop(show);renderShow();loadShowNav()}
 // the DeckWriter key at this spot on the shown Companion page (to spot page up/down keys)
 function showKeyKind(key){return show.nav[show.num]?.[key]}
-const pressReq=(key,down)=>{const[r,c]=parseKey(key);return fetch(RELAY+"/press",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({page:show.num,row:r,column:c,down})}).catch(()=>{})};
+// presses go out strictly in order (a release must never overtake its press), and a lost release is retried once
+let pressQ=Promise.resolve();
+const pressReq=(key,down)=>{const[r,c]=parseKey(key);const body=JSON.stringify({page:show.num,row:r,column:c,down});
+  const once=()=>fetch(RELAY+"/press",{method:"POST",headers:{"Content-Type":"application/json"},body}).then(x=>{if(!x.ok)throw 0});
+  pressQ=pressQ.then(once).catch(()=>down?null:new Promise(ok=>setTimeout(ok,300)).then(once)).catch(()=>{});return pressQ};
 let showDown=null;
 document.addEventListener("pointerdown",e=>{const t=e.target.closest?.("#smGrid .sm-key");if(!t)return;e.preventDefault();const key=t.dataset.sk,kind=showKeyKind(key);
   t.classList.add("down");
@@ -2672,6 +2676,8 @@ document.addEventListener("pointerdown",e=>{const t=e.target.closest?.("#smGrid 
   showDown={key,t};pressReq(key,true)});
 const showUp=()=>{if(!showDown)return;const{key,t,nav}=showDown;showDown=null;t.classList.remove("down");if(!nav)pressReq(key,false)};
 document.addEventListener("pointerup",showUp);document.addEventListener("pointercancel",showUp);
+// switching away mid-press must not leave a key held down in Companion
+document.addEventListener("visibilitychange",()=>{if(document.hidden)showUp()});addEventListener("pagehide",showUp);addEventListener("blur",showUp);
 addEventListener("resize",()=>{if(!$("#showMode").hidden)renderShow()});
 document.addEventListener("keydown",e=>{if($("#showMode").hidden)return;e.stopPropagation(); // nothing reaches the editor underneath
   if(e.key==="Escape"){if(!SHOW_ONLY)closeShow()}else if(e.key==="ArrowRight")showPage(1);else if(e.key==="ArrowLeft")showPage(-1)},true);
@@ -2911,7 +2917,7 @@ async function livePull(why){
     inSync(); // everything now matches Companion: nothing to send
     // Undo can't go back past a load from Companion: it would send the old buttons back over what changed there
     undoStack.length=0;redoStack.length=0;render();
-    clearTimeout(liveRT.timer);liveRT.dirty=false;liveRT.shown=null;
+    clearTimeout(liveRT.timer);liveRT.dirty=false; // (the deck keeps its page: only changing page in DeckWriter turns it)
     liveRT.lastMsg=`Loaded from Companion: ${changed} key${changed===1?"":"s"} on ${pagesChanged} page${pagesChanged===1?"":"s"}`;
     toast(why==="focus"?`Updated from Companion: ${changed} key${changed===1?"":"s"} changed there.`:liveRT.lastMsg+".");
     return true;

@@ -86,6 +86,8 @@ check('undo never steps back past a load from Companion', () => scripts[0].inclu
 check('relay only answers requests addressed to this Mac, from DeckWriter', () => { const r = readFileSync(join(root, 'tools/live/relay.mjs'), 'utf8'); return r.includes('if (!HOST_OK.test(') && !r.includes('/^null$/') })
 check('relay waits for Companion\'s page list before changing anything', () => readFileSync(join(root, 'tools/live/relay.mjs'), 'utf8').includes("if (!pagesReady) throw new Error('Companion is still starting up"))
 check('a second relay steps aside instead of crashing', () => readFileSync(join(root, 'tools/live/relay.mjs'), 'utf8').includes("DeckWriter Live is already running on port ${PORT}"))
+check('presses go out in order and a held key is released when the page is left', () => { const r = readFileSync(join(root, 'tools/live/relay.mjs'), 'utf8'); return r.includes('pq=pq.then(()=>send1(b))') && r.includes('if(document.hidden)up()') && scripts[0].includes('pressQ=pressQ.then(once)') && scripts[0].includes('if(document.hidden)showUp()') })
+check('offline copy never keeps a Wi-Fi sign-in page', () => readFileSync(join(root, 'sw.js'), 'utf8').includes("includes('<title>DeckWriter')"))
 check('live follows the open page with no page picker', () => !scripts[0].includes('livePage"') && !app.includes('id="livePage"'))
 check('live only clears keys DeckWriter sent or had when Live started', () => scripts[0].includes('if(owned[k]==null&&!occupied.has(k)){delete c.base[pg.id]?.[k];continue}'))
 check('relay never edits the boot page', () => { const r = readFileSync(join(root, 'tools/live/relay.mjs'), 'utf8'); return (r.match(/\tguardPage\(page\)/g) || []).length >= 3 })

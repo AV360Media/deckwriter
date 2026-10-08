@@ -645,12 +645,18 @@ async function load(){try{const r=await fetch(base+"/pages",{cache:"no-store"}).
   const cur=pages[at]?.number;pages=r.pages;at=Math.max(0,pages.findIndex(p=>p.number===cur));stream()}
   catch(e){status(false,"Can't reach Companion ("+e.message+"). Retrying…");setTimeout(load,3000)}}
 function go(step){if(!pages.length)return;at=(at+step+pages.length)%pages.length;stream()}
-const press=(key,down)=>{const p=pages[at];if(!p)return;const[r,c]=key.split(",").map(Number);fetch(base+"/press",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({page:p.number,row:r,column:c,down})}).catch(()=>{})};
+// presses go out strictly in order (a release must never overtake its press), and a lost release is retried once
+let pq=Promise.resolve();
+const send1=(b)=>fetch(base+"/press",{method:"POST",headers:{"Content-Type":"application/json"},body:b}).then(r=>{if(!r.ok)throw 0});
+const press=(key,down)=>{const p=pages[at];if(!p)return;const[r,c]=key.split(",").map(Number);const b=JSON.stringify({page:p.number,row:r,column:c,down});
+  pq=pq.then(()=>send1(b)).catch(()=>down?null:new Promise(ok=>setTimeout(ok,300)).then(()=>send1(b))).catch(()=>{})};
 let held=null;
 document.addEventListener("pointerdown",e=>{const t=e.target.closest(".k");if(!t)return;e.preventDefault();const key=t.dataset.k,kind=pages[at]?.nav?.[key];t.classList.add("down");
   if(kind){held={t,nav:1};go(kind==="pageup"?1:-1);return}held={t,key};press(key,true)},{passive:false});
 const up=()=>{if(!held)return;const h=held;held=null;h.t.classList.remove("down");if(!h.nav)press(h.key,false)};
 document.addEventListener("pointerup",up);document.addEventListener("pointercancel",up);
+// the iPad locking or switching apps mid-press must not leave a key held down in Companion
+document.addEventListener("visibilitychange",()=>{if(document.hidden)up()});addEventListener("pagehide",up);addEventListener("blur",up);
 $("prev").onclick=()=>go(-1);$("next").onclick=()=>go(1);
 addEventListener("resize",draw);document.addEventListener("visibilitychange",()=>{if(!document.hidden)load()});
 setInterval(()=>fetch(base+"/pages",{cache:"no-store"}).then(x=>x.json()).then(r=>{if(r.ok&&JSON.stringify(r.pages.map(p=>[p.number,p.name]))!==JSON.stringify(pages.map(p=>[p.number,p.name]))){pages=r.pages;if(at>=pages.length)at=0;stream()}else if(r.ok)pages=r.pages}).catch(()=>{}),15000);
