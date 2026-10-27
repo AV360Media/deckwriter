@@ -37,7 +37,7 @@ if (IDLE_EXIT > 0)
 		process.exit(0)
 	}, 15000)
 const ALLOWED = [/^https:\/\/av360media\.github\.io$/, /^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/]
-const VERSION = '1.9.2'
+const VERSION = '1.9.3'
 
 const log = (...a) => console.log(new Date().toLocaleTimeString(), ...a)
 
@@ -229,6 +229,19 @@ function readOnce(path, input, what) {
 }
 // a control's full config (the editor's watchControl subscription)
 const controlConfig = async (controlId) => (await readOnce('controls.watchControl', { controlId }, 'the button')).config
+// an image layer just above the background. Companion 5.0.2 takes {type, index}; 5.0.7 takes {type, afterElementId}
+async function addImageElement(controlId) {
+	const layers = (await controlConfig(controlId).catch(() => null))?.style?.layers || []
+	const have = layers.find((l) => l.type === 'image')
+	if (have) return have.id
+	const at = layers.findIndex((l) => l.id === 'box0')
+	try {
+		return await call('controls.styles.addElement', { controlId, type: 'image', index: at >= 0 ? at + 1 : null })
+	} catch (e) {
+		if (!/malformed|invalid/i.test(e.message)) throw e
+		return await call('controls.styles.addElement', { controlId, type: 'image', afterElementId: 'box0' })
+	}
+}
 function onPages(d) {
 	if (d.type === 'init') {
 		pages.order = d.order
@@ -296,7 +309,7 @@ async function pushKey(page, row, column, control) {
 	await set('canvas', 'decoration', st.show_topbar === true ? 'topbar' : st.show_topbar === false ? 'border' : 'default')
 	if (st.bgcolor != null) await set('box0', 'color', st.bgcolor)
 	if (st.png64) {
-		const imageId = await call('controls.styles.addElement', { controlId, type: 'image', afterElementId: 'box0' })
+		const imageId = await addImageElement(controlId).catch((e) => (log('image layer:', e.message), null))
 		if (typeof imageId === 'string') {
 			await set(imageId, 'base64Image', st.png64)
 			const [ih, iv] = String(st.pngalignment || 'center:center').split(':')
