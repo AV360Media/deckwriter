@@ -8,7 +8,7 @@
 <body>
 <title>DeckWriter (test)</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500&family=Noto+Sans+Symbols+2&display=swap">
 <script src="https://unpkg.com/lucide@0.460.0/dist/umd/lucide.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/js-yaml/4.1.0/js-yaml.min.js"></script>
 <style>
@@ -137,7 +137,7 @@ textarea.inp{resize:vertical}
 .grid{display:grid;grid-template-columns:repeat(var(--cols),var(--k));gap:calc(var(--k)*.17)}
 .key{width:var(--k);aspect-ratio:1;max-width:100%;border-radius:calc(var(--k)*.16);position:relative;overflow:hidden;background:#000;border:0;padding:0;container-type:inline-size;box-shadow:0 0 0 1px #000,0 2px 0 #050506,inset 0 0 0 1px rgba(255,255,255,.05);touch-action:none;user-select:none;-webkit-user-select:none;transition:box-shadow .12s}
 .key .art{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;pointer-events:none}
-.key .txt{position:absolute;inset:3%;display:flex;font-family:Arimo,Arial,Helvetica,sans-serif;white-space:pre-wrap;overflow-wrap:anywhere;line-height:1.08;pointer-events:none}
+.key .txt{position:absolute;inset:3%;display:flex;font-family:Arimo,Arial,Helvetica,"Noto Sans Symbols 2","Apple Symbols",sans-serif;white-space:pre-wrap;overflow-wrap:anywhere;line-height:1.08;pointer-events:none}
 .key .txt span{display:block;width:100%}
 .key .badges{position:absolute;right:5%;top:5%;display:flex;gap:2px;pointer-events:none}
 .key .badges i{width:5px;height:5px;border-radius:50%;background:var(--lime);box-shadow:0 0 0 1px #000}
@@ -1832,13 +1832,28 @@ function presetToButton(p,conn){
   return applyPresetIcon(b,p);
 }
 const isReadout=p=>/\$\(/.test(String(p.tx||""))&&(p.st||[]).every(s=>!["down","up","rotL","rotR"].some(k=>(s[k]||[]).length));
-// Variables like $(atem:short_1) show as {short_1} in previews; Companion fills in the real value
+// Variables like $(atem:short_1) preview as a readable guess; with Companion linked or Live on, its real values replace the guess
 const ATEM_SRC={0:"Blk",1000:"Bars",2001:"Col 1",2002:"Col 2",3010:"MP 1",3011:"MP 1K",3020:"MP 2",3021:"MP 2K",3030:"MP 3",3040:"MP 4",6000:"SSrc",10010:"PGM",10011:"PVW"};
 const varName=n=>{const m=/^(?:short|long)_(\d+)$/.exec(n);if(m){const v=+m[1];return ATEM_SRC[v]||(v>0&&v<1000?"In "+v:String(v))}
   // other variables preview as a couple of readable words; Companion shows the live value
   const w=n.replace(/([a-z0-9])([A-Z])/g,"$1 $2").replace(/[_-]+/g," ").toLowerCase().replace(/\b(current|formatted|value|text)\b/g,"").trim().split(/\s+/).filter(Boolean).slice(0,2).join(" ")||n;
   return w.charAt(0).toUpperCase()+w.slice(1)};
-const showVars=t=>String(t||"").replace(/\$\(([^:()]+):([^()]+)\)/g,(_,c,n)=>varName(n));
+const varVals={};
+const showVars=t=>String(t||"").replace(/\$\(([^:()]+):([^()]+)\)/g,(_,c,n)=>varVals[c+":"+n]??varName(n));
+// ask Companion's HTTP API for every variable the keys use; re-render only when a value changed
+async function pollVars(){
+  if(pollVars.busy||document.hidden||!(S.companionLinked||S.live?.on))return;pollVars.busy=true;
+  try{
+    const names=new Set();
+    for(const pg of S.pages)for(const b of Object.values(pg.buttons||{}))for(const m of String(b.text||"").matchAll(/\$\(([^:()]+):([^()]+)\)/g))names.add(m[1]+":"+m[2]);
+    let changed=false;
+    await Promise.all([...names].slice(0,300).map(async k=>{const[c,n]=k.split(/:(.*)/);
+      try{const r=await fetch(`${companionUrl()}/api/variable/${encodeURIComponent(c)}/${encodeURIComponent(n)}/value`,{cache:"no-store"});
+        if(!r.ok)return;const v=await r.text();if(varVals[k]!==v){varVals[k]=v;changed=true}}catch(e){}}));
+    if(changed){renderDeck();updatePreview()} // not render(): rebuilding the inspector would interrupt typing
+  }finally{pollVars.busy=false}
+}
+setInterval(pollVars,5000);setTimeout(pollVars,500);
 
 /* preset browser */
 let presetMod=null,presetCat="",presetQ="";
@@ -2848,7 +2863,7 @@ function liveAutoLink(ids){const done=[],unsure=[];
     else if(cands.length>1)unsure.push(`${mine.label} (Companion has ${cands.map(x=>"“"+x.label+"”").join(" and ")}: pick one with Link in Connections)`)}
   if(done.length){persist();renderRail()}
   return{done,unsure}}
-const BUILD="Oct 7, 9:01 PM";
+const BUILD="Oct 27, 8:31 AM";
 function renderLive(){
   const bs=$("#buildStamp");if(bs)bs.textContent="Build "+BUILD;if($("#liveDlg")?.open)renderRemote();
   const c=liveCfg(),st=liveRT.status,ok=!!(st&&st.companion),pg=page();
@@ -3150,7 +3165,7 @@ try{new ResizeObserver(scheduleOverlay).observe(document.body)}catch(_){}
 document.fonts?.ready?.then(scheduleOverlay);
 
 /* ---------- boot ---------- */
-const SHEET_CSS='.sheet{--kk:58px;background:#fff;color:#16191c;font:13px/1.45 "Barlow",Arial,sans-serif;padding:28px;text-align:left}\n.sheet .sh-head{border-bottom:2px solid #16191c;padding-bottom:10px;margin-bottom:20px}\n.sheet h1{font:700 26px/1.1 "Barlow Semi Condensed","Arial Narrow",sans-serif;margin:0;color:#16191c}\n.sheet .sh-head p{margin:4px 0 0;color:#5b636a;font-size:13px}\n.sheet .sh-page{margin-bottom:30px}\n.sheet h2{font:700 19px "Barlow Semi Condensed","Arial Narrow",sans-serif;margin:0 0 10px;display:flex;gap:10px;align-items:baseline;color:#16191c}\n.sheet h2 span{font:600 11px "JetBrains Mono",monospace;color:#5b636a;letter-spacing:.06em;text-transform:uppercase}\n.sheet .sh-map{display:grid;gap:8px 10px;background:#1a1d20;padding:12px 14px 8px;border-radius:14px;width:max-content;max-width:100%;margin-bottom:16px;-webkit-print-color-adjust:exact;print-color-adjust:exact}\n.sheet figure{margin:0;display:flex;flex-direction:column;align-items:center;gap:3px}\n.sheet figcaption{font:500 10px "JetBrains Mono",monospace;color:#9aa3ab}\n.sheet .sk{width:var(--kk);height:var(--kk);border-radius:8px;position:relative;overflow:hidden;background:#000;-webkit-print-color-adjust:exact;print-color-adjust:exact}\n.sheet .sk.empty{background:#0d0f10}\n.sheet .sk img{position:absolute;inset:0;width:100%;height:100%;object-fit:contain}\n.sheet .sk span{position:absolute;inset:3px;display:flex;font-family:Arimo,Arial,Helvetica,sans-serif;line-height:1.05;white-space:pre-wrap;overflow-wrap:anywhere}\n.sheet .sh-dial{width:var(--kk);height:var(--kk);border-radius:50%;background:#2a3036;color:#e6e8e4;display:flex;align-items:center;justify-content:center;font-size:9px;text-align:center;padding:6px;overflow:hidden}\n.sheet table{width:100%;border-collapse:collapse}\n.sheet th{text-align:left;font:600 10px "Barlow Semi Condensed",sans-serif;letter-spacing:.08em;text-transform:uppercase;color:#5b636a;border-bottom:1px solid #c9ced2;padding:4px 8px}\n.sheet td{border-bottom:1px solid #e3e6e8;padding:6px 8px;vertical-align:middle;color:#16191c}\n.sheet td.code{font:600 12px "JetBrains Mono",monospace;width:40px}\n.sheet td.th{width:48px}\n.sheet td.th .sk{--kk:36px;border-radius:5px}\n.sheet td.lbl{font-weight:600;width:22%}\n.sheet tr{break-inside:avoid}\n.sheet .sh-empty{color:#5b636a}\n.sheet .sh-foot{color:#8a9097;font-size:11px;margin-top:4px}';
+const SHEET_CSS='.sheet{--kk:58px;background:#fff;color:#16191c;font:13px/1.45 "Barlow",Arial,sans-serif;padding:28px;text-align:left}\n.sheet .sh-head{border-bottom:2px solid #16191c;padding-bottom:10px;margin-bottom:20px}\n.sheet h1{font:700 26px/1.1 "Barlow Semi Condensed","Arial Narrow",sans-serif;margin:0;color:#16191c}\n.sheet .sh-head p{margin:4px 0 0;color:#5b636a;font-size:13px}\n.sheet .sh-page{margin-bottom:30px}\n.sheet h2{font:700 19px "Barlow Semi Condensed","Arial Narrow",sans-serif;margin:0 0 10px;display:flex;gap:10px;align-items:baseline;color:#16191c}\n.sheet h2 span{font:600 11px "JetBrains Mono",monospace;color:#5b636a;letter-spacing:.06em;text-transform:uppercase}\n.sheet .sh-map{display:grid;gap:8px 10px;background:#1a1d20;padding:12px 14px 8px;border-radius:14px;width:max-content;max-width:100%;margin-bottom:16px;-webkit-print-color-adjust:exact;print-color-adjust:exact}\n.sheet figure{margin:0;display:flex;flex-direction:column;align-items:center;gap:3px}\n.sheet figcaption{font:500 10px "JetBrains Mono",monospace;color:#9aa3ab}\n.sheet .sk{width:var(--kk);height:var(--kk);border-radius:8px;position:relative;overflow:hidden;background:#000;-webkit-print-color-adjust:exact;print-color-adjust:exact}\n.sheet .sk.empty{background:#0d0f10}\n.sheet .sk img{position:absolute;inset:0;width:100%;height:100%;object-fit:contain}\n.sheet .sk span{position:absolute;inset:3px;display:flex;font-family:Arimo,Arial,Helvetica,\"Noto Sans Symbols 2\",\"Apple Symbols\",sans-serif;line-height:1.05;white-space:pre-wrap;overflow-wrap:anywhere}\n.sheet .sh-dial{width:var(--kk);height:var(--kk);border-radius:50%;background:#2a3036;color:#e6e8e4;display:flex;align-items:center;justify-content:center;font-size:9px;text-align:center;padding:6px;overflow:hidden}\n.sheet table{width:100%;border-collapse:collapse}\n.sheet th{text-align:left;font:600 10px "Barlow Semi Condensed",sans-serif;letter-spacing:.08em;text-transform:uppercase;color:#5b636a;border-bottom:1px solid #c9ced2;padding:4px 8px}\n.sheet td{border-bottom:1px solid #e3e6e8;padding:6px 8px;vertical-align:middle;color:#16191c}\n.sheet td.code{font:600 12px "JetBrains Mono",monospace;width:40px}\n.sheet td.th{width:48px}\n.sheet td.th .sk{--kk:36px;border-radius:5px}\n.sheet td.lbl{font-weight:600;width:22%}\n.sheet tr{break-inside:avoid}\n.sheet .sh-empty{color:#5b636a}\n.sheet .sh-foot{color:#8a9097;font-size:11px;margin-top:4px}';
 {const st=document.createElement("style");st.textContent=SHEET_CSS;document.head.appendChild(st)}
 document.querySelectorAll("[data-ico]").forEach(el=>{el.innerHTML=ico(el.dataset.ico)});
 S=load();
@@ -3165,6 +3180,6 @@ if("serviceWorker"in navigator&&!window.claude&&(location.protocol==="https:"||l
 })();
 </script>
 
-<div style="position:fixed;left:12px;bottom:12px;z-index:200;background:#e5484d;color:#fff;font:700 11px/1 system-ui,sans-serif;letter-spacing:.08em;padding:6px 8px;border-radius:6px;pointer-events:none">TEST BUILD · Oct 7, 9:01 PM</div>
+<div style="position:fixed;left:12px;bottom:12px;z-index:200;background:#e5484d;color:#fff;font:700 11px/1 system-ui,sans-serif;letter-spacing:.08em;padding:6px 8px;border-radius:6px;pointer-events:none">TEST BUILD · Oct 27, 8:31 AM</div>
 </body>
 </html>
